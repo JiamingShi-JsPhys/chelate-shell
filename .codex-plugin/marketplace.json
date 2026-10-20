@@ -1,0 +1,11 @@
+{
+  "name": "chelate-shell-marketplace",
+  "description": "Chelate Shell Plugin Marketplace",
+  "plugins": [
+    {
+      "name": "chelate-shell",
+      "source": "./",
+      "description": "A deterministic orchestrator that routes tasks to local skills across a strict 4-layer architecture."
+    }
+  ]
+}
