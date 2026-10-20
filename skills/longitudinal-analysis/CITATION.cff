@@ -1,0 +1,20 @@
+# longitudinal-analysis
+
+cff-version: "1.2.0"
+title: "longitudinal-analysis: reproducible longitudinal / panel-data analysis pipeline"
+type: software
+version: 1.0.0
+license: MIT
+date-created: 2026-10-15
+authors:
+  - family-names: "Shi"
+    given-names: "Jiaming"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/JiamingShi-JsPhys/agent-skills"
+description: "Reproducible multi-step analysis for longitudinal / repeated-measures data: descriptive stats, manipulation check, LMM, lagged mediation, and sensitivity analyses with a deterministic audit log. R (lme4 / lavaan) is invoked for the statistical steps; pure-Python steps degrade gracefully when R is absent."
+keywords:
+  - longitudinal
+  - mixed-models
+  - mediation
+  - sensitivity
+  - reproducible-research
