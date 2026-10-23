@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Editors / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Chelate Shell build/runtime artifacts
+_reports/
+.benchmarks/
+process/
+results/
+_broadcast/
+test_workspace/
+
+# Environment / secrets (never commit)
+.env
+
+# Test caches
+.pytest_cache/

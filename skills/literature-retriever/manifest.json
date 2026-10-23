@@ -1,0 +1,20 @@
+{
+  "name": "literature-retriever",
+  "version": "1.1.0",
+  "stage": "ingest",
+  "input_types": [
+    "query",
+    "keywords",
+    "arxiv"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json"
+  ],
+  "dependencies": [
+    "arxiv"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Search arXiv by keyword phrase via the arxiv SDK and store titles, abstracts, authors and links as JSON in process/literature/."
+}

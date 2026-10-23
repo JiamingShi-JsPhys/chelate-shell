@@ -1,0 +1,25 @@
+[project]
+name = "longitudinal-analysis"
+version = "1.0.0"
+description = "Longitudinal statistical analysis pipeline (LMM / lagged mediation / sensitivity) with reproducible auditing."
+authors = [{ name = "Jiaming Shi" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "PyYAML>=6.0",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+stats = [
+    "statsmodels>=0.14",
+    "scipy>=1.10",
+    "numpy>=1.24",
+]
+
+[project.scripts]
+jla = "src.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

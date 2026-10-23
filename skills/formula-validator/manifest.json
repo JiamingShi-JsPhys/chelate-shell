@@ -1,0 +1,22 @@
+{
+  "name": "formula-validator",
+  "version": "1.1.0",
+  "stage": "gates",
+  "input_types": [
+    "latex_string",
+    "plain_text",
+    "formula"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result"
+  ],
+  "dependencies": [
+    "sympy",
+    "numpy",
+    "pint"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Deterministic formula verification: SymPy D1-D5 layers (dimensional analysis, limit enumeration, numeric sampling, symbolic proof) merged with a pint physical-unit cross-check."
+}

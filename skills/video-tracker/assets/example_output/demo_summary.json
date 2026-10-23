@@ -1,0 +1,25 @@
+{
+  "video": "demo:synthetic_pendulum",
+  "fps": 30.0,
+  "fps_source": "demo",
+  "n_frames": 121,
+  "frame_width": 0,
+  "frame_height": 0,
+  "objects": [
+    {
+      "object": "demo_pendulum",
+      "roi": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "frames_tracked": 121,
+      "lost_frames": [],
+      "reinit_frames": [],
+      "tracker_losses": 0,
+      "success_rate": 1.0
+    }
+  ],
+  "scale_cm_per_px": null
+}

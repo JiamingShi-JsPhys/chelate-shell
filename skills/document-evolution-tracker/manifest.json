@@ -1,0 +1,19 @@
+{
+  "name": "document-evolution-tracker",
+  "version": "1.1.0",
+  "stage": "workspace",
+  "input_types": [
+    "markdown",
+    "plain_text",
+    "config"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json",
+    "markdown"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Paragraph-level diff across document versions with concept lineage tracking and evolution-timeline reports."
+}
