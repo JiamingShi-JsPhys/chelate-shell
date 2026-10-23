@@ -1,0 +1,17 @@
+[project]
+name = "multi-dim-manager"
+version = "1.0.0"
+description = "Multi-dimensional experiment state manager (parameter-space expansion, plugin contract, snapshots, JSONL audit, non-destructive rollback)."
+authors = [{ name = "Jiaming Shi" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+mdm = "scripts.run:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

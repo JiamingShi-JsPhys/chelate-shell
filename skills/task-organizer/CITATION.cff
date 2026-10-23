@@ -1,0 +1,20 @@
+# task-organizer
+
+cff-version: "1.2.0"
+title: "task-organizer: research task folder organizer"
+type: software
+version: 1.0.0
+license: MIT
+date-created: 2026-10-14
+authors:
+  - family-names: "Shi"
+    given-names: "Jiaming"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/JiamingShi-JsPhys/agent-skills"
+description: "Reorganizes a messy task folder into a standardized three-tier structure (material / process / results, plus _broadcast/ context-compression index) with before/after snapshots, 8-check verification, automatic rollback, provenance-based filing, operation history, smart deduplication, and YAML placement rules."
+keywords:
+  - task-organizer
+  - file-structure
+  - broadcast-index
+  - deduplication
+  - provenance

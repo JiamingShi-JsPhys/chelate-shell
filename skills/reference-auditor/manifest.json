@@ -1,0 +1,22 @@
+{
+  "name": "reference-auditor",
+  "version": "1.1.1",
+  "stage": "gates",
+  "input_types": [
+    "markdown",
+    "plain_text",
+    "draft",
+    "doi"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [
+    "requests"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Extract DOIs from a draft and verify each against the Crossref REST API; any non-existent DOI fails the gate and terminates the pipeline."
+}

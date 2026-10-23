@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Upstream reference material (kept out of the shipped skill)
+references/

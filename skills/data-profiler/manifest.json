@@ -1,0 +1,20 @@
+{
+  "name": "data-profiler",
+  "version": "1.1.1",
+  "stage": "gates",
+  "input_types": [
+    "csv",
+    "dataset"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [
+    "pandas"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Profile a CSV with pandas: row/column counts, per-column missing-value statistics, 1.5*IQR outlier ratios, duplicate rows and constant columns."
+}

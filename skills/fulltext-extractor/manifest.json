@@ -1,0 +1,19 @@
+{
+  "name": "fulltext-extractor",
+  "version": "1.1.1",
+  "stage": "ingest",
+  "input_types": [
+    "pdf"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json",
+    "text"
+  ],
+  "dependencies": [
+    "pypdf"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Extract text from a local PDF using pdfminer.six (with a pypdf fallback) and write the text plus a JSON metadata sidecar into process/fulltext/; degrades to UNVERIFIED on scanned/image PDFs."
+}

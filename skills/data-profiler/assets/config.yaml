@@ -1,0 +1,2 @@
+# data-profiler defaults (read by run.py via lib/chelate_core.adapter.load_config)
+outlier_fence: 1.5     # Tukey multiplier for the IQR outlier fences
