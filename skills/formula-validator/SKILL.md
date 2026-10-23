@@ -4,9 +4,9 @@ description: Deterministic formula checker for physics and math. Runs five CAS l
 metadata:
   author: Jiaming Shi
   license: MIT
-  version: 1.0.1
-  entry_point: python scripts/cli.py
-  python_requires: '>=3.9'
+  version: 1.1.0
+  entry_point: python run.py
+  python_requires: '>=3.10'
 ---
 
 

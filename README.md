@@ -31,7 +31,16 @@ those manifests to build the pipeline.
 
 ```text
 chelate/
-├── core/                        # microkernel
+├── .claude-plugin/            # Claude Code plugin manifest + marketplace
+├── .codebuddy-plugin/         # CodeBuddy plugin manifest + marketplace
+├── .codex-plugin/             # Codex plugin manifest + marketplace
+├── .dsh-plugin/               # DeepSeek Harness CJS entry (apply(ctx))
+├── assets/                    # icon.png (shared by the plugin manifests)
+├── index.js                   # CJS plugin entry (dsh ecosystem)
+├── package.json               # npm/dsh packaging metadata
+├── cordis.patch.yml           # cordis bundle patch
+├── ORCHESTRATOR.md            # agent-facing routing contract (v1.1.0)
+├── core/                      # microkernel
 │   ├── router.py                # dispatcher: manifest-driven pipeline
 │   ├── registry.py              # scans skills/ into a routing table
 │   └── sandbox.py               # dependency resolution / degradation
@@ -68,13 +77,33 @@ chelate/
 │       ├── LICENSE              #   MIT (per-skill copy)
 │       ├── run.py               #   thin adapter: CLI wiring only
 │       └── assets/              #   config.yaml and other dead resources
-└── tests/                       # automated test suite (141 tests)
+└── tests/                       # automated test suite (156 tests)
 ```
 
 Every skill directory carries the same surface: `SKILL.md` for the AI,
 `manifest.json` for the Router, `README.md` for humans, `LICENSE`, and
 `run.py` — a **thin adapter** that only parses arguments and formats the
 gate result.
+
+### Plugin manifests (Claude Code / CodeBuddy / Codex / dsh)
+
+The repository doubles as a plugin for four host platforms. Each `.xx-plugin/`
+directory holds that platform's `plugin.json` (+ `marketplace.json` where the
+platform has one). The v1.0.0 manifests were silently rejected by Claude Code
+for two contract violations; both are now locked down by
+`tests/test_plugin_manifests.py`:
+
+- **`author` must be an object** (`{"name": "Jiaming Shi"}`), not a bare
+  string — a string author fails validation and the plugin is ignored.
+- **`skills` is omitted, not `"./skills"`** — a string here fails validation
+  too; when the field is absent the host auto-scans the `skills/` directory,
+  which is exactly the flat layout this project ships. (A list of strings is
+  also legal but unnecessary.)
+- **`icon` is kept out of `plugin.json`** — it was the second rejection
+  cause; the shared `assets/icon.png` stays in the repo for humans.
+
+`version` is a single value across every skill manifest, every
+`plugin.json` and `package.json`; the test suite fails on any disagreement.
 
 ### Programs live outside the skills
 
@@ -263,16 +292,18 @@ of every key module function on every run.
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 141 tests
+python -m pytest tests/ -q     # 156 tests
 ```
 
 The suite covers the gate contract, manifest schema validation, flat-layout
 enforcement, pipeline planning and FAIL termination, the migration guard,
 the legacy D1–D5 and FFT/physics probes, the five new skills, workspace
 input-path resolution, `--inputs` auto-wiring (manifest-type matching,
-plan narrowing, fail-fast on missing files), and the unified debug layer
+plan narrowing, fail-fast on missing files), the unified debug layer
 (switch semantics plus a real-subprocess integration test for the router's
-debug plumbing).
+debug plumbing), and the manifest-contract suite (plugin manifests for all
+four host platforms: author-object, no string `skills`, no `icon`, version
+sync; SKILL.md frontmatter agreeing with each manifest).
 
 ## Requirements
 

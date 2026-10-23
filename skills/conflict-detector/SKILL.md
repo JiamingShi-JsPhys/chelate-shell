@@ -4,9 +4,9 @@ description: Cross-document contradiction engine. Compares entities, clauses, an
 metadata:
   author: Jiaming Shi
   license: MIT
-  version: 1.0.0
-  entry_point: python -m src.cli
-  python_requires: '>=3.9'
+  version: 1.1.0
+  entry_point: python run.py
+  python_requires: '>=3.10'
 ---
 
 

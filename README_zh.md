@@ -31,6 +31,13 @@ Chelate Shell 是一个**微内核调度器（Microkernel Router）**，它自�
 
 ```text
 chelate-shell/
+├── .claude-plugin/    # Claude Code 插件清单（plugin.json + marketplace.json）
+├── .codebuddy-plugin/ # CodeBuddy 插件清单
+├── .codex-plugin/     # Codex 插件清单
+├── .dsh-plugin/       # DeepSeek Harness 插件入口（index.js，导出 name + apply）
+├── assets/            # icon.png（插件图标）
+├── index.js / package.json / cordis.patch.yml  # dsh 生态打包文件
+├── ORCHESTRATOR.md    # 给 Agent 看的路由契约（v1.1.0）
 ├── core/          # 微内核：router.py（调度）+ registry.py（路由表）+ sandbox.py（隔离）
 ├── contracts/     # 全局契约：gate_result.py + schema.json
 ├── lib/chelate_core/  # 全局核心库：共享算法与适配器工具箱（程序提到外面）
@@ -43,6 +50,19 @@ chelate-shell/
 │   └── assets/        # 配置与模板等死资源
 └── tests/         # 自动化测试（含能力清点守卫，防阉割）
 ```
+
+### 四平台插件清单
+
+仓库同时是四个宿主平台的插件，`.claude-plugin/`、`.codebuddy-plugin/`、
+`.codex-plugin/`、`.dsh-plugin/` 各自持有对应平台的 `plugin.json`。v1.0.0 的
+清单曾被 Claude Code **静默拒绝**，根因是两个字段格式错误，现已修复并被
+`tests/test_plugin_manifests.py` 锁定：
+
+- **`author` 必须是对象** `{"name": "Jiaming Shi"}`——写成裸字符串会导致校验失败、插件被直接忽略；
+- **`skills` 字段省略**——原来写成字符串 `"./skills"` 同样校验失败；省略后宿主会自动扫描根目录的 `skills/` 文件夹，正好契合本项目的扁平结构；
+- **`icon` 不放 `plugin.json`**——这是第二个被拒原因，图标只留在仓库的 `assets/icon.png`。
+
+所有 `manifest.json` / `plugin.json` / `package.json` 的 `version` 保持一致（当前 1.1.0），测试套件对任何不一致直接报错。
 
 **阶段划分（manifest 中的 `stage` 字段）：**
 

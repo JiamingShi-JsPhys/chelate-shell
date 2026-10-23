@@ -276,7 +276,13 @@ def test_resolve_inputs_reports_missing_separately(tmp_path):
 
 
 def test_resolve_input_handles_unicode_filenames(tmp_path):
-    """The documented `--inputs 我的文件.md` case must resolve under root."""
+    """Non-ASCII filenames resolve under the workspace root.
+
+    The literal Chinese filename below is deliberate test data — the user
+    works with Chinese-named documents — not a language violation; the
+    repo's English-only rule covers code and comments, while domain data
+    (pattern libraries, filenames, corpora) may be non-English.
+    """
     import os
     import sys
     sys.path.insert(0, os.getcwd())

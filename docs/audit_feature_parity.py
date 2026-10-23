@@ -30,6 +30,33 @@ src = pathlib.Path(env_src) if env_src else REPO.parent / "chelate-shell-main" /
 src = src.resolve()
 
 pat = re.compile(r"python[^\n|`]*?(?:scripts|src)[./][\w./-]+")
+
+
+def documented_entries(text: str) -> set:
+    """Entry commands documented in the SKILL.md *body*.
+
+    The frontmatter is metadata, not a documented command — and its
+    `entry_point` field was stale in 1.0.0 (e.g. capstone-labmate declared
+    `python -m src.cli` although the skill has no `src/` package at all).
+    v1.1.0 re-points that field at the thin `run.py` adapter by contract,
+    which the capability guard verifies separately; here we only prove that
+    every entry command the 1.0.0 body taught is still documented.
+
+    `python -m a.b` is normalized to `python a/b.py` so the two spellings
+    of one entry do not read as two different commands.
+    """
+    body = text.split("---", 2)[2] if text.startswith("---") else text
+    out = set()
+    for cmd in pat.findall(body):
+        cmd = cmd.strip()
+        m = re.match(r"python\s+-m\s+([\w.]+)", cmd)
+        if m:
+            mod = m.group(1)
+            cmd = cmd.replace(f"-m {mod}", mod.replace(".", "/") + ".py", 1)
+        out.add(cmd)
+    return out
+
+
 total_src = total_dst = 0
 missing_any = False
 
@@ -41,8 +68,8 @@ if not src.is_dir():
 for s in LEGACY:
     a = (src / s / "SKILL.md").read_text(encoding="utf-8")
     b = (SKILLS / s / "SKILL.md").read_text(encoding="utf-8")
-    cmds_a = {m.strip() for m in pat.findall(a)}
-    cmds_b = {m.strip() for m in pat.findall(b)}
+    cmds_a = documented_entries(a)
+    cmds_b = documented_entries(b)
     missing = cmds_a - cmds_b
     total_src += len(cmds_a)
     total_dst += len(cmds_b)

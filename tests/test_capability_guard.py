@@ -125,8 +125,43 @@ def _sha(path):
     return h.hexdigest()
 
 
+# frontmatter contract fields v1.1.0 intentionally re-pointed at the thin
+# adapter (version 1.1.0, entry_point "python run.py", python_requires 3.10)
+_CONTRACT_FIELDS = (b"version:", b"entry_point:", b"python_requires:")
+
+
+def _mask_contract_lines(data: bytes) -> bytes:
+    """Blank out the three contract lines inside the frontmatter block.
+
+    The SKILL.md body must stay byte-identical to v1.0.0 (zero amputation),
+    but its frontmatter contract fields were updated to match the v1.1.0
+    manifests; masking exactly those lines keeps the guard proving that the
+    *content* is untouched while allowing the contract refresh.
+    """
+    out, in_fm = [], False
+    for line in data.splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped == b"---":
+            in_fm = not in_fm
+            out.append(line)
+            continue
+        if in_fm and any(stripped.startswith(f) for f in _CONTRACT_FIELDS):
+            eol = b"\r\n" if line.endswith(b"\r\n") else b"\n"
+            out.append(b"<contract-field>" + eol)
+            continue
+        out.append(line)
+    return b"".join(out)
+
+
 def test_migrated_files_byte_identical_to_v1_source():
-    """Zero-amputation proof: every carried-over file matches the source."""
+    """Zero-amputation proof: every carried-over file matches the source.
+
+    SKILL.md bodies must stay byte-identical to v1.0.0; only the three
+    frontmatter contract fields (version / entry_point / python_requires)
+    were re-pointed at the v1.1.0 thin adapter, and those lines are masked
+    before hashing (see `_mask_contract_lines`). The frontmatter-to-manifest
+    agreement itself is enforced in `tests/test_plugin_manifests.py`.
+    """
     source_root = SKILLS_DIR.parent.parent / "chelate-shell-main" / "skills"
     if not source_root.is_dir():
         pytest.skip("v1.0.0 source tree not present on this machine")
@@ -157,6 +192,16 @@ def test_migrated_files_byte_identical_to_v1_source():
                     mismatched.append(f"{skill}/{rel_key} (not in source)")
                     continue
                 checked += 1
+                if rel_key == "SKILL.md":
+                    # body must be byte-identical; only the three contract
+                    # fields may differ (masked before comparing)
+                    dst_bytes = open(os.path.join(root, f), "rb").read()
+                    if _mask_contract_lines(sp.read_bytes()) != \
+                            _mask_contract_lines(dst_bytes):
+                        mismatched.append(
+                            f"{skill}/{rel_key} (body differs beyond the "
+                            f"contract fields)")
+                    continue
                 if _sha(sp) != _sha(os.path.join(root, f)):
                     mismatched.append(f"{skill}/{rel_key} (content differs)")
     assert checked > 200, f"only {checked} files compared — walk failed?"

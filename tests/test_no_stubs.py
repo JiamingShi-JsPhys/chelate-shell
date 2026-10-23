@@ -184,10 +184,14 @@ def test_every_adapter_exposes_root_and_action():
             f"{skill} adapter does not expose the uniform --root/--action contract"
 
 
-def test_adapters_accept_generic_stage_actions():
+def test_adapters_accept_generic_stage_actions(tmp_path):
     """The Router passes generic stage actions (gate/ingest/process/
     workspace); every adapter must map them onto its default action
-    instead of failing with 'unknown action'."""
+    instead of failing with 'unknown action'.
+
+    Runs against a tmp_path workspace: --root "." would make all 14 real
+    adapters write their gate files into the repository root.
+    """
     import subprocess
     import sys
     from conftest import STAGE_OF
@@ -197,7 +201,7 @@ def test_adapters_accept_generic_stage_actions():
         action = generic[STAGE_OF[skill]]
         proc = subprocess.run(
             [sys.executable, str(SKILLS_DIR / skill / "run.py"),
-             "--root", ".", "--action", action],
+             "--root", str(tmp_path), "--action", action],
             cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=120)
         out = proc.stdout + proc.stderr
         assert "unknown action" not in out, \

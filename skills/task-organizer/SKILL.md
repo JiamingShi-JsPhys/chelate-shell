@@ -4,9 +4,9 @@ description: The mandatory entry point for complex tasks. Initializes the standa
 metadata:
   author: Jiaming Shi
   license: MIT
-  version: 1.0.1
-  entry_point: python -m scripts.run
-  python_requires: '>=3.9'
+  version: 1.1.0
+  entry_point: python run.py
+  python_requires: '>=3.10'
 ---
 
 

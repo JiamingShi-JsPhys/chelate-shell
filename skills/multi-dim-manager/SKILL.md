@@ -4,9 +4,9 @@ description: State manager for multi-round parameter sweeps. Handles Cartesian e
 metadata:
   author: Jiaming Shi
   license: MIT
-  version: 1.0.1
-  entry_point: python -m scripts.run
-  python_requires: '>=3.9'
+  version: 1.1.0
+  entry_point: python run.py
+  python_requires: '>=3.10'
 ---
 
 

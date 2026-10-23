@@ -4,9 +4,9 @@ description: Experimental tool for extracting motion data from physics videos. U
 metadata:
   author: Jiaming Shi
   license: MIT
-  version: 0.0.0-beta
-  entry_point: python -m scripts.tracker
-  python_requires: '>=3.9'
+  version: 1.1.0
+  entry_point: python run.py
+  python_requires: '>=3.10'
 ---
 
 

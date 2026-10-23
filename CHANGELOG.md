@@ -39,10 +39,11 @@ All notable changes to Chelate Shell are documented in this file.
   `--skill-arg` flags are appended after, so they win under argparse's
   last-value rule). A file whose extension declares no manifest type is
   reported as an `[INPUT]` warning and wires to nothing.
-- 141 automated tests under `tests/` (contracts, registry, router, cli,
+- 156 automated tests under `tests/` (contracts, registry, router, cli,
   capability guard, formula-validator, video-tracker, new skills,
   thin-adapter and no-stub guards, unified debug layer, input-path
-  resolution, `--inputs` auto-wiring).
+  resolution, `--inputs` auto-wiring, plugin-manifest contract,
+  SKILL.md frontmatter/manifest agreement).
 - Unified debug layer: `lib/chelate_core/debug.py` exposes one switch with two
   shapes — `--debug` on every `cli.py` subcommand and `core/router.py`, or the
   `CHELATE_DEBUG=1` environment variable (inherited by skill subprocesses, so
@@ -51,6 +52,19 @@ All notable changes to Chelate Shell are documented in this file.
   Coverage: registry scan, resolved command and cwd, dependency verdict,
   return code / duration / stderr tail per skill, legacy action → module
   mapping, and the emitted gate path with its status.
+- Plugin manifests for four host platforms, repaired against the v1.0.0
+  rejection: `.claude-plugin/`, `.codebuddy-plugin/`, `.codex-plugin/` each
+  ship `plugin.json` (+ `marketplace.json`), and `.dsh-plugin/` ships the CJS
+  entry (`index.js` exporting `name` + `apply(ctx)`). Two contract
+  violations were fixed: `author` is now an object (`{"name": ...}`) instead
+  of a bare string, and the invalid string `skills` field is omitted so the
+  host auto-scans the flat `skills/` directory; the `icon` field was removed
+  from `plugin.json` (the shared `assets/icon.png` stays in the repo). Root
+  `package.json`, `index.js` and `cordis.patch.yml` complete the dsh
+  packaging, and `ORCHESTRATOR.md` documents the v1.1.0 routing contract
+  (14 skills, 4 stages). `tests/test_plugin_manifests.py` locks the shape:
+  version sync across all manifests, author-object, no string `skills`, no
+  `icon`, marketplace entries, and the CJS entry surface.
 
 ### Added — `lib/chelate_core/` (programs live outside the skills)
 - `adapter.py`: thin-adapter toolkit — common argparse, gate emission,
@@ -102,6 +116,22 @@ All notable changes to Chelate Shell are documented in this file.
   amputation.
 
 ### Fixed
+- The nine legacy `SKILL.md` frontmatters shipped stale contract fields:
+  versions like `1.0.0-beta` / `0.0.0-beta` (contradicting the manifests'
+  `1.1.0`), `entry_point` values pointing at CLIs the Router never calls
+  (`python -m src.cli`, `python -m scripts.tracker` — capstone-labmate
+  declared `src.cli` although it has no `src/` package at all), and
+  `python_requires: '>=3.9'` against the repo-wide 3.10+ floor. All three
+  fields now agree with the manifests and README; the byte-identity guard
+  masks exactly those frontmatter lines so the SKILL.md *bodies* stay
+  provably untouched, and `tests/test_plugin_manifests.py` fails on any
+  future drift.
+- `docs/audit_feature_parity.py`: the entrypoint audit compared raw command
+  strings including the frontmatter, so re-pointing `entry_point` at the
+  thin adapter read as three "missing entrypoints". It now extracts only
+  body-documented commands and normalizes `python -m a.b` to `python a/b.py`
+  before diffing; the frontmatter contract is covered by the guard test
+  above.
 - Legacy usage errors no longer hard-block the pipeline: when a migrated
   legacy CLI exits non-zero with an argparse usage error on stderr (e.g.
   `conflict-detector` invoked without its required `--config`), the adapter
