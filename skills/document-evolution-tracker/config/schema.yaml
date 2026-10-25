@@ -1,0 +1,8 @@
+# Documented shape of the document-evolution-tracker config (YAML or JSON).
+# The authoritative loader is src/config.py.
+version: "1.0.0"
+tracking_id: string
+versions_dir: path                       # directory holding the version family
+version_naming: enum[sequential, timestamp]
+granularity: enum[line, paragraph, sentence]   # default paragraph
+out_dir: string                         # default ./evolution

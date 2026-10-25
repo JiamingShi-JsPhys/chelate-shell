@@ -1,0 +1,21 @@
+{
+  "name": "video-tracker",
+  "version": "1.1.1",
+  "stage": "ingest",
+  "input_types": [
+    "video"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json",
+    "csv",
+    "png"
+  ],
+  "dependencies": [
+    "numpy",
+    "cv2"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "OpenCV coordinate extraction (CSRT/Template trackers), FFT spectrum analysis, and physics consistency probes (teleport/smoothness, conservation, equation-of-motion)."
+}

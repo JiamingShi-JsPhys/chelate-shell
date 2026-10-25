@@ -1,0 +1,15 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "chelate-shell-marketplace",
+  "description": "Marketplace for Chelate Shell agent skills.",
+  "owner": {
+    "name": "JiamingShi-JsPhys"
+  },
+  "plugins": [
+    {
+      "name": "chelate-shell",
+      "source": "./",
+      "description": "A deterministic orchestrator for local agent skills."
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# bibtex-normalizer defaults (read by run.py via lib/chelate_core.adapter.load_config)
+# Empty outdir = <root>/process/bibtex.
+outdir: ""

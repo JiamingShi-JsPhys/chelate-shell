@@ -1,0 +1,5 @@
+# multi-dim-manager — optional dependencies
+#
+# JSON configs work with the Python standard library alone.
+# Install this only if you use a YAML config (config.example.yaml):
+pyyaml
