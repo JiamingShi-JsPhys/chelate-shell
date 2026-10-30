@@ -1,0 +1,21 @@
+{
+  "name": "conflict-detector",
+  "version": "1.1.3",
+  "stage": "gates",
+  "input_types": [
+    "markdown",
+    "csv",
+    "config",
+    "documents"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json",
+    "csv"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Cross-document contradiction engine: pluggable comparison rules plus regex number extraction for hard cross-checks between prose and data tables; emits structured JSON/CSV conflict reports."
+}

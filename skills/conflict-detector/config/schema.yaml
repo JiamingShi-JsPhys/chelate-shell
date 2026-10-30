@@ -1,0 +1,11 @@
+# Documented shape of the conflict-detector config (YAML or JSON).
+# The authoritative loader is src/config.py.
+version: "1.0.0"
+run_id: string
+documents:
+  - id: string
+    kind: enum[path, text, json]
+    value: string | list[{...}]   # path string, inline text, or inline JSON array
+levels: [entity, clause, argument]   # subset, default all three
+numeric_tolerance: number             # default 1e-06
+output_dir: string                    # default ./conflicts

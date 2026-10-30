@@ -1,0 +1,20 @@
+# document-evolution-tracker
+
+cff-version: "1.2.0"
+title: "document-evolution-tracker: document version alignment and concept lineage"
+type: software
+version: 1.0.0
+license: MIT
+date-created: 2026-10-15
+authors:
+  - family-names: "Shi"
+    given-names: "Jiaming"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/JiamingShi-JsPhys/agent-skills"
+description: "Tracks how a document evolves across versions: paragraph-level diffs and a concept-lineage matrix (introduced / retained / modified / dropped). Pure standard library; PyYAML optional for YAML configs. Emits Markdown + JSON timelines."
+keywords:
+  - document-versioning
+  - concept-lineage
+  - diff
+  - timeline
+  - version-alignment

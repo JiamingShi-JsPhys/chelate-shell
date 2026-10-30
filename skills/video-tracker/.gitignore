@@ -1,0 +1,19 @@
+# Runtime outputs produced by the skill
+output/
+__pycache__/
+*.pyc
+
+# Test / coverage artifacts
+.coverage
+.pytest_cache/
+*.log
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+
+# Local reference clones (download-only, never committed)
+Js_video-tracker_refs/
+
+# Upstream reference material (kept out of the shipped skill)
+references/

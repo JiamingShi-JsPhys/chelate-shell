@@ -1,0 +1,14 @@
+# video-tracker — dependencies
+#
+# Core (required for the video steps):
+numpy>=1.24
+opencv-contrib-python-headless>=4.5
+
+# Optional — PNG spectrum / trajectory figures:
+matplotlib>=3.5
+
+# Optional — YAML config support (JSON configs need no extra dependency):
+pyyaml
+
+# Test runner:
+pytest

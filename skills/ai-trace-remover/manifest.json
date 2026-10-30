@@ -1,0 +1,19 @@
+{
+  "name": "ai-trace-remover",
+  "version": "1.1.3",
+  "stage": "processors",
+  "input_types": [
+    "markdown",
+    "plain_text",
+    "text"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "AI-likeness audit: removes template sentences and scores manuscripts 0-100 with a clean-room English lexicon plus the full Chinese lexicon and scoring rubric."
+}
