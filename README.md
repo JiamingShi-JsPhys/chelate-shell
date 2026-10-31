@@ -139,7 +139,9 @@ Keep the cloned repository somewhere the agent can reach: every rule file names 
 
 ### Method 3: let your AI install it
 
-> "Please visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell` and clone it, then run `python install.py --project . --global`. If your host has a plugin system, install it as a single plugin instead; the script covers the hosts that read rule files."
+```bash
+"Please visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell` and clone it, then run `python install.py --project . --global`. If your host has a plugin system, install it as a single plugin instead; the script covers the hosts that read rule files."
+```
 
 > **Warning**: when an AI performs the installation it will very likely scatter the individual skills from `skills/` flat into the platform's global skill directory. That breaks Chelate Shell's microkernel auto-routing architecture and degrades it into 18 loose skills. Use Method 1 if you need the full plugin orchestration.
 
