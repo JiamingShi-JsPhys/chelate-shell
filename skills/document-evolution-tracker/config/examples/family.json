@@ -1,0 +1,8 @@
+{
+  "version": "1.2.0",
+  "tracking_id": "family",
+  "versions_dir": "./config/examples/family",
+  "version_naming": "sequential",
+  "granularity": "paragraph",
+  "out_dir": "./evolution"
+}

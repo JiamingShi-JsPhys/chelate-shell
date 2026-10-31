@@ -1,0 +1,8 @@
+{
+  "name": "chelate-shell",
+  "version": "1.2.0",
+  "description": "A deterministic orchestrator that routes tasks to local skills across a strict 4-stage gated pipeline.",
+  "author": {
+    "name": "Jiaming Shi"
+  }
+}

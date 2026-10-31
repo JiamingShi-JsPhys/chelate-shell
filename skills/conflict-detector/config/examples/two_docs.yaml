@@ -1,0 +1,23 @@
+version: 1.2.0
+run_id: two_docs
+
+documents:
+  - id: alpha
+    kind: text
+    value: |
+      subject: X
+      speed: 10
+      active: true
+  - id: beta
+    kind: text
+    value: |
+      subject: X
+      speed: 20
+      active: false
+
+levels:
+  - entity
+  - clause
+
+numeric_tolerance: 1e-06
+output_dir: ./conflicts

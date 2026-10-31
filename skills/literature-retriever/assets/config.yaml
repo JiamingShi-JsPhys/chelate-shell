@@ -1,0 +1,3 @@
+# literature-retriever defaults (read by run.py via lib/chelate_core.adapter.load_config)
+max_results: 10        # papers per query (arXiv page size caps at 100)
+sort_by: relevance     # relevance | lastUpdatedDate | submittedDate

@@ -1,0 +1,94 @@
+# video-tracker — experiment configuration (example)
+#
+# A JSON config is also accepted and needs no extra dependency. YAML
+# requires `pip install pyyaml`. OpenCV is required for the video steps.
+#
+# Copy this file and adapt to your experiment. Declare ROIs in pixels in
+# the video's first frame — the skill never guesses where the target is.
+
+videos:
+  # One or more video paths (.mp4 / .avi / .mov only).
+  - ./videos/pendulum.mp4
+  # - ./videos/ballistic.avi
+
+# FPS of the video. The container FPS is NOT trusted for timing; declare it
+# here (measure it once with a stopwatch or `ffprobe`). If omitted, the
+# container value is used and a warning is emitted.
+fps: 24.0
+
+# Optional event window: track only frames [start, end] (inclusive).
+# For long or multi-event videos the interesting motion usually occupies a
+# few-seconds sub-window, so limiting the sweep makes the run ~100x faster
+# and keeps the FFT on the part that matters. Omit (or set to a range
+# covering the whole file) to track every frame.
+#frame_range: [0, 599]
+
+# Optional physical scale: how many centimetres one pixel represents in
+# the video's reference frame. When set, the CSV gains x_cm / y_cm columns
+# and the FFT can be computed in cm units. Omit for pixel-only output.
+scale_cm_per_px: 0.05
+
+# One entry per object to track. The ROI is the bounding box (x, y, w, h)
+# of the target in the FIRST frame, in pixels. Use a quick overlay to read
+# the numbers: draw a rectangle around the target in the first frame and
+# record the coordinates.
+objects:
+  - name: ball
+    x: 412
+    y: 208
+    w: 38
+    h: 41
+
+# CSRT tracker tuning. Used ONLY by the `csrt` backend; the `template`
+# backend ignores these. All fields are optional; omitted fields keep the
+# OpenCV stock defaults. Tune psr_threshold / admm_iterations /
+# template_size for occlusion-prone or noisy setups.
+params:
+  psr_threshold: 0.05      # raise for occlusion-prone setups
+  admm_iterations: 4
+  template_size: 200
+  padding: 3.0
+  scale_lr: 0.025
+  window_function: hann
+
+# Template-matching re-acquire (Thomas-Kr scheme). When the tracker
+# reports a loss, a normalized template match runs on the next frame; if
+# the score is >= threshold, the ROI is repositioned and the tracker is
+# re-initialized. Set use_template_reinit: false to disable.
+template_match_threshold: 0.85
+use_template_reinit: true
+
+# --- Tracking backend & robustness knobs -------------------------------
+# tracker_type: auto | csrt | template
+#   auto     : CSRT when available (OpenCV 4.x), else pure template matching
+#   csrt     : force CSRT (errors on OpenCV 5.x where it was removed)
+#   template : pure cv2.matchTemplate — zero external weights, works on every
+#              OpenCV build including 5.x (the default fallback)
+tracker_type: auto
+
+# Sub-pixel centroid refinement: a local template match + parabolic peak
+# interpolation nudges each reported centre below integer precision.
+subpixel: true
+
+# Optical-flow fallback: when the tracker loses the target and template
+# re-acquire also fails, a dense Farneback flow estimate advances the last
+# known centre instead of freezing it.
+use_optical_flow_fallback: true
+
+# Performance / robustness: auto-downscale frames whose long edge exceeds
+# max_dim (positions are scaled back to original pixels). Omit to skip.
+# max_dim: 480
+
+# Performance: record only every Nth processed frame (keeps continuity,
+# cuts output size). Set to 1 to record every frame.
+# frame_step: 1
+
+# FFT options. max_freq limits the one-sided spectrum to [0, max_freq] Hz
+# (omit for the full Nyquist range). top_peaks is how many resonances to
+# report, ranked by amplitude.
+fft_max_freq: 10.0
+fft_top_peaks: 5
+
+# Where all outputs (CSV / JSON / PNG / report) are written. Never touches
+# the raw video.
+output: ./output

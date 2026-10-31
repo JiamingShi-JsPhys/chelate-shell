@@ -1,0 +1,20 @@
+# multi-dim-manager
+
+cff-version: "1.2.0"
+title: "multi-dim-manager: multi-dimensional experiment state manager"
+type: software
+version: 1.2.0
+license: MIT
+date-created: 2026-10-14
+authors:
+  - family-names: "Shi"
+    given-names: "Jiaming"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/JiamingShi-JsPhys/agent-skills"
+description: "Expands a parameter space into independent rounds, runs each round through a unified plugin contract, takes content-addressed snapshots, appends every round to an immutable JSONL audit log, and supports non-destructive rollback."
+keywords:
+  - experiment-state
+  - parameter-scan
+  - audit-trail
+  - rollback
+  - reproducibility

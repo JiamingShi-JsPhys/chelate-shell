@@ -1,0 +1,19 @@
+# JSON-Schema-like description of the longitudinal-analysis config.
+# (Documented only; the authoritative loader is src/config.py.)
+version: "1.2.0"
+analysis_id: string
+data:
+  input: path
+  id_column: string
+  time_column: string
+  condition_columns: [string]
+steps:
+  - name: string
+    type: enum[descriptive, anova, lmm, mediation, sensitivity]
+    config: object
+    enabled: bool
+outputs:
+  tables: path
+  figures: path
+  logs: path
+seed: int

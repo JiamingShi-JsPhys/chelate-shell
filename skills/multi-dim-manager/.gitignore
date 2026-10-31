@@ -1,0 +1,13 @@
+# Runtime outputs produced by the experiment loop
+output/
+work/
+
+# Test / coverage artifacts
+.coverage
+.pytest_cache/
+__pycache__/
+*.log
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db

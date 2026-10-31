@@ -1,0 +1,18 @@
+{
+  "name": "latex-exporter",
+  "version": "1.2.0",
+  "stage": "processors",
+  "input_types": [
+    "markdown",
+    "plain_text"
+  ],
+  "output_type": "latex",
+  "output_types": [
+    "latex",
+    "tex"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "scripts/run.py",
+  "description": "LaTeX export processor (no heavy dependency, no pandoc): reads the Markdown reports under process/ and the graphics under process/figures/, then merges them into a single compilable .tex file under process/latex/. Pure standard-library Markdown subset converter."
+}

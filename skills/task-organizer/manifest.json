@@ -1,0 +1,19 @@
+{
+  "name": "task-organizer",
+  "version": "1.2.0",
+  "stage": "workspace",
+  "input_types": [
+    "workspace",
+    "path",
+    "filesystem"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json",
+    "markdown"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Workspace infrastructure: init the four-zone layout, organize files into place (C1-C8 validation, dedupe, snapshots, undo/redo), and broadcast a read-only _broadcast/INDEX.md context-compression index."
+}

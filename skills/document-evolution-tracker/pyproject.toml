@@ -1,0 +1,17 @@
+[project]
+name = "document-evolution-tracker"
+version = "1.2.0"
+description = "Document evolution tracker for version alignment and concept lineage."
+authors = [{ name = "Jiaming Shi" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+det = "src.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

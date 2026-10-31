@@ -1,0 +1,23 @@
+{
+  "name": "figure-generator",
+  "version": "1.2.0",
+  "stage": "processors",
+  "input_types": [
+    "csv",
+    "dataset",
+    "json"
+  ],
+  "output_type": "figure",
+  "output_types": [
+    "figure",
+    "png"
+  ],
+  "dependencies": [
+    "matplotlib",
+    "seaborn",
+    "pandas"
+  ],
+  "sandbox_required": true,
+  "entrypoint": "scripts/run.py",
+  "description": "Heavy figure-generation processor: publishes statistical charts (matplotlib/seaborn) from structured data. Runs in an isolated sandbox process with a 120-second circuit-breaker."
+}

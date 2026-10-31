@@ -1,0 +1,13 @@
+# Test-only / core runtime dependencies.
+PyYAML>=6.0
+pandas>=2.0
+
+# Optional for the manipulation-check step (statsmodels OLS + Type-II ANOVA).
+statsmodels>=0.14
+scipy>=1.10
+numpy>=1.24
+
+# Test runner.
+pytest>=8.0
+
+# External (not Python): R >= 4.0 with packages lme4, lavaan, emmeans, jsonlite.

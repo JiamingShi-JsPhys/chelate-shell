@@ -1,0 +1,11 @@
+{
+  "_comment": "Merge the entry below into ~/# local configmcp.json. Replace <python> with an interpreter that has sympy, numpy and scipy installed; on Windows use an absolute path.",
+  "mcpServers": {
+    "formula-validator": {
+      "command": "<python>",
+      "args": [
+        "<absolute-path-to>/formula-validator/mcp_server/server.py"
+      ]
+    }
+  }
+}
