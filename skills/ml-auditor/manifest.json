@@ -1,0 +1,20 @@
+{
+  "name": "ml-auditor",
+  "version": "1.2.0",
+  "stage": "gates",
+  "input_types": [
+    "csv",
+    "dataset"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result"
+  ],
+  "dependencies": [
+    "scikit-learn",
+    "pandas"
+  ],
+  "sandbox_required": true,
+  "entrypoint": "scripts/run.py",
+  "description": "ML data-audit gate: detects data leakage (feature==label, deterministic mapping, near-perfect correlation) and label errors (cross-validated label confidence). scikit-learn + pandas are the hard deps; cleanlab is an optional second opinion. Degrades to UNVERIFIED when the hard deps are absent. Runs in an isolated sandbox with a 120-second circuit-breaker."
+}

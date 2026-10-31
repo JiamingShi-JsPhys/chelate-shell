@@ -1,0 +1,17 @@
+{
+  "name": "multi-dim-manager",
+  "version": "1.2.0",
+  "stage": "workspace",
+  "input_types": [
+    "workspace",
+    "config"
+  ],
+  "output_type": "json",
+  "output_types": [
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Parameter-space expansion for multi-round sweeps with SHA-256 file snapshots, hash audit logs, and safe rollback to any past round."
+}

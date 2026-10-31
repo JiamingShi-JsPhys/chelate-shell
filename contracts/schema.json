@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chelate Shell skill manifest",
+  "description": "Metadata contract for skills/<skill>/manifest.json. The physical tree is flat (no namespaces/ nesting); all logical hierarchy lives in these fields.",
+  "type": "object",
+  "required": ["name", "version", "stage", "input_types", "output_type", "entrypoint", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique skill id; must equal the directory name under skills/."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the skill, e.g. 1.2.0."
+    },
+    "stage": {
+      "type": "string",
+      "enum": ["workspace", "ingest", "gates", "processors"],
+      "description": "Pipeline stage: workspace (infrastructure), ingest (extraction), gates (quality gates), processors (post-processing)."
+    },
+    "input_types": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Input kinds this skill accepts, e.g. [\"pdf\", \"latex_string\", \"csv\"]. The router matches user inputs against this list."
+    },
+    "output_type": {
+      "type": "string",
+      "description": "Primary output kind, e.g. gate_result, json, markdown."
+    },
+    "output_types": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Full set of output kinds this skill can emit; output_type is the primary member. Used by the router for multi-output routing."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Third-party import names required at runtime; missing ones degrade the skill to UNVERIFIED."
+    },
+    "sandbox_required": {
+      "type": "boolean",
+      "description": "True when the skill must run inside an isolated environment (heavy or unsafe dependencies). core/sandbox.py resolves this."
+    },
+    "entrypoint": {
+      "type": "string",
+      "description": "Adapter script relative to the skill root; must be run.py in v1.1.0."
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line human/AI-readable summary of the skill."
+    }
+  }
+}

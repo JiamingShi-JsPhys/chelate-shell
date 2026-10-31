@@ -1,0 +1,36 @@
+{
+  "name": "capstone-labmate",
+  "version": "1.2.0",
+  "status": "beta",
+  "description": "PASCO Capstone 教学实验伴侣（Agent-Native 第三方互操作工具）。两阶段流程：(1) 课前预制——读取实验指导书 PDF/docx，自动生成满配 .cap 模板（采样率/数据列/公式/图表/坐标轴全预置，并按校验清单逐项核对）；(2) 课后报告——读取正式实验保存的最终 .cap，本地降采样 + CSV 导出，宿主 LLM 按模板生成忠实于数据、图文并茂、逐条覆盖手册要求的实验报告草稿（含随机误差语料库与强制学术诚信水印）。AI 不参与实验采集阶段；不内置任何 API Key；全部数据处理本地完成。",
+  "author": "Jiaming Shi",
+  "license": "MIT",
+  "entry": "scripts/preconfigure_cap.py",
+  "platforms": ["workbuddy", "claude", "codex", "dsh"],
+  "dependencies": {
+    "python": ">=3.9",
+    "pip": ["numpy>=1.20", "matplotlib>=3.4", "pypdf>=4.0 (optional, PDF input)"]
+  },
+  "triggers": [
+    "处理PASCO数据",
+    "生成实验模板",
+    "PASCO预配置",
+    "帮我生成 PASCO 预配置模板",
+    "帮我处理这组实验数据并生成图表",
+    "生成实验报告",
+    "把 .cap 转成分析草稿"
+  ],
+  "stages": {
+    "A": {"name": "pre-lab preconfigure", "script": "scripts/preconfigure_cap.py", "interactive": true, "note": "读手册 -> 生成满配 .cap -> 逐项校验清单"},
+    "B": {"name": "in-lab", "script": null, "interactive": false, "note": "纯人工采集，AI 隔离"},
+    "C": {"name": "post-lab extract", "script": "scripts/process_cap.py", "interactive": true, "note": "降采样 JSON + PNG + CSV 导出（Excel 筛查用）"},
+    "D": {"name": "report draft", "script": "scripts/draft_report.py", "interactive": false, "note": "宿主 LLM 按 templates/lab_report_template.md 生成报告草稿"}
+  },
+  "safety": {
+    "R-01": "互操作性工具，MIT 开源，非商用；.cap 解析为净室实现，未反编译 Capstone 二进制",
+    "R-02": "教学辅助口径；随机误差变量池；草稿末尾强制学术诚信水印；AI 不参与实验采集",
+    "R-03": "全本地解析；Token 防火墙（只传降采样 JSON 给 LLM）；不内置作者 API Key",
+    "R-04": "matplotlib/pypdf 可选，缺失降级；失败抛明确诊断",
+    "R-05": "报告数据保真：报告中每个数值必须可溯源到 .cap/导出 CSV，禁止臆造；未观测项须标注并说明筛查方法"
+  }
+}

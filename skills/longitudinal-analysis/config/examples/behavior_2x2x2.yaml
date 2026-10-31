@@ -1,0 +1,47 @@
+version: 1.2.0
+analysis_id: behavior_2x2x2
+
+data:
+  input: ./data/raw.csv
+  id_column: subject_id
+  time_column: session
+  condition_columns: [default, info, cancel]
+
+steps:
+  - name: descriptive
+    type: descriptive
+    config:
+      group_by: [default, info, cancel, session]
+      dv: [pain, willingness]
+
+  - name: manipulation_check
+    type: anova
+    config:
+      dv: manipulation_score
+      between: [default, info, cancel]
+
+  - name: lmm
+    type: lmm
+    config:
+      formula: "willingness ~ default * info * cancel * session + (1 + session | subject_id)"
+      reml: true
+
+  - name: lagged_mediation
+    type: mediation
+    config:
+      x: pain
+      m: pain
+      y: willingness
+      controls: [willingness, subject_mean]
+
+  - name: sensitivity
+    type: sensitivity
+    config:
+      vary: [random_effects, covariance_structure]
+
+outputs:
+  tables: ./results/tables/
+  figures: ./results/figures/
+  logs: ./results/logs/
+
+seed: 42

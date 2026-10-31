@@ -1,0 +1,20 @@
+{
+  "name": "quantitative-validator",
+  "version": "1.2.0",
+  "stage": "gates",
+  "input_types": [
+    "formula",
+    "chemical_equation",
+    "plain_text"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result"
+  ],
+  "dependencies": [
+    "rdkit"
+  ],
+  "sandbox_required": true,
+  "entrypoint": "scripts/run.py",
+  "description": "Atom-conservation gate: parses a molecular formula or chemical equation and verifies the left/right element tallies match (rdkit periodic-table cross-check). Degrades to UNVERIFIED when rdkit is absent. Runs in an isolated sandbox with a 120-second circuit-breaker."
+}

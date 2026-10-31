@@ -1,0 +1,5 @@
+# fulltext-extractor defaults (read by run.py via lib/chelate_core.adapter.load_config)
+# Empty pages = extract every page. Page spec syntax: "1-5,8" (1-based, inclusive).
+pages: ""
+# Default output directory under the workspace (empty = <root>/process/fulltext).
+outdir: ""

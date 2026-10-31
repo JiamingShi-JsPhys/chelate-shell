@@ -1,0 +1,21 @@
+{
+  "name": "longitudinal-analysis",
+  "version": "1.2.0",
+  "stage": "gates",
+  "input_types": [
+    "csv",
+    "config",
+    "panel_data"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [
+    "pandas"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Longitudinal/panel statistics: time-series OLS plus R-backed LMM (lme4), mediation (lavaan) and sensitivity analysis; degrades to pure-Python steps when Rscript is absent."
+}

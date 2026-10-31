@@ -1,0 +1,175 @@
+Chelate Shell — Third-Party Licences
+=======================================
+
+Chelate Shell's own source code is released under the MIT License (see the
+top-level LICENSE file, Copyright (c) 2026 Jiaming Shi).
+
+This project is composed of a thin orchestrator plus 18 skill adapters (none of
+which remain skeletons in v1.2.0). The
+adapters themselves are MIT, but several of them invoke third-party Python
+libraries. This document lists every third-party library the release
+references, its actual licence class, and its copyright header, so that the
+license compliance chain is auditable.
+
+Every third-party dependency listed here is a *permissive* licence
+(MIT / BSD-family / Apache-2.0). No component in this release links a
+copyleft library (GPL, AGPL, or any other strong-copyleft licence). The
+previous AGPL component (PyMuPDF) was removed in v1.1.1.
+
+Licence classes involved
+------------------------
+  MIT            — permissive
+  BSD-2-Clause   — permissive
+  BSD-3-Clause   — permissive
+  Apache-2.0     — permissive (grant of patent rights; compatible with MIT)
+
+Third-party libraries and their licences
+----------------------------------------
+
+  Library          Version   Licence class   Used by skill(s)
+  ---------------  --------  -------------   --------------------------------
+  sympy            1.14.0    BSD-3-Clause    formula-validator
+  numpy            2.5.4     BSD-3-Clause    formula-validator, video-tracker
+  mpmath           1.3.0     BSD-2-Clause    formula-validator
+  scipy            1.17.0    BSD-3-Clause    formula-validator
+  Pint             0.26.2    BSD-2-Clause    formula-validator
+  bibtexparser     2.1.0     MIT             bibtex-normalizer
+  arxiv            4.0.1     MIT             literature-retriever
+  requests         2.32.5    Apache-2.0      reference-auditor
+  pandas           3.1.0     BSD-3-Clause    data-profiler, longitudinal-analysis, figure-generator
+  pypdf            6.21.2    BSD-3-Clause    fulltext-extractor (fallback backend)
+  pdfminer.six     20260107  MIT             fulltext-extractor (primary backend)
+  opencv-python    5.0.0.93  Apache-2.0      video-tracker
+  matplotlib       3.11.2    BSD-3-Clause    figure-generator
+  seaborn          0.13.2    BSD-3-Clause    figure-generator
+  rdkit            2026.09.1 BSD-3-Clause    quantitative-validator
+  scikit-learn     1.9.1     BSD-3-Clause    ml-auditor
+
+rdkit and scikit-learn are hard dependencies of their skills; both skills
+degrade to UNVERIFIED when the library is absent, so neither is bundled or
+vendored in this repository.
+
+Compliance note: permissive licences require only that the copyright and
+licence notices of each library be preserved with the distribution. The
+copyright headers for each library are reproduced below.
+
+------------------------------------------------------------------------------
+
+COPYRIGHT HEADERS
+-----------------
+
+sympy 1.14.0 (BSD-3-Clause)
+  Copyright (c) 2006-2026 SymPy developers.
+  All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met.
+
+numpy 2.4.1 (BSD-3-Clause)
+  Copyright (c) 2005-2025, NumPy Developers.
+  All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met.
+
+mpmath 1.3.0 (BSD-2-Clause)
+  Copyright (c) 2007-2026 by the mpmath authors (sage support).
+  All rights reserved.
+  (BSD two-clause; see the mpmath project for the full text.)
+
+scipy 1.17.0 (BSD-3-Clause)
+  Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
+  All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met.
+
+Pint 0.26.2 (BSD-2-Clause)
+  Copyright (c) 2012 by Hernan E. Grecco and contributors.
+  See AUTHORS for more details.
+  (BSD two-clause; see the Pint project for the full text.)
+
+bibtexparser 2.1.0 (MIT)
+  Copyright (c) 2021 Michael Weiss
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction.
+
+arxiv 4.0.1 (MIT)
+  Copyright (c) 2015 Lukas Schwab
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction.
+
+requests 2.32.5 (Apache-2.0)
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  Copyright (c) 2019 Kenneth Reitz and contributors.
+
+pandas 3.0.0 (BSD-3-Clause)
+  Copyright (c) 2008-2011, AQR Capital Management, LLC, Lambda Foundry, Inc.
+  and PyData Development Team. All rights reserved.
+  Copyright (c) 2011-2026, Open source contributors.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met.
+
+pypdf 6.21.2 (BSD-3-Clause)
+  Copyright (c) 2006-2008, Mathieu Fenniak
+  Some contributions copyright (c) 2007, Ashish Kulkarni <kulkarni.ashish@gmail.com>
+  Some contributions copyright (c) 2014, Steve Witham <switham_github@mac-guyver.com>
+  (plus subsequent pypdf contributors; BSD three-clause)
+
+pdfminer.six 20260107 (MIT)
+  Copyright (c) 2004-2016  Yusuke Shinyama <yusuke at shinyama dot jp>
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction.
+  (pdfminer.six is maintained under the MIT licence.)
+
+opencv-python 5.0.0.93 (Apache-2.0)
+  OpenCV is licensed under the Apache License, Version 2.0 (with an
+  additional permissive exception for the documentation).
+  Copyright (c) 2009-2025, By OpenCV Foundation
+  Copyright (c) 2000-2008, Intel Corporation
+  Copyright (c) 2009-2016, NVIDIA Corporation
+
+matplotlib 3.11.2 (BSD-3-Clause, Matplotlib Licence — BSD-compatible)
+  License agreement for matplotlib versions 1.3.0 and later.
+  Copyright (c) 2012- Matplotlib Development Team; All Rights Reserved.
+  Subject to the terms and conditions of this Licence Agreement, the Matplotlib
+  Development Team hereby grants a nonexclusive, royalty-free, world-wide
+  licence to reproduce, analyze, test, perform and/or display publicly, prepare
+  derivative works, distribute, and otherwise use matplotlib alone or in any
+  derivative version, provided the Matplotlib Development Team's Licence
+  Agreement and copyright notice are retained.
+
+seaborn 0.13.2 (BSD-3-Clause)
+  Copyright (c) 2012-2023, Michael L. Waskom
+  All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the conditions of the BSD
+  three-clause licence are met (retain the copyright notice, retain the
+  disclaimer, and do not use the names of the project or its contributors to
+  endorse or promote derived products without specific prior written
+  permission).
+
+rdkit 2026.09.1 (BSD-3-Clause)
+  Copyright (c) 2006-2026, Rational Discovery LLC, Greg Landrum, and
+  RDKit contributors. All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the conditions of the BSD
+  three-clause licence are met.
+
+scikit-learn 1.9.1 (BSD-3-Clause)
+  Copyright (c) 2007-2026 The scikit-learn developers.
+  All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the conditions of the BSD
+  three-clause licence are met.
+
+------------------------------------------------------------------------------
+
+Maintenance
+-----------
+If a new third-party library is added to any skill's manifest dependencies,
+append its entry to the table above and its copyright header to this section.
+The licence class of every entry must remain permissive; introducing a
+copyleft (GPL/AGPL) dependency requires a deliberate legal review and is not
+permitted by the project's pure-permissive distribution policy.
