@@ -140,7 +140,7 @@ python chelate-shell/install.py --project <项目> --only cursor,windsurf
 ### 方法三：让 AI 帮你装
 
 ```bash
-“请访问 GitHub 仓库 `https://github.com/JiamingShi-JsPhys/chelate-shell` 并克隆它，然后运行 `python install.py --project . --global`。如果你的宿主有插件系统，请改为把整套作为单一插件安装；该脚本覆盖的是读规则文件的那些宿主。”
+请访问 GitHub 仓库 `https://github.com/JiamingShi-JsPhys/chelate-shell` 并克隆它，然后运行 `python install.py --project . --global`。如果你的宿主有插件系统，请改为把整套作为单一插件安装；该脚本覆盖的是读规则文件的那些宿主。
 ```
 
 > **警告**：使用 AI 自动安装时，AI 有概率会将 `skills/` 目录下的独立技能直接打散，平铺复制到平台的全局技能目录中。这会导致 Chelate Shell 的“微内核自动调度架构”失效，退化为 18 个散装技能。如果你需要完整的插件调度功能，请使用方法一。
