@@ -1,6 +1,6 @@
 [project]
 name = "task-organizer"
-version = "1.2.0"
+version = "1.2.1"
 description = "Reorganizes a messy task folder into a standardized three-tier structure (material / process / results, plus _broadcast/ index) with snapshots, verification, and rollback."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

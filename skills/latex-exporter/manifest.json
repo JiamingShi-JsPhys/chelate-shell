@@ -1,6 +1,6 @@
 {
   "name": "latex-exporter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "stage": "processors",
   "input_types": [
     "markdown",

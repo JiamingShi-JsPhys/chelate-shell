@@ -2,7 +2,7 @@
 
 Atom-conservation gate for chemistry. Parses a molecular formula or a full
 chemical equation and verifies that the left- and right-hand sides carry
-identical element tallies. Part of **chelate-shell v1.2.0** (MIT).
+identical element tallies. Part of **chelate-shell v1.2.1** (MIT).
 
 ## Usage
 

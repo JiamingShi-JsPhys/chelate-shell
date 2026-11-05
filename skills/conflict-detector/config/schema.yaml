@@ -1,6 +1,6 @@
 # Documented shape of the conflict-detector config (YAML or JSON).
 # The authoritative loader is src/config.py.
-version: "1.2.0"
+version: "1.2.1"
 run_id: string
 documents:
   - id: string

@@ -7,7 +7,7 @@
 
 [English](README.md) · **简体中文**
 
-**版本：** 1.2.0 | **技能数：** 18
+**版本：** 1.2.1 | **技能数：** 18
 
 ---
 
@@ -50,7 +50,7 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 **Claude Code** —— 在会话内执行（v2.1.275+），先用 URL 添加市场，并锁定发布 tag：
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.0
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.1
 ```
 
 再安装它列出的条目：
@@ -62,7 +62,7 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 **Codex** —— 把 URL 注册为 Git 市场；`--ref` 锁定发布 tag，HTTPS 换成 SSH 或本地路径同样可用：
 
 ```bash
-codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.2.0
+codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.2.1
 ```
 
 **Codex** —— 从该市场安装插件：
@@ -74,13 +74,13 @@ codex plugin add chelate-shell@chelate-shell-marketplace
 **dsh（DeepSeek Harness）** —— 直接从同一个仓库 URL 安装进指定 profile：
 
 ```bash
-dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.2.0
+dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.2.1
 ```
 
 **CodeBuddy** —— 先把 URL 加为 Git 市场：
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.0
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.1
 ```
 
 再安装它列出的条目：
@@ -139,11 +139,11 @@ python chelate-shell/install.py --project <项目> --only cursor,windsurf
 
 ### 方法三：让 AI 帮你装
 
-> “请访问 GitHub 仓库 `https://github.com/JiamingShi-JsPhys/chelate-shell` 并克隆它，然后运行 `python install.py --project . --global`。如果你的宿主有插件系统，请改为把整套作为单一插件安装；该脚本覆盖的是读规则文件的那些宿主。”
+```bash
+请访问 GitHub 仓库 `https://github.com/JiamingShi-JsPhys/chelate-shell` 并克隆它，然后运行 `python install.py --project . --global`。如果你的宿主有插件系统，请改为把整套作为单一插件安装；该脚本覆盖的是读规则文件的那些宿主。
+```
 
 > **警告**：使用 AI 自动安装时，AI 有概率会将 `skills/` 目录下的独立技能直接打散，平铺复制到平台的全局技能目录中。这会导致 Chelate Shell 的“微内核自动调度架构”失效，退化为 18 个散装技能。如果你需要完整的插件调度功能，请使用方法一。
-
-**环境依赖提示**：微内核与多数技能仅依赖 Python 标准库。少数涉及数据处理/网络的技能需要第三方库（见 [docs/DEPENDENCIES_zh.md](docs/DEPENDENCIES_zh.md)）；缺失依赖时，系统会优雅降级为 `UNVERIFIED` 门禁并给出提示，不会直接崩溃。
 
 ## 快速上手
 
@@ -279,7 +279,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.2.0）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.2.1）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md

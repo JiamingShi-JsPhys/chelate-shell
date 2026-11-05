@@ -4,6 +4,13 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-11-01
+
+### Fixed
+- Version declaration bumped to 1.2.1 alongside `manifest.json`, the `SKILL.md`
+  frontmatter, `CITATION.cff` and the packaged version string. Part of the
+  repository-wide 1.2.1 bug-fix release; no capability change in this skill.
+
 ## [1.2.0] - 2026-10-25
 
 ### Changed

@@ -1,12 +1,12 @@
 ---
 name: conflict-detector
-version: 1.2.0
+version: 1.2.1
 description: >
   Cross-checks two or more documents, datasets or extracted fact tables for
   contradictions and reports each conflict with a severity. Numbers are
   compared with hard cross-checks, not fuzzy inference.
 metadata:
-  version: 1.2.0
+  version: 1.2.1
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

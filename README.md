@@ -7,7 +7,7 @@
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.2.0 | **Skills:** 18
+**Version:** 1.2.1 | **Skills:** 18
 
 ---
 
@@ -50,7 +50,7 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 **Claude Code** — from inside a session (v2.1.275+), add the marketplace from the URL first, pinned to the release tag:
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.0
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.1
 ```
 
 Then install the entry it lists:
@@ -62,7 +62,7 @@ Then install the entry it lists:
 **Codex** — register the URL as a Git marketplace; `--ref` pins the release tag, and an SSH URL or a local path works in place of the HTTPS one:
 
 ```bash
-codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.2.0
+codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.2.1
 ```
 
 **Codex** — install the plugin from that marketplace:
@@ -74,13 +74,13 @@ codex plugin add chelate-shell@chelate-shell-marketplace
 **dsh (DeepSeek Harness)** — installs from the same repository URL straight into a profile:
 
 ```bash
-dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.2.0
+dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.2.1
 ```
 
 **CodeBuddy** — add the URL as a Git marketplace:
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.0
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.2.1
 ```
 
 Then install the entry it lists:
@@ -139,11 +139,11 @@ Keep the cloned repository somewhere the agent can reach: every rule file names 
 
 ### Method 3: let your AI install it
 
-> "Please visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell` and clone it, then run `python install.py --project . --global`. If your host has a plugin system, install it as a single plugin instead; the script covers the hosts that read rule files."
+```bash
+Please visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell` and clone it, then run `python install.py --project . --global`. If your host has a plugin system, install it as a single plugin instead; the script covers the hosts that read rule files.
+```
 
 > **Warning**: when an AI performs the installation it will very likely scatter the individual skills from `skills/` flat into the platform's global skill directory. That breaks Chelate Shell's microkernel auto-routing architecture and degrades it into 18 loose skills. Use Method 1 if you need the full plugin orchestration.
-
-**Environment dependencies**: the microkernel and most skills depend only on the Python standard library. A few data/network-related skills need third-party libraries (see [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md)); a missing one degrades that skill to an `UNVERIFIED` gate with a hint instead of crashing.
 
 ## Quick start
 
@@ -279,7 +279,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.2.0)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.2.1)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md

@@ -1,13 +1,13 @@
 ---
 name: capstone-labmate
-version: 1.2.0
+version: 1.2.1
 description: >
   Parses PASCO Capstone `.cap` files into down-sampled CSV/JSON, pre-configures
   a Capstone run from a lab manual PDF, and drafts a watermarked lab report. It
   is an interoperability helper for teaching; it never fabricates data and
   never claims the experiment was performed by the tool.
 metadata:
-  version: 1.2.0
+  version: 1.2.1
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

@@ -30,7 +30,7 @@ def test_version_consistency() -> None:
 
     fm_text = SKILL_MD.read_text(encoding="utf-8")
     assert _frontmatter_value(fm_text, "version") == __version__
-    assert __version__ == "1.2.0"
+    assert __version__ == "1.2.1"
 
 
 def test_changelog_is_crlf() -> None:

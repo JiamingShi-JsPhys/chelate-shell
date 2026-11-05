@@ -2,6 +2,47 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.2.1] — 2026-11-01
+
+Bug-fix release: five defects found by running the suite end to end against a
+clean workspace.
+
+### Fixed
+- **Dependency probing mistook hyphenated packages for absent ones.**
+  `core/sandbox.py` and `lib/chelate_core/adapter.py` probed the manifest's
+  distribution name directly, so `find_spec("scikit-learn")` returned `None` on
+  a machine where the package was installed (the importable name is
+  `sklearn`). Every scikit-learn skill degraded to `UNVERIFIED` for no reason.
+  Both probes now translate the distribution name before looking it up.
+- **A missing `--input` hard-failed the pipeline.** `reference-auditor` raised
+  `Failed` when neither `--input` nor `--text` was supplied, so a pipeline run
+  that had not yet wired a draft terminated and locked `process/` for every
+  later stage. "Nothing was supplied" is a usage state, not a failed audit: it
+  now degrades to `UNVERIFIED`. A genuinely missing *file* still fails.
+- **The limit layer reported a false mismatch on identical sides.**
+  `skills/formula-validator/scripts/core/limits.py` compared the two sides'
+  limits by subtracting them, and two copies of the same infinity-carrying
+  expression subtract to `nan` (`nan.is_zero` is `None`), which fell through to
+  "the two sides tend to different expressions". `m*a = m*a` failed for that
+  reason. Identical limits now compare equal, and an indeterminate difference
+  is reported as inconclusive instead of a mismatch.
+- **An incomplete legacy invocation dumped the whole usage block.** The
+  adapter's argparse guard put `usage: ...` plus the error into the gate
+  reason; it now reports only the offending requirement
+  (`invocation incomplete: the following arguments are required: --config`).
+- **`security-guard` could not find a workspace-relative `--input`.** It
+  resolved the path against the repository cwd, so the router's auto-wired
+  `--input process/x.txt` was reported as a missing file. Resolution moved into
+  `core/security_shield.resolve_input`, which honours `--root` first like every
+  other adapter.
+
+### Changed
+- **Version bumped to 1.2.1** across all 18 skill manifests, `SKILL.md`
+  frontmatter, `pyproject.toml` / `CITATION.cff` / `config` schemas, the four
+  plugin manifests, `package.json`, `ORCHESTRATOR.md`, both READMEs and the
+  platform rule files. The Citation-File-Format spec version
+  (`cff-version: "1.2.0"`) is a format identifier and is unchanged.
+
 ## [1.2.0] — 2026-10-24
 
 ### Changed

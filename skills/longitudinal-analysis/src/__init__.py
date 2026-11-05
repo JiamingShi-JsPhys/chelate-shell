@@ -7,4 +7,4 @@ statistical steps; pure-stdlib modules handle config, orchestration and
 auditing so the package degrades gracefully when R is absent.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"

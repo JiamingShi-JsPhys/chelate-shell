@@ -1,12 +1,12 @@
 ---
 name: latex-exporter
-version: 1.2.0
+version: 1.2.1
 description: >
   Merges the Markdown reports in `process/` plus the graphics in
   `process/figures/` into one compilable `.tex` file. Pure standard library —
   no pandoc, no LaTeX toolchain required to produce the file.
 metadata:
-  version: 1.2.0
+  version: 1.2.1
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py

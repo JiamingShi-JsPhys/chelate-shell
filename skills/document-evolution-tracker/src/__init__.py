@@ -6,4 +6,4 @@ timeline and a concept-lineage graph. Pure standard library (``difflib`` /
 ``json`` / ``re``); no external dependencies.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"

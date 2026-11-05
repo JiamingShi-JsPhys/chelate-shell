@@ -169,12 +169,35 @@ def _compare(ll: dict, lr: dict, lhs, rhs, sym, point) -> dict:
     if kl == "conditional" and kr == "conditional":
         a, b = ll.get("expr"), lr.get("expr")
         if a is not None and b is not None:
+            # Identical limits are equal by definition. This must be checked
+            # before the subtraction below: two copies of the same
+            # infinity-carrying expression subtract to ``nan``
+            # (``oo*sign(m) - oo*sign(m)`` is not 0) and ``nan.is_zero`` is
+            # None, which used to fall through to a spurious "the two sides
+            # tend to different expressions" error on an identity such as
+            # ``m*a = m*a``.
+            try:
+                if a == b:
+                    return out
+            except Exception:
+                pass
             try:
                 d = sp.simplify(a - b)
                 if getattr(d, "is_zero", False) is True:
                     return out
+                if d is sp.nan or getattr(d, "is_nan", False):
+                    # An indeterminate difference (typically two identical
+                    # divergent limits) cannot be decided here: abstain
+                    # instead of inventing a mismatch.
+                    out.update(verdict="inconclusive", severity="info",
+                               message=(f"as {sym.name} → "
+                                        f"{_point_label(point)}, the difference "
+                                        f"between the two limits is "
+                                        f"indeterminate; not counted as a "
+                                        f"mismatch"))
+                    return out
                 out.update(verdict="mismatch", severity="error",
-                           message=(f"as {sym.name} -> {_point_label(point)}, "
+                           message=(f"as {sym.name} → {_point_label(point)}, "
                                     f"the two sides tend to different "
                                     f"expressions (difference `{sp.sstr(d)}`)"))
                 return out

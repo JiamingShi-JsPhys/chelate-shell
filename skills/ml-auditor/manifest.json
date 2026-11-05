@@ -1,6 +1,6 @@
 {
   "name": "ml-auditor",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "stage": "gates",
   "input_types": [
     "csv",

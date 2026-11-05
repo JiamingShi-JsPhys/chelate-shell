@@ -3,7 +3,7 @@
 ML data-audit gate. Screens a labelled CSV for the two failure modes that
 silently destroy an ML result — **data leakage** and **label errors** — and
 returns a `PASS` / `FAIL` / `UNVERIFIED` verdict. Part of **chelate-shell
-v1.2.0** (MIT).
+v1.2.1** (MIT).
 
 ## Usage
 

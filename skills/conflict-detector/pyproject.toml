@@ -1,6 +1,6 @@
 [project]
 name = "conflict-detector"
-version = "1.2.0"
+version = "1.2.1"
 description = "Cross-document conflict detector (entity / clause / argument level contradictions)."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

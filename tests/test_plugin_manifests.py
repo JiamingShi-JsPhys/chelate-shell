@@ -132,7 +132,7 @@ def test_icon_asset_present():
 
 def test_orchestrator_doc_describes_v11_layout():
     doc = (REPO_ROOT / "ORCHESTRATOR.md").read_text(encoding="utf-8")
-    assert "v1.2.0" in doc
+    assert "v1.2.1" in doc
     assert "18" in doc  # skill count
     for stage in ("workspace", "ingest", "gates", "processors"):
         assert stage in doc

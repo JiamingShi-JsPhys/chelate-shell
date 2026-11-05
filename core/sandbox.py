@@ -68,11 +68,54 @@ class SandboxDecision:
         return {**os.environ, "PYTHONPATH": combined}
 
 
+# Distribution name -> importable module name, where the two differ.
+#
+# ``find_spec("scikit-learn")`` returns None even on a machine where the
+# package is installed, because a hyphen is not a legal module identifier: the
+# importable name is ``sklearn``. Probing the pip name made every scikit-learn
+# skill report a bogus missing dependency and degrade to UNVERIFIED on a
+# correctly provisioned machine, so the lookup goes through this map first.
+# Keys are lower-cased distribution names; a name absent from the map is probed
+# verbatim, which is correct for the packages whose two names agree.
+_IMPORT_NAME = {
+    "scikit-learn": "sklearn",
+    "scikit-image": "skimage",
+    "opencv-python": "cv2",
+    "opencv-python-headless": "cv2",
+    "opencv-contrib-python": "cv2",
+    "opencv-contrib-python-headless": "cv2",
+    "pillow": "PIL",
+    "pyyaml": "yaml",
+    "python-docx": "docx",
+    "python-pptx": "pptx",
+    "beautifulsoup4": "bs4",
+    "python-dateutil": "dateutil",
+}
+
+
+def import_name(dist: str) -> str:
+    """Translate a distribution name into the module name to probe."""
+    return _IMPORT_NAME.get(str(dist).strip().lower(), str(dist).strip())
+
+
 def missing_dependencies(names: List[str]) -> List[str]:
-    """Return the subset of ``names`` that cannot be imported in this env."""
+    """Return the subset of ``names`` that cannot be imported in this env.
+
+    ``names`` are the distribution names a manifest declares (they are what the
+    user is told to ``pip install``), so each is translated through
+    ``import_name`` before probing. ``find_spec`` does not execute the module,
+    so a package that is installed but raises on import is not reported here;
+    the skill's own ``require_deps`` probe decides whether it can run.
+    """
     out: List[str] = []
     for n in names:
-        if importlib.util.find_spec(n) is None:
+        try:
+            found = importlib.util.find_spec(import_name(n)) is not None
+        except (ImportError, ValueError, ModuleNotFoundError):
+            # A dotted name whose parent package is itself absent makes
+            # find_spec raise; that is a genuine "missing".
+            found = False
+        if not found:
             out.append(n)
     return out
 

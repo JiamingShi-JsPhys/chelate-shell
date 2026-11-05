@@ -1,6 +1,6 @@
 {
   "name": "multi-dim-manager",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "stage": "workspace",
   "input_types": [
     "workspace",

@@ -33,6 +33,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import sys
 import traceback
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -94,10 +95,48 @@ def bootstrap():
     return _bootstrap
 
 
+# Distribution name -> importable module name, where the two differ. Kept in
+# sync with core/sandbox.py's map: an adapter's ``DEPENDENCIES`` names what the
+# user must ``pip install``, and probing that literal string fails for every
+# hyphenated distribution ("scikit-learn" is imported as ``sklearn``).
+_IMPORT_NAME = {
+    "scikit-learn": "sklearn",
+    "scikit-image": "skimage",
+    "opencv-python": "cv2",
+    "opencv-python-headless": "cv2",
+    "opencv-contrib-python": "cv2",
+    "opencv-contrib-python-headless": "cv2",
+    "pillow": "PIL",
+    "pyyaml": "yaml",
+    "python-docx": "docx",
+    "python-pptx": "pptx",
+    "beautifulsoup4": "bs4",
+    "python-dateutil": "dateutil",
+}
+
+
+def import_name(dist: str) -> str:
+    """Translate a distribution name into the module name to probe."""
+    return _IMPORT_NAME.get(str(dist).strip().lower(), str(dist).strip())
+
+
 def probe_deps(modules: Sequence[str]) -> List[str]:
-    """Subset of `modules` not importable in this interpreter."""
+    """Subset of `modules` not importable in this interpreter.
+
+    `modules` are distribution names as declared in a manifest; each is
+    translated through ``import_name`` before probing, so a hyphenated package
+    is not reported missing merely because of its hyphen.
+    """
     import importlib.util
-    return [m for m in modules if importlib.util.find_spec(m) is None]
+    out: List[str] = []
+    for m in modules:
+        try:
+            found = importlib.util.find_spec(import_name(m)) is not None
+        except (ImportError, ValueError, ModuleNotFoundError):
+            found = False
+        if not found:
+            out.append(m)
+    return out
 
 
 def require_deps(modules: Sequence[str], what: str) -> None:
@@ -180,10 +219,19 @@ def dispatch(skill: str,
             raise  # --help already printed its text; exit 0 as argparse does
         # A missing required flag (e.g. --input) is an invocation problem,
         # not a data verdict: emit a gate so the pipeline degrades to
-        # UNVERIFIED instead of dying without any contract artifact.
-        usage = ap.format_usage().strip().splitlines()[0]
+        # UNVERIFIED instead of dying without any contract artifact. The
+        # reason names the flag(s) actually missing rather than echoing the
+        # multi-line usage banner, which says nothing about what to add.
+        raw = list(argv if argv is not None else sys.argv[1:])
+        missing = [a.dest for a in ap._actions
+                   if getattr(a, "required", False)
+                   and not any(x == "--" + a.dest or x.startswith("--" + a.dest + "=")
+                               for x in raw)]
+        detail = (f"the following arguments are required: "
+                  f"{', '.join('--' + m for m in missing)}" if missing
+                  else ap.format_usage().strip().splitlines()[0])
         _emit(own["--root"], skill, "UNVERIFIED", "UNVERIFIED",
-              f"adapter usage error: {usage}")
+              f"invocation incomplete: {detail}")
         return 0
     debug.flag(args.debug)  # --debug flag or CHELATE_DEBUG env, one switch
     debug.log(f"{skill}: argv={argv if argv is not None else sys.argv[1:]} "
@@ -424,8 +472,12 @@ def run_legacy(skill: str,
     # output, so the legacy CLI never examined the data.
     if int(rc or 0) != 0 and "usage:" in err:
         debug.log(f"{skill}: legacy usage error rc={int(rc or 0)}")
+        # Report the *missing argument* rather than the raw argparse block:
+        # the error line names exactly what the caller has to add, and it
+        # keeps the multi-line usage dump out of the gate reason.
+        detail = _usage_error_line(err) or _tail(err)
         _emit(args.root, skill, "UNVERIFIED", "UNVERIFIED",
-              f"legacy CLI invocation incomplete (rc={rc}): {_tail(err)}")
+              f"invocation incomplete: {detail}")
         return 0
     if verdict_hook is not None:
         debug.log(f"{skill}: verdict_hook rc={int(rc or 0)} sub={sub!r}")
@@ -514,6 +566,18 @@ def tail(text: str, n: int = 2, limit: int = 240) -> str:
     """Last n non-empty lines of `text`, joined and length-capped."""
     lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
     return " | ".join(lines[-n:])[:limit]
+
+
+# argparse prints "usage: ..." then "<prog>: error: <what>"; the error line is
+# the only part that tells the caller what to fix. The prog may contain spaces
+# ("cd run: error: ..."), so the prefix is matched lazily rather than as \S+.
+_USAGE_ERROR_RE = re.compile(r"^\s*.+?: error: (.+)$", re.M)
+
+
+def _usage_error_line(text: str) -> str:
+    """The ``<prog>: error: ...`` line from an argparse usage dump, or ''."""
+    m = _USAGE_ERROR_RE.search(text or "")
+    return m.group(1).strip() if m else ""
 
 
 # backward-compatible private alias

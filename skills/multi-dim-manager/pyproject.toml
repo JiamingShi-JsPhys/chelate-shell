@@ -1,6 +1,6 @@
 [project]
 name = "multi-dim-manager"
-version = "1.2.0"
+version = "1.2.1"
 description = "Multi-dimensional experiment state manager (parameter-space expansion, plugin contract, snapshots, JSONL audit, non-destructive rollback)."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

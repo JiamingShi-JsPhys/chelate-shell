@@ -39,7 +39,7 @@ from conftest import SKILLS_DIR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERSION = "1.2.0"
+EXPECTED_VERSION = "1.2.1"
 CANONICAL_CONTACT_EMAIL = "jiamingshi_git@outlook.com"
 ALLOWED_STAGES = {"workspace", "ingest", "gates", "processors"}
 

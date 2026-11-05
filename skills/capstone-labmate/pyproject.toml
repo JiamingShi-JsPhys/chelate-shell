@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "capstone-labmate"
-version = "1.2.0"
+version = "1.2.1"
 description = "An Agent-Native interoperability tool for PASCO Capstone: pre-lab .cap pre-configuration (with QA checklists) + post-lab local downsampling/CSV export + data-faithful draft report generation."
 authors = [
     { name = "Jiaming Shi", email = "jiamingshi_git@outlook.com" }

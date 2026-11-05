@@ -1,6 +1,6 @@
 [project]
 name = "ai-trace-remover"
-version = "1.2.0"
+version = "1.2.1"
 description = "De-AI-flavour detection and rewriting for Chinese and English prose. Pure standard library."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

@@ -3,7 +3,7 @@
 LaTeX export processor — **no heavy dependency, no pandoc**. Reads the Markdown
 reports generated under `process/` and the graphics under `process/figures/`,
 then merges them into a single compilable `.tex` file under `process/latex/`.
-Part of **chelate-shell v1.2.0** (MIT).
+Part of **chelate-shell v1.2.1** (MIT).
 
 ## Usage
 

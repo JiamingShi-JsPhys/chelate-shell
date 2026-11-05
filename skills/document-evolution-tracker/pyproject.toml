@@ -1,6 +1,6 @@
 [project]
 name = "document-evolution-tracker"
-version = "1.2.0"
+version = "1.2.1"
 description = "Document evolution tracker for version alignment and concept lineage."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

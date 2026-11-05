@@ -1,12 +1,12 @@
 ---
 name: figure-generator
-version: 1.2.0
+version: 1.2.1
 description: >
   Renders publication-quality charts from a CSV table (bar, line, scatter) and
   SEM path diagrams from a JSON spec. Runs inside the process sandbox; output
   goes to `process/figures/`.
 metadata:
-  version: 1.2.0
+  version: 1.2.1
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py

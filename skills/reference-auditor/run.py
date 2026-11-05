@@ -41,12 +41,22 @@ def _configure(ap) -> None:
 def _audit(args) -> dict:
     cfg = adapter.load_config(SKILL_ROOT)
     adapter.require_deps(DEPENDENCIES, "DOI verification")
+    if not args.input and not args.text:
+        # Declaring no draft is a *usage* state, not a failed audit: nothing
+        # was examined, so nothing can be asserted about the citations. It
+        # degrades to UNVERIFIED instead of raising Failed, which would
+        # hard-FAIL the pipeline and lock process/ for every later stage over
+        # an argument the caller simply has not supplied yet.
+        raise adapter.Degraded(
+            "no draft supplied: pass --input <draft.md> or --text \"...\"")
     draft = str(paths.resolve_input(args.root, args.input)) if args.input \
         else ""
     try:
         text, source = doi_audit.read_draft(draft, args.text)
-    except (FileNotFoundError, ValueError) as exc:
+    except FileNotFoundError as exc:
         raise adapter.Failed(str(exc))
+    except ValueError as exc:
+        raise adapter.Degraded(str(exc))
     if not doi_audit.extract_dois(text):
         raise adapter.Degraded(f"no DOIs found in {source}; nothing to audit")
 

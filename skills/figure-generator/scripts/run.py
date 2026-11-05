@@ -7,7 +7,7 @@ Usage:
         --input sem_figure_input.json            # type: sem_path -> path fig
 
 The adapter only parses arguments and delegates to engine.generate(); all
-business logic lives in scripts/engine.py (v1.2.0, MIT).
+business logic lives in scripts/engine.py (v1.2.1, MIT).
 """
 from __future__ import annotations
 
