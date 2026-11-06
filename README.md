@@ -39,7 +39,7 @@ Chelate Shell addresses this in two parts, and both are part of the same reposit
 A missing dependency degrades one skill to `UNVERIFIED` and the run continues. A single `FAIL` is terminal: the pipeline stops on the spot and leaves the intermediate products locked in `process/`. When no gate fails, `process/` is promoted into `results/`, and the run is summarised in a typed pipeline report plus the `_broadcast/` index that a later session reads before opening any original.
 
 ```mermaid
-flowchart TB
+flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
     CLI --> REG["core/registry.py<br/>scan the 20 manifests"]
     REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
