@@ -39,7 +39,7 @@ Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里
 缺依赖时只把该技能降级为 `UNVERIFIED`，流水线继续。单个 `FAIL` 是终止态：流水线当场停止，中间产物锁在 `process/` 里。没有任何门禁失败时，`process/` 会被提升到 `results/`，同时写出类型化的流水线报告和 `_broadcast/` 索引——后续会话先读索引，再决定打开哪些原件。
 
 ```mermaid
-flowchart TB
+flowchart LR
     IN["用户意图 + 输入文件"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
     CLI --> REG["core/registry.py<br/>扫描 20 个 manifest"]
     REG --> PLAN{"build_plan<br/>规范顺序<br/>--inputs 按类型收窄"}
