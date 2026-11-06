@@ -39,7 +39,7 @@ the run and keeps `process/` locked. A run with no failing gate promotes
 `_broadcast/` index.
 
 ```mermaid
-flowchart TB
+flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
     CLI --> REG["core/registry.py<br/>scan the 20 manifests"]
     REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
