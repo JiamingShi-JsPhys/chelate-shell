@@ -8,7 +8,8 @@
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.0 | **Skills:** 20 
+**Version:** 1.3.0 | **Skills:** 20
+
 ---
 
 ## Security & Open Source Statement
@@ -207,93 +208,63 @@ Please visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate
 
 ## Quick start
 
-All commands run from the repository root — **never hard-code absolute paths**.
+Install the plugin, then stay in the chat box: type `/` and pick a skill or a
+command. No shell, no absolute path — the workspace is the folder you are
+already working in.
 
-List the routing table:
+### Skills
 
-```bash
-python cli.py list
+All 20 skills are registered under the `chelate-shell` namespace, so every one
+of them is one `/` away:
+
+```text
+/chelate-shell:task-organizer      turn this folder into a task workspace
+/chelate-shell:formula-validator   check F = m*a with units F=N, m=kg, a=m/s^2
+/chelate-shell:reference-auditor   verify every DOI in draft.md against Crossref
+/chelate-shell:security-guard      screen draft.md for prompt injection
+/chelate-shell:data-profiler       profile data.csv
 ```
 
-Run one skill directly:
+Say what you want after the name; the skill picks the action and writes a gate
+result. A fake DOI does not merely warn — it fails the gate and stops the
+pipeline.
 
-```bash
-python cli.py run reference-auditor --root /path/to/workspace --action audit --input draft.md
+### Commands added in 1.3.0
+
+Two commands put the heavier engines behind a single line:
+
+| Command | Does |
+|---|---|
+| `/chelate-shell:figure` | Renders a bar / line / scatter / box chart from a CSV or JSON dataset into `process/figures/` — a vector PDF plus a raster PNG |
+| `/chelate-shell:model3d` | Generates a Wavefront `.obj` from a JSON spec, or audits and merges existing meshes, into `process/models/` |
+
+```text
+/chelate-shell:figure data.csv — scatter of voltage against time
+/chelate-shell:model3d spec.json
 ```
 
-Dry-run a pipeline to see the planned execution order:
+Both run sandboxed with a 120-second circuit-breaker: a pathological input
+degrades to `UNVERIFIED` rather than blocking the run.
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode a --input-kind pdf --dry-run
-```
+### Sub-agents added in 1.3.0
 
-Run the full pipeline (ingest → gates → processors):
+Two roles in `agents/` are registered with the plugin:
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode a --input-kind pdf
-```
+| Sub-agent | Fits | Skills it may use |
+|---|---|---|
+| `spatial_agent` | 3D content — image-to-3D, video-to-3D, scene composition, mesh QC | 3d-modeler, sci-visualizer, security-guard |
+| `visual_agent` | Publication visuals — 2D plots, static diagrams, gif frames, figure QA, LaTeX export | sci-visualizer, latex-exporter, security-guard |
 
-Run gates only, with per-skill arguments:
+Claude dispatches to them when a task matches, and you can name one in your
+request. Each is bounded by a skill whitelist, a writable-path whitelist
+(`assets/`, `process/`, `results/`) and a step budget, so a sub-agent cannot
+reach a skill or a directory outside its role.
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode c --selected reference-auditor --skill-arg "reference-auditor:--input draft.md"
-```
+### When you need the CLI
 
-Initialise a complex-task workspace:
-
-```bash
-python skills/task-organizer/run.py --root <workspace> --action init
-```
-
-Rebuild the context-compression index:
-
-```bash
-python skills/task-organizer/run.py --root <workspace> --action broadcast
-```
-
-Validate a physics formula deterministically (bypass mode):
-
-```bash
-python skills/formula-validator/run.py --root <workspace> --action validate -- --expr "F = m*a" --units F=N --units m=kg --units a=m/s**2
-```
-
-Audit the DOIs in a draft (a fake DOI fails the gate and stops the pipeline):
-
-```bash
-python skills/reference-auditor/run.py --root <workspace> --action audit --input draft.md
-```
-
-Remove AI traces from a draft:
-
-```bash
-python skills/ai-trace-remover/run.py --root <workspace> --action scan -- <file>
-```
-
-Screen a file for prompt injection and dangerous call sites:
-
-```bash
-python skills/security-guard/run.py --root <workspace> --action gate --input draft.md
-```
-
-Declare the run's input files, each wired as `--input` to the plan:
-
-```bash
-python cli.py pipeline --root ./test_workspace --inputs draft.md data.csv
-```
-
-Debug one skill (the flag may sit before or after the skill name):
-
-```bash
-python cli.py run data-profiler --root /path/to/workspace --action profile --input data.csv --debug
-```
-
-Debug a whole pipeline through the environment variable:
-
-```bash
-CHELATE_DEBUG=1 python cli.py pipeline --root /path/to/workspace --mode c --selected reference-auditor
-```
-
-Pipeline modes: `a` auto (ingest → gates → processors), `b` extract-only, `c` gates-only. `--inputs` narrows the plan to the skills that can consume the declared files (an explicit `--selected` list always wins); a file whose extension declares no manifest type is reported as an `[INPUT]` warning and wires to nothing. Each declared file is resolved against `--root` (relative paths anchor at the workspace root, absolute paths are used as-is); a missing file fails fast with exit code 2 **before any skill runs**.
+The same operations are available headlessly for CI and scripted runs; the
+flags, the `a` / `b` / `c` pipeline modes and the debugging switches are
+specified in [ORCHESTRATOR.md](ORCHESTRATOR.md) §5.
 
 ## Requirements
 

@@ -2,99 +2,131 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
-## [1.3.0] — 2026-10-28
+## [1.3.0] — 2026-11-06
+
+### Skill tree flattened to one level
+
+- **All 20 skills now live directly under `skills/`.** The six numbered
+  category folders (`01_infrastructure` … `06_domain-extensions`) and their
+  `.gitkeep` placeholders are gone. A skill's category is carried by the
+  manifest `stage` field, not by its path, so nothing about routing changed.
+- **`core/registry.py` accepts exactly one level** (`skills/<skill>/manifest.json`)
+  and records anything deeper as an error instead of loading it. The previous
+  rule allowed depth 2, which is what let a skill be visible to the registry
+  and invisible to the host scanners at the same time.
+- **Adapters no longer assume a fixed depth.** `sci-visualizer` and
+  `3d-modeler` walked up a hard-coded number of parents to find the repo root;
+  both now walk up until they find `lib/chelate_core/`, so a skill can move
+  without breaking its imports.
 
 ### Skill restructuring (19 → 20 skills)
+
 - **Merged `figure-generator` into `sci-visualizer`.** The figure engine
   (`scripts/engine.py`, matplotlib/seaborn/pandas, plus the AMOS-style SEM
   path-diagram renderer) is now co-located under
-  `skills/sci-visualizer/scripts/` and imported in-process by
-  `run.py`. The standalone `figure-generator` skill is removed from the
-  routing table. `sci-visualizer` now declares `matplotlib` / `seaborn` /
-  `pandas` as manifest dependencies; missing libraries degrade the gate to
-  `UNVERIFIED`, never a crash.
+  `skills/sci-visualizer/scripts/` and imported in-process by `run.py`. The
+  standalone `figure-generator` skill is removed from the routing table.
+  `sci-visualizer` declares `matplotlib` / `seaborn` / `pandas` as manifest
+  dependencies; missing libraries degrade the gate to `UNVERIFIED`, never a
+  crash.
 - **Removed `sem-copilot` from the core skill set.** The SEM / AMOS
-  replacement module has been extracted as an independent standalone plugin.
-  Please refer to its separate repository:
+  replacement module has been extracted as an independent standalone plugin:
   `https://github.com/JiamingShi-JsPhys/sem-copilot`.
-- **Restored three skills to v1.3.0** (bumped to 1.3.0, re-joined the
-  routing table and routing tests):
-  - `multi-dim-manager` (workspace stage) — parameter-space expansion,
-    SHA-256 snapshots, hash audit logs, safe rollback.
-  - `longitudinal-analysis` (gates stage) — time-series OLS plus R-backed
-    LMM (lme4), mediation (lavaan) and sensitivity analysis; degrades to
+- **Restored three skills** (bumped to 1.3.0, re-joined the routing table and
+  routing tests):
+  - `multi-dim-manager` (workspace) — parameter-space expansion, SHA-256
+    snapshots, hash audit logs, safe rollback.
+  - `longitudinal-analysis` (gates) — time-series OLS plus R-backed LMM
+    (lme4), mediation (lavaan) and sensitivity analysis; degrades to
     pure-Python steps when Rscript is absent.
-  - `ai-trace-remover` (processors stage) — template-sentence removal and a
-    0–100 "AI-likeness" score.
+  - `ai-trace-remover` (processors) — template-sentence removal and a 0–100
+    "AI-likeness" score.
+- **Three category meta-skills** — `security-guard` (infrastructure),
+  `sci-visualizer` (generation) and `3d-modeler` (domain_extensions) — flat
+  like every other skill, with the category in the manifest `stage` field.
 
 ### Added
+
 - **Security shield** (`core/security_shield.py`) — pre-dispatch injection
-  scan wired into `core/router.py` (`_scan_inputs_for_injection`): every
-  text input is screened against a set of known prompt-injection patterns
-  before any skill subprocess is spawned. A hit writes a FAIL gate under
-  `process/gates/` and hard-terminates the pipeline.
-- **Subagent manager** (`core/subagent_manager.py`) — `agents/` discovery
-  (two agent specs: `spatial_agent`, `visual_agent`), skill-whitelist
-  permission isolation (fail-closed path guard), and a `load_default_manager`
-  seam for the Router.
-- **Three category meta-skills**, flat like every other skill
-  (`skills/<skill>/`) with the category carried by the manifest `stage`
-  field: `security-guard` (infrastructure), `sci-visualizer` (generation),
-  `3d-modeler` (domain_extensions). The registry scans exactly one level under
-  `skills/` and reports any deeper manifest, because the host skill scanners
-  (Claude Code, Codex) do not descend into namespace folders.
-- **`agents/` + `commands/` surfaces** — no `dot-plugin` manifest wiring
-  change needed: the Claude Code / Codex hosts discover these natively from
-  the installed plugin root, which is exactly where they land after install.
-  `SubAgentManager` consumes `agents/` via the Python discovery path;
-  `commands/` is documentation-only.
-- `sem-copilot-output/` added to `.gitignore`.
+  scan wired into `core/router.py`: every text input is screened against a set
+  of known prompt-injection patterns before any skill subprocess is spawned. A
+  hit writes a FAIL gate under `process/gates/` and terminates the pipeline.
+- **Subagent manager** (`core/subagent_manager.py`) — discovers `agents/`,
+  enforces a skill whitelist and a writable-path whitelist (fail-closed), and
+  exposes `load_default_manager` for the Router.
+- **Two sub-agents** — `spatial_agent` (3D content: image-to-3D, video-to-3D,
+  scene composition, mesh QC; may call `3d-modeler`, `sci-visualizer`,
+  `security-guard`) and `visual_agent` (publication visuals, figure QA, LaTeX
+  export; may call `sci-visualizer`, `latex-exporter`, `security-guard`). Both
+  are sandboxed, capped by `timeout_seconds` and `max_steps`, and may write
+  only under `assets/`, `process/` and `results/`.
+- **Two slash commands** — `/chelate-shell:figure` and
+  `/chelate-shell:model3d` — that put the heavier engines (matplotlib/seaborn,
+  the OBJ mesh builder) behind a single line.
+- `sem-copilot-output/` added to `.gitignore`; pytest `tmp*/` work directories
+  ignored as well.
+
+### Changed
+
+- **The README quick start is now slash-first.** Both READMEs open the section
+  with `/chelate-shell:<skill>` examples, document the two new commands and the
+  two new sub-agents, and leave the CLI flags, pipeline modes and debugging
+  switches to `ORCHESTRATOR.md` §5.
+- **The pipeline diagram is horizontal** (`flowchart LR`) in `README.md`,
+  `README_zh.md` and `ORCHESTRATOR.md`, keeping the whole flow on one band
+  instead of a tall column.
+- All 20 `SKILL.md` files were rewritten to one structure: what the skill does,
+  when it fires, a `Quick Execution` block, and its limits. `task-organizer`
+  alone drops over 1000 lines; no behaviour changed.
 
 ### Performance
+
 - `core/registry.py`: in-process memo on `load_default_registry()` keyed on
   per-manifest mtime + size, so a second call within the same CLI process
   (the subagent-manager dispatch fallback path) reuses the parsed Registry
-  when nothing on disk has changed — ~20 ms saved per avoided re-scan.
+  when nothing on disk has changed.
 
 ### Tests
-- `tests/test_sci_visualizer.py` replaces `tests/test_figure_generator.py`
-  (engine now lives under sci-visualizer; the subprocess delegation test is
-  replaced by an in-process engine-load test).
-- `tests/test_subagent_manager.py` fixture references repointed from
-  `figure-generator` to `sci-visualizer`; the real-repo smoke test now
-  asserts `mgr.names() == {"spatial_agent", "visual_agent"}`.
-- `agents/visual_agent.md` + `agents/spatial_agent.md` `allowed_skills`
-  whitelists fixed to reference skills that actually ship; stale
-  "lands in the future" prose removed.
-- `tests/test_capability_guard.py`: `sem-copilot` INVENTORY entry removed;
-  `test_no_python_file_lost` count re-verified (135 legacy py files
-  unchanged; the three restored skills are not in LEGACY_SKILLS).
-- `tests/test_output_paths.py`: sem-copilot skip blocks removed;
-  `skill_root` now resolves the flat `skills/<name>/` layout.
 
-### Fixed (post-1.3.0 hardening, same release)
+- `tests/test_registry.py::test_physical_flatness_no_nested_manifests` now
+  asserts depth **1**, and a new
+  `test_registry_rejects_a_nested_manifest` proves a manifest one level deeper
+  is reported rather than loaded.
+- `tests/conftest.py` — `skill_root()` resolves the flat layout only.
+- `tests/test_plugin_manifests.py`, `tests/test_repo_consistency.py`,
+  `tests/test_no_stubs.py`, `tests/test_sci_visualizer.py` — nested-path
+  resolution and the comments describing it removed.
+- `tests/test_sci_visualizer.py` replaces `tests/test_figure_generator.py`.
+- `tests/test_subagent_manager.py` asserts
+  `mgr.names() == {"spatial_agent", "visual_agent"}`.
+- The suite collects **357 tests (347 passed, 10 skipped** — dependency- or
+  fixture-gated, not failures).
+
+### Fixed
+
 - **`security-guard` no longer reports a PASS for an input it never read.**
-  The adapter treated any `--input` that did not resolve to an existing file
-  as inline text, so `--input draft.md` with a typo'd path scanned the
-  *string* `"draft.md"` and returned `PASS` — a security gate claiming a file
-  was checked when nothing was read. The adapter now distinguishes a path
-  from a payload (separator, leading `.`/`~`, or a known document extension)
-  and exits `2` with `input file not found` for a missing file. A run with no
-  `--input` at all still passes through, which is what the generic
-  `--root <ws> --action gate` smoke run requires.
+  The adapter treated any `--input` that did not resolve to an existing file as
+  inline text, so `--input draft.md` with a typo'd path scanned the *string*
+  `"draft.md"` and returned `PASS` — a security gate claiming a file was
+  checked when nothing was read. The adapter now distinguishes a path from a
+  payload (separator, leading `.`/`~`, or a known document extension), resolves
+  relative paths against `--root`, and exits `2` with `input file not found`
+  for a missing file. A run with no `--input` still passes through, which the
+  generic smoke run requires.
+- **Distribution names are mapped to import names before probing.**
+  `scikit-learn` → `sklearn`, `opencv-python` → `cv2`, `pillow` → `PIL`,
+  `pyyaml` → `yaml` and friends, so an installed package no longer reads as
+  missing. A probe that raises now counts as missing instead of crashing.
+- **`reference-auditor` degrades instead of failing** when no draft is
+  supplied, and a `ValueError` inside the auditor is treated as degraded.
+- **`formula-validator` no longer reports a false mismatch** when a
+  conditional limit evaluates to NaN; the verdict becomes inconclusive.
+- **`adapter.py` reports the missing required argument** instead of dumping the
+  whole usage block.
 - **`tests/test_router.py::test_red_fail_output` no longer fails when
-  `NO_COLOR` is exported.** `_color()` honours `NO_COLOR` before
-  `CHELATE_FORCE_COLOR`, so a shell that exports it made a correct
-  implementation look broken. The test clears the variable with
-  `monkeypatch` instead of mutating `os.environ` by hand.
-- **`tests/test_repo_consistency.py::test_contact_email_is_unified` works in
-  a tree without git metadata.** It shelled out to `git ls-files` with
-  `check=True`, so the distributed ZIP and any plain source drop raised
-  `CalledProcessError` instead of scanning. It now falls back to a recursive
-  walk when `git ls-files` is unavailable.
-- **README test counts corrected.** Both READMEs claimed 329 tests
-  (320 passed / 9 skipped); the suite collects 356 (346 passed, 10 skipped —
-  the skips are dependency- or fixture-gated, not failures).
+  `NO_COLOR` is exported.**
+- **`tests/test_repo_consistency.py` dependency-table checks** follow the
+  matrix to its new home, `docs/DEPENDENCIES*.md`.
 
 ## [1.2.0] — 2026-10-24
 

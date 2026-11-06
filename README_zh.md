@@ -9,6 +9,7 @@
 [English](README.md) · **简体中文**
 
 **版本：** 1.3.0 | **技能数：** 20
+
 ---
 
 ## 安全与开源声明
@@ -207,93 +208,52 @@ python chelate-shell/install.py --project <项目> --only cursor,windsurf
 
 ## 快速上手
 
-所有命令均在仓库根目录执行，**绝不硬编码绝对路径**。
+装好插件后不用离开对话框：输入 `/` 选择技能或命令即可。不需要开终端，也不需要写绝对路径——工作区就是你当前正在操作的文件夹。
 
-列出路由表：
+### 技能
 
-```bash
-python cli.py list
+20 个技能全部注册在 `chelate-shell` 命名空间下，一个 `/` 就能调出来：
+
+```text
+/chelate-shell:task-organizer      把这个文件夹初始化成任务工作区
+/chelate-shell:formula-validator   校验 F = m*a，单位 F=N、m=kg、a=m/s^2
+/chelate-shell:reference-auditor   核验 draft.md 里的每条 DOI 是否存在于 Crossref
+/chelate-shell:security-guard      扫描 draft.md 的提示注入与危险调用
+/chelate-shell:data-profiler       体检 data.csv
 ```
 
-直接运行单个技能（以查假文献为例）：
+技能名后面直接说你要做什么，由技能自己决定执行哪个动作，并写下一个门禁结果。假 DOI 不是提示一下就放过——它会让门禁 FAIL 并终止流水线。
 
-```bash
-python cli.py run reference-auditor --root /path/to/workspace --action audit --input draft.md
+### 1.3.0 新增的命令
+
+两条命令把较重的引擎收成一行：
+
+| 命令 | 作用 |
+|---|---|
+| `/chelate-shell:figure` | 从 CSV 或 JSON 数据集出图（柱状 / 折线 / 散点 / 箱线），输出到 `process/figures/`，同时给矢量 PDF 与位图 PNG |
+| `/chelate-shell:model3d` | 从 JSON 规格生成 Wavefront `.obj`，或审计、合并已有网格，输出到 `process/models/` |
+
+```text
+/chelate-shell:figure data.csv —— 画电压随时间的散点图
+/chelate-shell:model3d spec.json
 ```
 
-干跑一条流水线（展示计划的执行顺序）：
+两者都在沙箱内运行并带 120 秒熔断：输入异常时降级为 `UNVERIFIED`，不会把整条流水线卡住。
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode a --input-kind pdf --dry-run
-```
+### 1.3.0 新增的子代理
 
-完整流水线（提取 → 门禁 → 加工）：
+`agents/` 下的两个角色随插件一起注册：
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode a --input-kind pdf
-```
+| 子代理 | 适用场景 | 可调用的技能 |
+|---|---|---|
+| `spatial_agent` | 3D 内容——图像转 3D、视频转 3D、场景合成、网格质检 | 3d-modeler、sci-visualizer、security-guard |
+| `visual_agent` | 出版级视觉——二维图表、静态示意图、gif 逐帧、出图质检、LaTeX 导出 | sci-visualizer、latex-exporter、security-guard |
 
-只跑门禁，带逐技能参数：
+任务匹配时 Claude 会自动交给它们，也可以在请求里点名。每个子代理都受技能白名单、可写路径白名单（`assets/`、`process/`、`results/`）与步数预算约束，越不出自己的角色范围。
 
-```bash
-python cli.py pipeline --root /path/to/workspace --mode c --selected reference-auditor --skill-arg "reference-auditor:--input draft.md"
-```
+### 需要命令行时
 
-初始化复杂任务工作区：
-
-```bash
-python skills/task-organizer/run.py --root <workspace> --action init
-```
-
-重建上下文压缩索引：
-
-```bash
-python skills/task-organizer/run.py --root <workspace> --action broadcast
-```
-
-确定性校验物理公式（旁路模式）：
-
-```bash
-python skills/formula-validator/run.py --root <workspace> --action validate -- --expr "F = m*a" --units F=N --units m=kg --units a=m/s**2
-```
-
-审计草稿中的 DOI（假 DOI 直接 FAIL 并终止流水线）：
-
-```bash
-python skills/reference-auditor/run.py --root <workspace> --action audit --input draft.md
-```
-
-去除草稿的 AI 痕迹：
-
-```bash
-python skills/ai-trace-remover/run.py --root <workspace> --action scan -- <file>
-```
-
-扫描文件中的提示注入与危险调用：
-
-```bash
-python skills/security-guard/run.py --root <workspace> --action gate --input draft.md
-```
-
-用 `--inputs` 声明本次运行的输入文件（自动接线）：
-
-```bash
-python cli.py pipeline --root ./test_workspace --inputs draft.md data.csv
-```
-
-调试单个技能（`--debug` 放在技能名前后均可）：
-
-```bash
-python cli.py run data-profiler --root /path/to/workspace --action profile --input data.csv --debug
-```
-
-用环境变量调试整条流水线：
-
-```bash
-CHELATE_DEBUG=1 python cli.py pipeline --root /path/to/workspace --mode c --selected reference-auditor
-```
-
-流水线模式：`a` 自动（提取 → 门禁 → 加工）、`b` 仅提取、`c` 仅门禁。`--inputs` 把计划收窄到能消费所声明文件的技能（显式 `--selected` 列表永远优先）；扩展名未声明任何 manifest 类型的文件会打印 `[INPUT]` 警告且不接线。每个声明的文件都按 `--root` 解析（相对路径以工作区根为准，绝对路径原样使用）；文件缺失时在运行任何技能之前直接以 exit 2 失败。
+同样的操作也可以无头运行，供 CI 与脚本调用；参数、`a` / `b` / `c` 三种流水线模式与调试开关见 [ORCHESTRATOR.md](ORCHESTRATOR.md) §5。
 
 ## 环境要求
 
