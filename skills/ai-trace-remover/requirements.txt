@@ -1,0 +1,7 @@
+# ai-trace-remover -- pure standard library. No runtime dependencies.
+#
+# This skill deliberately installs nothing. The detector (src/core/) and CLI
+# (src/cli.py) run on the standard library alone, on Windows / macOS / Linux.
+#
+# Optional, dev-only (for running the test suite):
+pytest>=7.0

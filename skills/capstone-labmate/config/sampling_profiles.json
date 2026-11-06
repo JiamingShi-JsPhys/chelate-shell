@@ -1,0 +1,133 @@
+{
+  "_comment": "Stage A configuration: per-experiment sampling profiles. preconfigure_cap.py reads a profile and injects its sampling rate, blank data columns, preset formulas, and axis setup into a base .cap template. 'Configured, not hard-coded': every numeric value below is data, not code. Add new experiment families freely.",
+  
+  "free-fall": {
+    "description": "Free Fall: Position vs. Time, verifying acceleration due to gravity (g).",
+    "sampling_hz": 100,
+    "columns": [
+      {"name": "time", "unit": "s"},
+      {"name": "position", "unit": "m", "sensor": "Motion Sensor"},
+      {"name": "velocity", "unit": "m/s", "formula": "d(position)/dt"},
+      {"name": "acceleration", "unit": "m/s^2", "formula": "d(velocity)/dt"}
+    ],
+    "formulas": [
+      {"name": "v", "text": "slope([position])"},
+      {"name": "a", "text": "slope([v])"}
+    ],
+    "axes": {
+      "graph1": {"x": "time", "y": "position", "title": "Position vs Time"},
+      "graph2": {"x": "time", "y": "velocity", "title": "Velocity vs Time"}
+    },
+    "ranges": {"position_m": [0, 2.0], "velocity_ms": [-5, 5], "time_s": [0, 3]}
+  },
+  
+  "pendulum": {
+    "description": "Simple Pendulum: Angle vs. Time, verifying the theoretical period T=2*pi*sqrt(L/g). Note: Requires string length 'L' as an external input variable.",
+    "sampling_hz": 50,
+    "columns": [
+      {"name": "time", "unit": "s"},
+      {"name": "angle", "unit": "deg", "sensor": "Rotary Motion Sensor"},
+      {"name": "angular_velocity", "unit": "rad/s", "formula": "d(angle)/dt"}
+    ],
+    "formulas": [
+      {"name": "period", "text": "period([angle])"},
+      {"name": "T_theory", "text": "2*pi*sqrt([L]/9.81)"}
+    ],
+    "axes": {
+      "graph1": {"x": "time", "y": "angle", "title": "Angle vs Time"}
+    },
+    "ranges": {"angle_deg": [-30, 30], "time_s": [0, 10]}
+  },
+  
+  "spring-mass": {
+    "description": "Spring-Mass System: Displacement vs. Time, verifying Simple Harmonic Motion (SHM).",
+    "sampling_hz": 100,
+    "columns": [
+      {"name": "time", "unit": "s"},
+      {"name": "displacement", "unit": "m", "sensor": "Motion Sensor"},
+      {"name": "velocity", "unit": "m/s", "formula": "d(displacement)/dt"}
+    ],
+    "formulas": [
+      {"name": "frequency", "text": "freq([displacement])"},
+      {"name": "T", "text": "1/[frequency]"}
+    ],
+    "axes": {
+      "graph1": {"x": "time", "y": "displacement", "title": "Displacement vs Time"}
+    },
+    "ranges": {"displacement_m": [-0.2, 0.2], "time_s": [0, 10]}
+  },
+  
+  "franck-hertz": {
+    "description": "Franck-Hertz Experiment (Ar tube, BEM-5702): Anode Current vs. Accelerating Voltage. Measure quantized excitation energy of Ar and derive Planck constant. 850 Ch.A=Current (pA), Ch.B=Voltage (V).",
+    "sampling_hz": 20,
+    "columns": [
+      {"name": "Voltage", "unit": "V", "sensor": "current"},
+      {"name": "Current", "unit": "pA", "sensor": "voltage"},
+      {"name": "Peak Voltage", "unit": "V"},
+      {"name": "Trough Voltage", "unit": "V"}
+    ],
+    "formulas": [
+      {"name": "Diff between Peaks", "text": "diff(1,[Peak Voltage])"},
+      {"name": "Diff between Troughs", "text": "diff(1,[Trough Voltage])"}
+    ],
+    "axes": {
+      "graph1": {"x": "Voltage", "y": "Current", "title": "Anode Current vs Accelerating Voltage"}
+    },
+    "ranges": {"voltage_V": [0, 85], "current_pA": [0, 500000]}
+  },
+
+  "voltmeter": {
+    "description": "Ohm's Law / I-V Characteristics: Voltage vs. Current, plotting U-I curve to determine resistance.",
+    "sampling_hz": 10,
+    "columns": [
+      {"name": "voltage", "unit": "V", "sensor": "Voltage Sensor"},
+      {"name": "current", "unit": "A", "sensor": "Current Sensor"},
+      {"name": "resistance", "unit": "ohm", "formula": "[voltage]/[current]"}
+    ],
+    "formulas": [
+      {"name": "R", "text": "slope([voltage] vs [current])"}
+    ],
+    "axes": {
+      "graph1": {"x": "current", "y": "voltage", "title": "U-I Curve"}
+    },
+    "ranges": {"voltage_V": [0, 5], "current_A": [0, 0.5]}
+  },
+
+  "blackbody": {
+    "description": "Blackbody Radiation (Planck's Law + photoelectric calibration): spectral scan at multiple lamp voltages (4V/5V/7V/9V/10V), deriving Planck constant via the Planck-law intensity chain. Sensors: BroadSpectrumLightSensor + RotaryMotionSensor (PASPORT, 100 Hz) + Voltage Sensor (Analog A, 20 Hz). Main rate 100 Hz.",
+    "sampling_hz": 100,
+    "columns": [
+      {"name": "Angle", "unit": "deg", "sensor": "RotaryMotionSensor"},
+      {"name": "LightIntensity", "unit": "counts/s", "sensor": "BroadSpectrumLightSensor"},
+      {"name": "Voltage", "unit": "V", "sensor": "VoltageChA"},
+      {"name": "OutputCurrent", "unit": "A", "sensor": "OutputCurrentChH"},
+      {"name": "AngleCal", "unit": "%"},
+      {"name": "Initialangle", "unit": "deg"},
+      {"name": "Rholder", "unit": "ohm"},
+      {"name": "Temp", "unit": "K"},
+      {"name": "scale", "unit": ""}
+    ],
+    "formulas": [
+      {"name": "trueangle", "text": "abs([Angle])/([AngleCal]/100)"},
+      {"name": "CorrTrueAng", "text": "[Initialangle]-[trueangle]"},
+      {"name": "n", "text": "sqrt((2*sin([CorrTrueAng(°)/360*2*3.14])/sqrt(3)+0.5)^2+3/4)"},
+      {"name": "lambda", "text": "filter(400,2500, 320+1/([n]-1.635)+0.2/([n]-1.635)^2+0.19/([n]-1.635)^3)"},
+      {"name": "resist", "text": "5.65*([VoltageChA(V)]/[OutputCurrentChH(A)]-[Rholder(ohm)])/0.93"},
+      {"name": "AbsTemp", "text": "103+38.1*[resist]-0.095*[resist]^2+0.000248*[resist]^3"},
+      {"name": "I", "text": "([C1]/([λ]/10^9)^5) * (1/(exp([C2]/(([λ]/10^9)*[Temp]))-1))"},
+      {"name": "Itheory", "text": "[I]*10^(-11)*[scale]"},
+      {"name": "C1", "text": "2*π*[h]*[c]^2"},
+      {"name": "C2", "text": "[h]*[c]/[k_Boltzmann]"}
+    ],
+    "axes": {
+      "graph1": {"x": "trueangle", "y": "LightIntensity", "title": "Spectral Intensity vs Corrected Angle"},
+      "graph2": {"x": "Angle", "y": "LightIntensity", "title": "Light Intensity vs Angle"},
+      "graph3": {"x": "λ", "y": "Itheory", "title": "Theoretical Planck Intensity vs Wavelength"}
+    },
+    "ranges": {
+      "angle_deg": [-90, 90],
+      "intensity_counts_s": [0, 2000000],
+      "wavelength_nm": [300, 900]
+    }
+  }
+}

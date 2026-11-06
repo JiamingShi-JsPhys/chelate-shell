@@ -1,0 +1,2 @@
+# reference-auditor defaults (read by run.py via lib/chelate_core.adapter.load_config)
+timeout_seconds: 20    # per-DOI HTTP timeout against api.crossref.org

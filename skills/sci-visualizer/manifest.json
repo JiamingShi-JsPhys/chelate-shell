@@ -1,0 +1,26 @@
+{
+  "name": "sci-visualizer",
+  "version": "1.3.0",
+  "stage": "generation",
+  "input_types": [
+    "csv",
+    "dataset",
+    "json",
+    "image_sequence"
+  ],
+  "output_type": "figure",
+  "output_types": [
+    "figure",
+    "png",
+    "gif",
+    "mp4"
+  ],
+  "dependencies": [
+    "matplotlib",
+    "seaborn",
+    "pandas"
+  ],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Generation-stage meta-skill: routes static charts to figure-generator and frame-scans gif/animation inputs with optional Pillow. Writes its gate into the workspace (v1.1.1 output contract)."
+}

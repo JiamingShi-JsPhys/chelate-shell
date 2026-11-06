@@ -1,0 +1,36 @@
+# multi-dim-manager — experiment configuration (example)
+#
+# Copy this file and adapt it to your experiment. A JSON config is also
+# accepted and needs no extra dependency; YAML requires `pip install pyyaml`.
+
+param_space:
+  dimensions:
+    # Declare every axis you iterate over. The manager expands the Cartesian
+    # product, so N dimensions with a_i values yield prod(a_i) rounds.
+    - name: condition
+      values: [default_on, default_off]
+    - name: info
+      values: [visible, hidden]
+    - name: unsub
+      values: [fast, slow]
+    - name: timepoint
+      values: [T0, T1, T2, T3, T4]
+
+# Only these files are snapshotted (content-addressed). Declare the artifacts
+# whose integrity matters: cleaned data, fitted models, intermediate states.
+# A full working-directory snapshot is deliberately NOT taken.
+critical_paths:
+  - data/clean.csv
+  - results/lmm.json
+
+plugin:
+  # One shell command. The manager substitutes:
+  #   {PARAMS} -> path to this round's parameter JSON
+  #   {OUT}    -> path the plugin MUST write its JSON result to
+  # Exit codes: 0 success, 1 assertion failed, 2 error/skipped.
+  command: "python sample_plugin.py --params {PARAMS} --out {OUT}"
+  timeout: 300   # seconds; omit or set null for no limit
+
+workdir: ./work          # where the plugin reads/writes
+output: ./output         # audit log, snapshot store, summaries
+auto_rollback: true      # recover the last good baseline after a failed round

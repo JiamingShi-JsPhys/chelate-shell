@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Runtime outputs
+results/
+data/raw.csv
+index.json
+index.md
+audit/
+state.db
+
+# Runtime artifacts of the installer / tests
+.snapshots/
+
+# Metadata that must never ship to GitHub
+references/
+examples/_runtime/

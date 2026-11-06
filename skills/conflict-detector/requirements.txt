@@ -1,0 +1,8 @@
+# conflict-detector — dependencies
+#
+# Core is pure standard library. PyYAML is only required when the config
+# file is in YAML format; JSON configs need no extra dependency.
+PyYAML>=6.0
+
+# Test runner.
+pytest>=8.0

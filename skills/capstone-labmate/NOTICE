@@ -1,0 +1,13 @@
+NOTICE
+
+"PASCO" and "Capstone" are registered trademarks of PASCO Scientific.
+
+capstone-labmate is an independent, third-party interoperability and
+educational-assistance tool. It is not affiliated with, endorsed by, or
+sponsored by PASCO Scientific.
+
+All .cap parsing and processing runs locally on the user's machine; no data
+leaves the local environment. Users are responsible for complying with their
+institution's academic-integrity policy.
+
+This skill is licensed under the MIT License (see LICENSE in this directory).

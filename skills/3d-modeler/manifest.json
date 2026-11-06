@@ -1,0 +1,19 @@
+{
+  "name": "3d-modeler",
+  "version": "1.3.0",
+  "stage": "domain_extensions",
+  "input_types": [
+    "json",
+    "obj",
+    "csv"
+  ],
+  "output_type": "model_3d",
+  "output_types": [
+    "obj",
+    "model_3d"
+  ],
+  "dependencies": [],
+  "sandbox_required": true,
+  "entrypoint": "scripts/run.py",
+  "description": "Domain-extension skill: generates, merges, and audits pure-Python OBJ 3D meshes. Runs in an isolated sandbox process with a 120-second circuit-breaker."
+}

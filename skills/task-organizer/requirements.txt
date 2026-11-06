@@ -1,0 +1,13 @@
+# Core runtime dependency (Excel index generation).
+# Every other feature -- history/undo-redo, smart dedupe, YAML rules,
+# logging, init, provenance manifest, incremental hashing, artifact
+# rotation -- is standard-library only; no new runtime dependency.
+openpyxl>=3.1.0
+
+# Test-only dependencies.
+pytest>=8.0
+pytest-cov>=4.0
+
+# Optional: enables AI-powered one-line summaries in the index when present.
+# pip install "requests"  # not required; the AI path degrades to a
+# filename + 200-char placeholder when no key is configured.

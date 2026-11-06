@@ -1,0 +1,10 @@
+_reports/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+.venv/
+
+# Upstream reference material (kept out of the shipped skill)
+references/

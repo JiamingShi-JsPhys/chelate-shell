@@ -1,0 +1,65 @@
+{
+  "n_signals": 2,
+  "signals": [
+    {
+      "signal": "demo_pendulum.x_px",
+      "n_samples": 121,
+      "fps": 30.0,
+      "dominant_freq_hz": 0.495868,
+      "dominant_amplitude": 99.538816,
+      "period_s": 2.016667,
+      "top_peaks": [
+        {
+          "freq_hz": 0.495868,
+          "amplitude": 99.538816
+        },
+        {
+          "freq_hz": 0.743802,
+          "amplitude": 2.02734
+        },
+        {
+          "freq_hz": 0.991736,
+          "amplitude": 1.118335
+        },
+        {
+          "freq_hz": 0.247934,
+          "amplitude": 1.085987
+        },
+        {
+          "freq_hz": 1.239669,
+          "amplitude": 0.797702
+        }
+      ]
+    },
+    {
+      "signal": "demo_pendulum.y_px",
+      "n_samples": 121,
+      "fps": 30.0,
+      "dominant_freq_hz": 0.247934,
+      "dominant_amplitude": 50.201828,
+      "period_s": 4.033333,
+      "top_peaks": [
+        {
+          "freq_hz": 0.247934,
+          "amplitude": 50.201828
+        },
+        {
+          "freq_hz": 0.495868,
+          "amplitude": 0.281537
+        },
+        {
+          "freq_hz": 0.743802,
+          "amplitude": 0.105148
+        },
+        {
+          "freq_hz": 0.991736,
+          "amplitude": 0.05598
+        },
+        {
+          "freq_hz": 1.239669,
+          "amplitude": 0.034937
+        }
+      ]
+    }
+  ]
+}

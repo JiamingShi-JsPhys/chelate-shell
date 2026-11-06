@@ -1,0 +1,113 @@
+# Example placement-rule config for task-organizer.
+#
+# Copy this file to `.task-organizer.yml` in one of these locations (search
+# order, first match wins):
+#   1. the task folder you are organizing  (highest priority, besides --config)
+#   2. your home directory                 (~/.task-organizer.yml)
+# or pass it explicitly:  python -m scripts.run organize <root> --config <this file>
+#
+# The tool uses its built-in rules when no config is found, and falls back to
+# the built-ins (with a warning) if this file cannot be parsed. It NEVER
+# crashes on a malformed config.
+#
+# ---------------------------------------------------------------------------
+# Two things changed -- read this before copying the old file.
+# ---------------------------------------------------------------------------
+#
+# 1. **Provenance beats keywords.** `material/initial/` and
+#    `material/downloaded/` are no longer keyword targets: they are decided by
+#    *who produced the file* (see `process/sources.json`). A rule whose target
+#    is `material/initial` or `material/downloaded` is therefore ignored for
+#    routing purposes -- use `init` / `mark-user` / `mark-downloaded` instead.
+#    The keyword table below only decides `results` vs `process` for files
+#    nobody has declared.
+#
+# 2. **Profiles.** One file can carry several named rule sets. Pick one with
+#    `--profile <name>`; `default_profile` decides which one is used when
+#    `--profile` is omitted. The old flat layout (a top-level `placement:`
+#    key with no `profiles:`) still works exactly as before.
+#
+# Schema
+# ------
+# default_profile: pharma          # optional; used when --profile is omitted
+# profiles:
+#   <name>:
+#     placement:
+#       - priority: 1              # integer; lower = checked first
+#         keywords: [a, b, c]      # inline flow list (or one-per-line block list)
+#         target: results          # relative dir under the task root
+#     defaults:
+#       target: process            # where undeclared files land
+#
+# Valid targets: `process`, `results`, or any relative directory you like
+# (e.g. `process/reviews`). `material/initial` and `material/downloaded`
+# are reserved for the user's own material.
+
+default_profile: pharma
+
+profiles:
+
+  # --- the pharma / clinical-research example -----------------------------
+  pharma:
+    placement:
+      # Raw data and source dumps -> process/
+      - priority: 1
+        keywords: [raw, 原始数据, source, export]
+        target: process
+      # Anything approved for delivery -> results/
+      - priority: 2
+        keywords: [final, 最终版, release, approved]
+        target: results
+      # Clinical / study reports -> results/
+      - priority: 3
+        keywords: [report, 临床报告, csr, study]
+        target: results
+      # Review cycles and comments stay in process/
+      - priority: 4
+        keywords: [review, comment, 审阅, 意见]
+        target: process
+    defaults:
+      target: process
+
+  # --- a generic example --------------------------------------------------
+  default:
+    placement:
+      # Drafts / intermediates -> process/
+      - priority: 1
+        keywords: [draft, intermediate, temp, tmp, raw]
+        target: process
+      # Final deliverables -> results/
+      - priority: 2
+        keywords: [final, deliverable]
+        target: results
+    defaults:
+      target: process
+
+  # --- a legal / contract review example ----------------------------------
+  legal:
+    placement:
+      - priority: 1
+        keywords: [draft, redline, 修订]
+        target: process
+      - priority: 2
+        keywords: [executed, signed, 签署, final]
+        target: results
+      - priority: 3
+        keywords: [clause, appendix, 附件]
+        target: results
+    defaults:
+      target: process
+
+# ---------------------------------------------------------------------------
+# Legacy flat layout -- still supported. Uncomment to use a single rule set
+# with no profiles at all.
+# ---------------------------------------------------------------------------
+# placement:
+#   - priority: 1
+#     keywords: [draft, intermediate, temp, tmp, raw]
+#     target: process
+#   - priority: 2
+#     keywords: [final, deliverable]
+#     target: results
+# defaults:
+#   target: process
