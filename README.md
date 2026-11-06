@@ -8,8 +8,7 @@
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.0 | **Skills:** 20 (flat layout, one folder per skill)
-
+**Version:** 1.3.0 | **Skills:** 20 
 ---
 
 ## Security & Open Source Statement
