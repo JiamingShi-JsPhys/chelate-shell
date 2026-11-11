@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1] - 2026-11-11
+
+### Changed
+- Version declaration bumped to 1.3.1 across the repository.
+  No capability change to this skill.
+
 ## [1.3.0] - 2026-10-28
 
 - Merged the standalone figure-generator skill into sci-visualizer: the

@@ -1,12 +1,12 @@
 ---
 name: ml-auditor
-version: 1.3.0
+version: 1.3.1
 description: >
   Audits a labelled dataset for leakage and label errors with scikit-learn,
   and optionally takes a second opinion from cleanlab. Runs inside the process
   sandbox; missing dependencies degrade the gate to `UNVERIFIED`.
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py

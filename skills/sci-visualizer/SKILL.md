@@ -1,12 +1,12 @@
 ---
 name: sci-visualizer
-version: 1.3.0
+version: 1.3.1
 description: >
   Generation meta-skill: renders static scientific charts from tabular data and
   scans gif/animation frame sequences. Successor to `figure-generator`, adding
   the gif path and four chart types.
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

@@ -13,7 +13,16 @@ import re
 
 import pytest
 
-from conftest import LEGACY_SKILLS, SKILLS_DIR, run_in_skill
+from conftest import LEGACY_SKILLS, SKILLS_DIR, missing_modules, run_in_skill
+
+# Legacy skills whose key modules import a third-party package at module
+# level. Without it the subprocess raises ModuleNotFoundError and the name
+# inventory cannot be checked; the skill still degrades correctly, which the
+# UNVERIFIED-path tests cover instead.
+LEGACY_DEPS = {
+    "video-tracker": ("numpy",),            # fft_analyzer / physics
+    "formula-validator": ("sympy", "pint", "numpy"),
+}
 
 # (module, [required top-level names]) per skill, expressed as subprocess code
 INVENTORY = {
@@ -74,6 +83,9 @@ INVENTORY = {
 @pytest.mark.parametrize("skill", LEGACY_SKILLS)
 def test_legacy_key_functions_exist(skill):
     """Import each key module in an isolated subprocess and assert names."""
+    missing = missing_modules(*LEGACY_DEPS.get(skill, ()))
+    if missing:
+        pytest.skip("optional dependency not installed: " + ", ".join(missing))
     for module, names in INVENTORY[skill]:
         code = (
             "import importlib, json, sys\n"

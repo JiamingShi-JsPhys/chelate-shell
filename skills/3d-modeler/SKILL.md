@@ -1,17 +1,22 @@
 ---
 name: 3d-modeler
-version: 1.3.0
+version: 1.3.1
 description: >
   Pure-Python OBJ mesh work: generate a mesh from a JSON spec, merge several
   OBJ files, and audit an existing mesh (winding, degenerate faces, bounds).
   Runs inside the process sandbox.
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py
   python_requires: '>=3.10'
 ---
+> **Deprecated — audit only.** This action still generates and merges OBJ
+> meshes, but its `.obj` audit path is deprecated. For print-quality
+> verification (watertightness, non-manifold edges, normals, size) use
+> `3d-fabric`: `python run.py --action inspect --input part.obj`.
+
 
 # 3d-modeler
 
@@ -47,7 +52,7 @@ python scripts/run.py --root <WS> --action process --input spec.json
 
 | `--action` | Does | Extra arguments |
 | --- | --- | --- |
-| `process` | Generate / merge / audit | `--input <spec.json\|.obj> [--spec ...] [--merge other.obj ...]` |
+| `process` | Generate / merge (+ deprecated audit) | `--input <spec.json\|.obj> [--spec ...] [--merge other.obj ...]` |
 
 ## Hard constraints
 

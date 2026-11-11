@@ -2,6 +2,63 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.3.1] — 2026-11-11
+
+A release about the test suite being trustworthy, not about the skills.
+
+### Fixed
+- **A fresh clone can run its own suite.** There was no pytest configuration at
+  the root, so `pytest` collected `skills/*/tests/` as well as `tests/`. Those
+  directories each declare a top-level `tests` package, so the run died during
+  collection with `ImportPathMismatchError` — and an early `conftest` import
+  resolved to `skills/capstone-labmate/conftest.py` instead of the root one.
+  `pytest.ini` now scopes collection to `tests/`, the suite this project
+  maintains.
+- **Two skill contract tests were pinned to `1.2.0`.** `conflict-detector` and
+  `document-evolution-tracker` asserted `__version__ == "1.2.0"` while both
+  skills already shipped `1.3.0`. They now compare against the skill's own
+  `manifest.json`, so a release bump cannot break them again.
+- **`yamlmini` kept inline comments, so `data-profiler` failed its own gate
+  whenever PyYAML was absent.** The shipped `assets/config.yaml` writes
+  `outlier_fence: 1.5     # Tukey multiplier …`; PyYAML strips the comment,
+  the built-in fallback parser did not, and `float()` raised on the whole
+  string — the adapter reported FAIL for a config it could not read. The
+  fallback now strips a trailing `#` outside quotes. Found by the CI job that
+  installs no PyYAML, which is the install a user gets.
+- **`package.json` shipped the skills without the code they import.** The
+  `files` list carried `skills/` and left out `core/`, `lib/`, `bootstrap.py`,
+  `cli.py` and `contracts/`, so an npm install produced a tree the registry
+  could not start. It now includes them, plus `commands/` and `agents/`.
+
+### Added
+- **CI, in two jobs.** `.github/workflows/tests.yml` runs `python -m pytest` on
+  every push and pull request against Python 3.10 and 3.12. The `bare` job
+  installs pytest and nothing else — the `UNVERIFIED` path is what a fresh
+  user gets, so that is the path worth guarding — and the `extras` job
+  installs numpy, pandas, scikit-learn, matplotlib, seaborn, sympy, pint,
+  pypdf, pdfminer.six, bibtexparser, requests and arxiv, so the PASS paths run
+  too.
+  `tests/conftest.py` gains `requires()`, the marker a test uses to skip when
+  its optional dependency is absent; the 20 tests that assert a real verdict
+  (CAS layers, FFT, profiling, PDF/BibTeX parsing) now carry it instead of
+  failing. `test_ml_auditor` and `test_sci_visualizer` imported numpy and
+  pandas at module scope and now use `pytest.importorskip`, so a bare run
+  skips those modules instead of dying during collection. The PDF fixture is
+  built by pypdf when pymupdf is absent, and without font metrics pdfminer
+  emits one glyph per line, so its assertion now compares with whitespace
+  removed.
+
+### Changed
+- **Install commands moved to `docs/INSTALL_COMMANDS.md`** (and its Chinese
+  twin). The README keeps methods 1 and 3 plus a pointer, so the front page is
+  short again.
+- **An Acknowledgements section**, with `docs/ACKNOWLEDGEMENTS.md` carrying the
+  detail behind each credited report.
+- **`3d-modeler`'s audit path is deprecated.** Print-quality verification
+  (watertightness, non-manifold edges, normals, physical size) belongs to
+  `3d-fabric --action inspect`; `3d-modeler` still audits, but says so in
+  its gate reason and raises a `DeprecationWarning`.
+
 ## [1.3.0] — 2026-11-06
 
 ### Skill tree flattened to one level

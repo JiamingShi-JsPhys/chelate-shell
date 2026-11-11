@@ -12,6 +12,7 @@ Public API (used by scripts/run.py):
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
 from typing import List
 
@@ -50,9 +51,17 @@ def build_from_spec(spec_path) -> str:
 def audit_obj(obj_path) -> str:
     """Validate and normalise an OBJ file; returns its text after audit.
 
+    .. deprecated::
+       Print-quality verification belongs to 3d-fabric
+       (``python run.py --action inspect``). This helper only checks
+       vertex presence and face index bounds, which is a strict subset.
+
     Counts vertices/faces and raises ``ValueError`` on out-of-range face
     indices.
     """
+    warnings.warn(
+        "3d-modeler.audit_obj is deprecated; use 3d-fabric --action inspect",
+        DeprecationWarning, stacklevel=2)
     text = Path(obj_path).read_text(encoding="utf-8")
     n_v = sum(1 for ln in text.splitlines() if ln.startswith("v "))
     if n_v == 0:

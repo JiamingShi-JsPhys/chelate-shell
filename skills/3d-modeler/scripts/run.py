@@ -24,6 +24,12 @@ from lib.chelate_core import adapter  # noqa: E402
 
 SKILL = "3d-modeler"
 
+#: ``audit_obj`` is deprecated: print-quality verification now belongs to
+#: 3d-fabric (``python run.py --action inspect``). Kept for compatibility.
+_AUDIT_DEPRECATION = (
+    ' · DEPRECATED: this audit is superseded by 3d-fabric '
+    '(`run.py --action inspect`)')
+
 
 def _configure(ap):
     ap.add_argument("--input", required=False,
@@ -53,16 +59,18 @@ def _handler(args):
     try:
         if spec_path.suffix.lower() == ".json":
             mesh = build_from_spec(spec_path)
+            deprecated = False
             obj_path = out_dir / (spec_path.stem + ".obj")
         else:  # .obj -> audit (and optionally merge)
             mesh = audit_obj(spec_path)
             obj_path = out_dir / (spec_path.stem + "_audited.obj")
+            deprecated = True
         merges = [pathlib.Path(m) for m in (args.merge or []) if m]
         if merges:
             mesh = merge_objs(mesh, merges)
         obj_path.write_text(mesh, encoding="utf-8")
         return {"status": "PASS", "evidence_level": "SYMBOLIC",
-                "reason": f"wrote {obj_path.name}",
+                "reason": f"wrote {obj_path.name}" + (_AUDIT_DEPRECATION if deprecated else ""),
                 "artifacts": [str(obj_path)]}
     except Exception as exc:
         return {"status": "FAIL", "evidence_level": "UNVERIFIED",

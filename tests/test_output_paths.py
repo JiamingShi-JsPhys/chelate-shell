@@ -29,9 +29,13 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from conftest import (ROUTED_SKILLS, REPO_ROOT, SKILLS_DIR, run_path_of,  # noqa: E402
-                      skill_root)
+from conftest import (ROUTED_SKILLS, REPO_ROOT, SKILLS_DIR, requires,  # noqa: E402
+                      run_path_of, skill_root)
 from lib.chelate_core import adapter  # noqa: E402
+
+# formula-validator's CAS layers need sympy / pint / numpy; without them the
+# adapter has no verdict to write a report for.
+_needs_cas = requires("sympy", "pint", "numpy")
 
 PYTHON = sys.executable
 
@@ -150,6 +154,7 @@ def test_adapter_writes_nothing_outside_the_workspace(skill, tmp_path):
 # ------------------------------------------------------- formula-validator
 
 
+@_needs_cas
 def test_formula_validator_dimensional_error_lands_in_workspace(tmp_path):
     """The user's exact Claude Code scenario: a dimensional error is
     intercepted (FAIL/SYMBOLIC) and the Markdown report is written to
@@ -180,6 +185,7 @@ def test_formula_validator_dimensional_error_lands_in_workspace(tmp_path):
     assert _snapshot(str(skill_dir)) == before
 
 
+@_needs_cas
 def test_formula_validator_units_action_requires_expr(tmp_path):
     """units action without --expr -> FAIL gate, no report written."""
     ws = tmp_path / "ws"
@@ -194,6 +200,7 @@ def test_formula_validator_units_action_requires_expr(tmp_path):
     assert not list((ws / "process" / "reports").glob("*.md"))
 
 
+@_needs_cas
 def test_explicit_output_flag_wins_over_injected_default(tmp_path):
     """--skill-arg "--report /my.md" must beat the adapter's injection."""
     ws = tmp_path / "ws"

@@ -7,6 +7,11 @@ import pytest
 
 from core import router
 from core.registry import Registry
+from conftest import requires
+
+# data-profiler reaches PASS only with pandas; in a bare environment it
+# degrades to UNVERIFIED and the promotion assertion below cannot hold.
+_needs_pandas = requires("pandas")
 
 
 @pytest.fixture()
@@ -224,6 +229,7 @@ def test_dry_run_shows_auto_wired_inputs(workspace, capsys):
     assert "--input" in capsys.readouterr().out
 
 
+@_needs_pandas
 def test_inputs_auto_wired_end_to_end(workspace, tmp_path):
     """--inputs data.csv must reach data-profiler without --skill-arg."""
     csv = tmp_path / "data.csv"

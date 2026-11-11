@@ -8,7 +8,7 @@
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.0 | **Skills:** 20
+**Version:** 1.3.1 | **Skills:** 20
 
 ---
 
@@ -102,102 +102,7 @@ https://github.com/JiamingShi-JsPhys/chelate-shell
 
 ### Method 2: install with commands
 
-**Claude Code** — from your shell (v2.1.292+), marketplace and install in one step:
-
-```bash
-claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-JsPhys/chelate-shell.git
-```
-
-**Claude Code** — from inside a session (v2.1.275+), add the marketplace from the URL first, pinned to the release tag:
-
-```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.0
-```
-
-Then install the entry it lists:
-
-```text
-/plugin install chelate-shell@chelate-shell-marketplace
-```
-
-**Codex** — register the URL as a Git marketplace; `--ref` pins the release tag, and an SSH URL or a local path works in place of the HTTPS one:
-
-```bash
-codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.3.0
-```
-
-**Codex** — install the plugin from that marketplace:
-
-```bash
-codex plugin add chelate-shell@chelate-shell-marketplace
-```
-
-**dsh (DeepSeek Harness)** — installs from the same repository URL straight into a profile:
-
-```bash
-dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.3.0
-```
-
-**CodeBuddy** — add the URL as a Git marketplace:
-
-```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.0
-```
-
-Then install the entry it lists:
-
-```text
-/plugin install chelate-shell@chelate-shell-marketplace
-```
-
-Cursor, Windsurf, Cline's IDE extension, Continue, Roo Code, GitHub Copilot and opencode each read a rule file from their own location, and none of them accepts this repository as a plugin — Cline's `cline plugin install` takes only JS/TS plugin packages, Cursor's plugin format is a different bundle, and `opencode plugin <module>` installs npm modules. **No vendor ships an installer that understands another vendor's rule file**, so this repository ships one:
-
-```bash
-git clone https://github.com/JiamingShi-JsPhys/chelate-shell.git && python chelate-shell/install.py --project <project> --global
-```
-
-That single command writes every rule file at once:
-
-- `--project <project>` covers the project-scoped files — Cursor, Windsurf, Cline, Continue, Roo Code, GitHub Copilot, and the generic `AGENTS.md` that Codex, Cursor, Copilot agents and opencode all read.
-- `--global` covers the user-scoped files — `~/.config/opencode/AGENTS.md`, `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), and `~/.claude/CLAUDE.md` when `~/.claude` already exists — and skips any host this machine does not have.
-
-Re-running it is safe: identical files report `unchanged`, and a rule file that has drifted is left alone unless you pass `--force`.
-
-List every destination without writing anything:
-
-```bash
-python chelate-shell/install.py --list
-```
-
-Preview the run:
-
-```bash
-python chelate-shell/install.py --project <project> --global --dry-run
-```
-
-Install for one host only:
-
-```bash
-python chelate-shell/install.py --project <project> --only cursor,windsurf
-```
-
-Keep the cloned repository somewhere the agent can reach: every rule file names `cli.py`, `ORCHESTRATOR.md` and `task-organizer`, so the host agent enters the same pipeline as a plugin host. The rule file describes *how to call* the suite — it does not vendor the code.
-
-**opencode without copying** — opencode can also read the rule file in place through `opencode.json`'s `instructions` array, which needs no copy and can be committed for a whole team:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "instructions": ["../chelate-shell/AGENTS.md"]
-}
-```
-
-**Manual alternative** — if you would rather not run the script, copy the file yourself to the destination the script would have used:
-
-```text
-<clone>/AGENTS.md  →  <project>/AGENTS.md
-```
-
+Claude Code, Codex, dsh and CodeBuddy take a one-line plugin command; Cursor, Windsurf, Cline, Continue, Roo Code, GitHub Copilot and opencode read a rule file, and one script writes all of them. Every command, every flag and the optional dependencies live on one page: **[docs/INSTALL_COMMANDS.md](docs/INSTALL_COMMANDS.md)**.
 ### Method 3: let your AI install it
 
 ```bash
@@ -324,7 +229,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.0)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.1)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md
@@ -411,6 +316,11 @@ Honest edge cases — read before relying on any output:
 - For serious "file loss or corruption" reports, attach the before/after directory trees (`tree` output) and the generated `verification_report.md`.
 
 *Contributors who file clear, reproducible issues or pull requests will be credited in the next release's notes.*
+## Acknowledgements
+
+**NotFatJustRound** — [issue #1](https://github.com/JiamingShi-JsPhys/chelate-shell/issues/1) asked for CI and caught an incomplete npm `files` list.
+
+[Full acknowledgements](docs/ACKNOWLEDGEMENTS.md)
 
 ## Trademarks
 

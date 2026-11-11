@@ -1,12 +1,12 @@
 ---
 name: literature-retriever
-version: 1.3.0
+version: 1.3.1
 description: >
   Searches arXiv for a keyword phrase and stores the result as JSON in
   `process/`. Returns metadata only — titles, authors, identifiers, abstracts —
   and never downloads or redistributes the papers themselves.
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

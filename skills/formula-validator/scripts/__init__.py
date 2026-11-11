@@ -4,4 +4,4 @@ The version here must stay identical to the ``version:`` field in SKILL.md and
 to the newest section of CHANGELOG.md; ``tests/test_skill_docs.py`` enforces it.
 """
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"

@@ -3,7 +3,7 @@
 cff-version: "1.2.0"
 title: "document-evolution-tracker: document version alignment and concept lineage"
 type: software
-version: 1.3.0
+version: 1.3.1
 license: MIT
 date-created: 2026-10-15
 authors:

@@ -139,7 +139,7 @@ pipeline immediately and locks the intermediate products in `process/`.
   graphics under `process/figures/` into one compilable `.tex`. **Standard
   library only** (no `pandoc`), so no sandbox is required.
 
-### 2.5 architectural layer stages (v1.3.0)
+### 2.5 architectural layer stages (v1.3.1)
 
 These three stages host the new meta-skills. They are declared in `STAGE_ACTION`
 and routed by the registry but are not part of the canonical four-stage pipeline
@@ -262,7 +262,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.0).
+marketplace. Keep `version` in sync across all manifests (currently 1.3.1).
 
 ## 7. Hard constraints
 

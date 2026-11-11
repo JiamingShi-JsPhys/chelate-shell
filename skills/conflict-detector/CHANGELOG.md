@@ -4,6 +4,14 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-11-11
+
+### Changed
+- Version declaration bumped to 1.3.1 across the repository.
+  The version contract test now compares against this skill's
+  `manifest.json` instead of a hardcoded `"1.2.0"`, so a release
+  bump cannot break it.
+
 ## [1.3.0] - 2026-10-28
 
 ### Added

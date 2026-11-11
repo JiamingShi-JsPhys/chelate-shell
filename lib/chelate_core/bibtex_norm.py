@@ -120,7 +120,7 @@ def normalize(bib_path: Path, outdir: Path) -> dict:
 
     unique.sort(key=lambda e: (entry_key(e).lower(),
                                content_key(dict(entry_items(e)))))
-    header = (f"% Normalized by chelate bibtex-normalizer v1.3.0\n"
+    header = (f"% Normalized by chelate bibtex-normalizer v1.3.1\n"
               f"% Source: {Path(bib_path).name}\n"
               f"% Entries: {len(unique)} unique "
               f"({len(duplicates)} duplicates removed)\n")

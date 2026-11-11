@@ -5,7 +5,12 @@ import json
 import subprocess
 import sys
 
-from conftest import REPO_ROOT, SKILLS_DIR, run_in_skill
+from conftest import REPO_ROOT, SKILLS_DIR, requires, run_in_skill
+
+# The legacy CAS layers import sympy / pint / numpy. In a bare environment
+# (CI's `pytest only` job) the skill degrades to UNVERIFIED, which the adapter
+# test below still checks; there is no verdict to assert in the layer tests.
+_needs_cas = requires("sympy", "pint", "numpy")
 
 # --- legacy SymPy D1-D5 pipeline (the code path scripts/cli.py uses) --------
 
@@ -60,18 +65,21 @@ print(json.dumps({"status": r["status"], "reason": r.get("reason", "")}))
 """
 
 
+@_needs_cas
 def test_d1_d5_pipeline_proves_distributive_identity():
     out = run_in_skill("formula-validator", VALIDATE_OK)
     assert out["verdict"] == "pass", out
     assert out["errors"] == [], out
 
 
+@_needs_cas
 def test_dimension_layer_rejects_mismatch():
     out = run_in_skill("formula-validator", VALIDATE_DIM_FAIL)
     assert out["verdict"] == "fail", out
     assert any(e.get("check") == "dimension" for e in out["errors"]), out
 
 
+@_needs_cas
 def test_parse_layer_rejects_malformed_equation():
     """A malformed equation must never silently pass: legacy raises, and the
     adapter turns that into a gate verdict (never a crash)."""
@@ -83,11 +91,13 @@ def test_parse_layer_rejects_malformed_equation():
         assert out["errors"] or out["verdict"] == "unknown", out
 
 
+@_needs_cas
 def test_pint_layer_consistent():
     out = run_in_skill("formula-validator", PINT_OK)
     assert out["status"] == "pass", out
 
 
+@_needs_cas
 def test_pint_layer_rejects_mismatch():
     out = run_in_skill("formula-validator", PINT_BAD)
     assert out["status"] == "fail", out

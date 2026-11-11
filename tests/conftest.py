@@ -6,6 +6,7 @@ so per-skill code runs in an isolated subprocess via `run_in_skill()`.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -52,6 +53,34 @@ def skill_root(name: str) -> Path:
     if not path.is_dir():
         raise KeyError(f"skill not found: {name}")
     return path
+
+
+def missing_modules(*modules):
+    """Return the subset of `modules` that cannot be imported here.
+
+    Skills are allowed to degrade to UNVERIFIED when an optional dependency
+    is absent — that is the path a fresh user gets, and issue #1 asked CI to
+    guard it. But a test that asserts a real verdict (PASS/FAIL from sympy,
+    pint, pandas, …) has nothing to assert without the dependency, so it must
+    skip rather than fail. `requires()` is the marker for those.
+    """
+    missing = []
+    for mod in modules:
+        try:
+            found = importlib.util.find_spec(mod) is not None
+        except (ImportError, ValueError):  # parent package missing / bad name
+            found = False
+        if not found:
+            missing.append(mod)
+    return missing
+
+
+def requires(*modules):
+    """pytest marker: skip when an optional dependency is not installed."""
+    missing = missing_modules(*modules)
+    return pytest.mark.skipif(
+        bool(missing),
+        reason="optional dependency not installed: " + ", ".join(missing))
 
 
 def entrypoint_of(skill: str) -> str:

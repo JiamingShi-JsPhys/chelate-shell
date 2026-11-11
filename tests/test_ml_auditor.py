@@ -14,9 +14,12 @@ import json
 import subprocess
 import sys
 
-import numpy as np
-import pandas as pd
 import pytest
+
+# CI installs pytest and nothing else, on purpose: the UNVERIFIED path is what
+# a fresh user gets. Skip the module there instead of failing collection.
+np = pytest.importorskip("numpy")
+pd = pytest.importorskip("pandas")
 
 from conftest import REPO_ROOT, SKILLS_DIR
 

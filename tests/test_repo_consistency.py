@@ -39,7 +39,7 @@ from conftest import SKILLS_DIR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERSION = "1.3.0"
+EXPECTED_VERSION = "1.3.1"
 CANONICAL_CONTACT_EMAIL = "jiamingshi_git@outlook.com"
 # v1.3.0 extended the four runtime stages (workspace/ingest/gates/processors)
 # with three architectural categories: infrastructure (security-guard),

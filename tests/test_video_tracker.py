@@ -3,7 +3,14 @@ from __future__ import annotations
 
 import math
 
-from conftest import run_in_skill
+import pytest
+
+from conftest import requires, run_in_skill
+
+# The FFT and physics probes are numpy code; without numpy the skill degrades
+# to UNVERIFIED by design, and there is no spectrum to assert. CI's bare job
+# installs pytest only, so skip the module there.
+pytestmark = requires("numpy")
 
 FFT_SINE = """
 import json, math, sys

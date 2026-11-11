@@ -17,6 +17,11 @@ if REPO not in sys.path:
 
 from lib.chelate_core import adapter, debug  # noqa: E402
 from core import router as router_module  # noqa: E402
+from conftest import requires  # noqa: E402
+
+# data-profiler needs pandas to reach PASS; without it the gate is UNVERIFIED
+# and there is no successful subprocess to observe in the debug log.
+_needs_pandas = requires("pandas")
 
 
 # --------------------------------------------------------------------------
@@ -165,6 +170,7 @@ def test_adapter_accepts_debug_flag_directly(tmp_path, monkeypatch, capsys):
 # execute it, so this integration test is the only guard for debug plumbing)
 # --------------------------------------------------------------------------
 
+@_needs_pandas
 def test_router_run_skill_debug_logs_real_subprocess(tmp_path, monkeypatch,
                                                      capsys):
     import csv as _csv

@@ -6,6 +6,7 @@ on README.md.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -23,8 +24,12 @@ def _fm(text: str, key: str) -> str | None:
 def test_version_consistency() -> None:
     from src import __version__
 
+    manifest = json.loads(
+        (SKILL_DIR / "manifest.json").read_text(encoding="utf-8"))
     assert _fm(SKILL_MD.read_text(encoding="utf-8"), "version") == __version__
-    assert __version__ == "1.2.0"
+    # Pinned to the manifest, not to a literal: a release bump must not break
+    # this test (it did in 1.3.0 — the assert still said 1.2.0).
+    assert __version__ == manifest["version"]
 
 
 def test_changelog_is_crlf() -> None:

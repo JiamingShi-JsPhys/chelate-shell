@@ -38,7 +38,29 @@ def _mini_parse(text: str) -> Dict[str, Any]:
     return root
 
 
+def _strip_comment(value: str) -> str:
+    """Drop a trailing `# comment` that sits outside quotes.
+
+    PyYAML does this for us; the mini parser is what a user without PyYAML
+    gets, and the shipped config files carry inline comments
+    (`outlier_fence: 1.5     # Tukey multiplier …`). Without this the value
+    stays a string, `float()` raises, and the skill's gate fails — found by
+    the CI job that runs without PyYAML.
+    """
+    quote = None
+    for i, ch in enumerate(value):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#" and (i == 0 or value[i - 1].isspace()):
+            return value[:i].rstrip()
+    return value.rstrip()
+
+
 def _scalar(value: str) -> Any:
+    value = _strip_comment(value)
     if value.startswith("[") and value.endswith("]"):
         inner = value[1:-1].strip()
         return [_scalar(v.strip()) for v in inner.split(",") if v.strip()] if inner else []
