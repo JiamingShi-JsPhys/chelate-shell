@@ -1,21 +1,84 @@
 # Chelate Shell（螯合壳）
 
-> **面向科研与工程工作流的确定性调度器，自带 20 个技能。**
->
-> 使用它不需要你先准备技能：20 个科研与工程技能随仓库一起交付，覆盖公式校验（SymPy 五层判定 + pint 单位交叉校验）、基于 RDKit 的原子守恒、经 R 执行的混合模型与中介分析、基于 OpenCV 的视频轨迹提取、出版级统计图、PDF 文本抽取，以及 Markdown → 可编译 LaTeX 导出。全部 20 个都在安装内容里，按交付状态即可进入流水线运行。
+**面向科研与工程工作流的确定性调度器——20 个科研技能随它一起交付，而且是真的会跑。**
 
+单点技能各自解决一个问题，但 Agent 面对复杂任务时，仍得自己决定：调哪个、按什么顺序、产物放哪。Chelate Shell 把两半放进同一个仓库：20 个引擎，以及一个按固定阶段顺序调度它们、并为每次调用写下类型化门禁的微内核。
+
+- **对科研人员：** 这些技能是真在算——SymPy 五层判定加 pint 交叉校验、RDKit 原子守恒、R 混合模型与中介分析、OpenCV 轨迹跟踪、出版级统计图，不是提示词模板。
+- **对 Agent：** `core/router.py` 生成确定性计划，派发前扫描提示注入，遇到第一个 `FAIL` 就停下流水线。
+- **对留痕：** 每次调用都在 `process/gates/` 留下一个 `GateResult`。`PASS`、`UNVERIFIED`、`FAIL` 是三种不同状态，只有最后一种是终止态。
 
 [English](README.md) · **简体中文**
 
-**版本：** 1.3.1 | **技能数：** 20
+**版本：** 1.3.1 | **许可证：** MIT | **Python：** 3.10+ | **技能数：** 20
+
+> 仅作科研辅助。依赖任何输出之前，请先读[安全与开源声明](#安全与开源声明)。
 
 ---
 
-## 安全与开源声明
+## 目录
 
-> **免责声明**：本仓库包含作者为自动化科研工作流而开发的辅助工具，并非经过同行评审的学术项目。部分样板代码或实用脚本可能在 AI 辅助下生成，并经过作者高层面的审查与修改整合。作者对任何第三方代码问题不承担责任，但承诺及时处理任何合理的诉求。
->
-> 本工具**永远不会代替你做实验**。数据必须由学生在实验室手动采集，AI 在实验环节物理隔离。生成的报告仅为“数据分析草稿”，最终学术责任由使用者本人及所在机构承担。
+**上手**
+
+- [它跑起来是这样](#它跑起来是这样)
+- [你可以直接这样问](#你可以直接这样问)
+- [为什么需要 Chelate Shell？](#为什么需要-chelate-shell)
+- [安装与下载](#安装与下载)
+- [快速上手](#快速上手)
+
+**工作原理**
+
+- [架构与流水线](#架构与流水线)
+- [1.3.0 新增的命令](#130-新增的命令)
+- [1.3.0 新增的子代理](#130-新增的子代理)
+- [仓库布局](#仓库布局)
+
+**其余**
+
+- [环境要求](#环境要求)
+- [测试](#测试)
+- [安全与开源声明](#安全与开源声明)
+- [已知局限](#已知局限)
+- [报告问题与反馈](#报告问题与反馈)
+- [致谢](#致谢)
+- [商标声明](#商标声明)
+- [开源许可与作者](#开源许可与作者)
+
+---
+
+## 它跑起来是这样
+
+```text
+> /chelate-shell:formula-validator   v = d/t    单位：v=m, d=m, t=s
+
+FAIL · SYMBOLIC
+pint unit mismatch — LHS [length], RHS [length]/[time]
+gate    → process/gates/formula-validator_20261112T130046Z.json
+report  → process/reports/equation-4c9b2ce5-20261112-210045.md
+```
+
+量纲错了不是一句提醒：它是一次门禁失败、一份落盘的报告，以及就此停下的流水线。
+
+## 你可以直接这样问
+
+| 用自己的话说 | 路由到 | 拿回什么 |
+|---|---|---|
+| “校验 `F = m*a`，单位 F=N、m=kg、a=m/s²” | `formula-validator` | 五层检查的 PASS / FAIL，外加一份 Markdown 报告 |
+| “核验 draft.md 里的每条 DOI” | `reference-auditor` | 逐条比对 Crossref；假 DOI 直接让门禁 FAIL |
+| “这两版稿子对得上吗？” | `conflict-detector` | 每一处矛盾，带严重程度 |
+| “体检 data.csv” | `data-profiler` | 行数、缺失值、1.5·IQR 离群值、重复行 |
+| “这个标注数据集有泄漏吗？” | `ml-auditor` | 数据泄漏与标签错误的判定（scikit-learn） |
+| “画一张电压随时间的图” | `sci-visualizer` | 矢量 PDF + PNG，落在 `process/figures/` |
+| “抽取这些 PDF 第 3–7 页的文字” | `fulltext-extractor` | 纯文本 + JSON 旁车文件，落在 `process/` |
+| “找几篇关于 X 的新论文” | `literature-retriever` | arXiv 元数据，存成 JSON |
+| “把视频里的小球轨迹追出来” | `video-tracker` | 坐标、FFT 频谱、物理一致性探针 |
+| “把我的报告合成一个 LaTeX 文件” | `latex-exporter` | 一份可直接编译的 `.tex` |
+| “生成这个网格并检查它” | `3d-modeler` | OBJ，外加绕序 / 退化面 / 包围盒审计 |
+| “这段文字是不是在尝试注入指令？” | `security-guard` | 注入标记与危险调用点 |
+
+全部 20 个技能、各自到底算了什么，见 [仓库布局](#仓库布局)。
+
+**怎么装：** 一条插件命令，或另外三条路径——见 [安装与下载](#安装与下载)。
 
 ---
 
@@ -33,61 +96,21 @@ Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里
 
 ## 架构与流水线
 
-`core/router.py` 是微内核：它读取 20 个 `manifest.json`，按规范阶段顺序生成计划，在派发任何技能**之前**先对文本输入做提示注入扫描，然后逐个调用技能的适配器。每次调用都会在 `process/gates/` 写下一个 `GateResult`——`PASS`、`UNVERIFIED` 或 `FAIL`。
+`core/router.py` 读取 20 个 manifest，按规范阶段顺序生成计划，派发前先对文本输入做
+提示注入扫描，然后逐个调用技能适配器。每次调用写下一个 `GateResult`：`PASS` 继续，
+`UNVERIFIED` 只让该技能降级、流水线继续，第一个 `FAIL` 则锁定 `process/` 并终止。
 
-缺依赖时只把该技能降级为 `UNVERIFIED`，流水线继续。单个 `FAIL` 是终止态：流水线当场停止，中间产物锁在 `process/` 里。没有任何门禁失败时，`process/` 会被提升到 `results/`，同时写出类型化的流水线报告和 `_broadcast/` 索引——后续会话先读索引，再决定打开哪些原件。
-
-```mermaid
-flowchart LR
-    IN["用户意图 + 输入文件"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>扫描 20 个 manifest"]
-    REG --> PLAN{"build_plan<br/>规范顺序<br/>--inputs 按类型收窄"}
-    PLAN --> SCAN["core/security_shield.py<br/>派发前注入扫描"]
-    SCAN -->|"命中标记"| BAD["FAIL：injection-scan<br/>派发前拦截"]
-
-    subgraph ROUTER["core/router.py — 四阶段流水线"]
-        direction TB
-        WS["workspace · 3 个技能<br/>task-organizer、multi-dim-manager、<br/>document-evolution-tracker"]
-        ING["ingest · 5 个技能<br/>capstone-labmate、video-tracker、<br/>fulltext-extractor、literature-retriever、<br/>bibtex-normalizer"]
-        GAT["gates · 7 个技能<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、<br/>quantitative-validator、ml-auditor、<br/>longitudinal-analysis"]
-        PRO["processors · 2 个技能<br/>ai-trace-remover、latex-exporter"]
-        WS --> ING --> GAT --> PRO
-    end
-
-    SCAN -->|"干净"| ING
-    WS -.->|"任务起始书挡"| ING
-
-    subgraph CALL["单次技能调用 — run_skill()"]
-        direction TB
-        AD["适配器 run.py<br/>--root --action"]
-        SB["core/sandbox.py<br/>声明 sandbox_required 时 120 秒熔断"]
-        AD -->|"需沙箱"| SB
-    end
-    GATE["process/gates/ — 每次运行一个 GateResult<br/>PASS / UNVERIFIED / FAIL"]
-
-    ROUTER -->|"计划内每个技能"| AD
-    AD --> GATE
-    SB --> GATE
-    AD -.->|"依赖缺失"| UNV["UNVERIFIED<br/>该技能降级；<br/>流水线继续"]
-    UNV -.-> GATE
-
-    GATE -->|"任一 FAIL"| STOP["PIPELINE TERMINATED<br/>process/ 锁定"]
-    GATE -->|"无 FAIL"| PROMOTE["results/promoted_TIMESTAMP/"]
-    GATE --> REPORT["results/pipeline_report_TIMESTAMP.json"]
-    REPORT --> BC["_broadcast/pipeline_index_TIMESTAMP.json"]
-
-    LAYER["分类元技能<br/>security-guard、sci-visualizer、3d-modeler"] -.->|"由 registry 路由，不占规范顺序"| ROUTER
-```
-
-图里刻意说明的三件事：
-
-- **自动流水线是 `ingest → gates → processors`。** `workspace`（task-organizer）是任务开始时的书挡，在流水线之前或通过 `--selected` 进入；`--mode a` 不会自动调度它。
-- **`UNVERIFIED` 不是失败。** 它表示该技能无法给出判定——缺可选依赖、调用方还没提供输入——其余流程照常继续。
-- **只有 `FAIL` 是终止态。** 它把 `process/` 原样锁在中断处，中间产物可审计，但不会被误当成结果。
-
----
+流程图、四个阶段与提升路径：**[docs/ARCHITECTURE_zh.md](docs/ARCHITECTURE_zh.md)**。
 
 ## 安装与下载
+
+如果你用的是 Claude Code，装上只需要这一条：
+
+```bash
+claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-JsPhys/chelate-shell.git
+```
+
+其他宿主各有各的一行命令——Codex、dsh、CodeBuddy，以及八个读规则文件的宿主——都收在 **[docs/INSTALL_COMMANDS_zh.md](docs/INSTALL_COMMANDS_zh.md)**。
 
 一共三种装法。有插件市场的宿主把整套装成**一个插件**——这是保留微内核自动调度的唯一形式；没有插件通道的宿主则以**规则文件**接入，一个脚本就能把全部规则文件一次写好；第三种是把这件事直接交给 AI。
 
@@ -95,9 +118,12 @@ flowchart LR
 
 下面每个宿主都有自己的插件市场。把本仓库的 Git URL 注册进去，再安装它列出的插件即可（URL 重复注册没有副作用，第二次会提示已存在）。
 
-```bash
-https://github.com/JiamingShi-JsPhys/chelate-shell
+```text
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin install chelate-shell@chelate-shell-marketplace
 ```
+
+`#v1.3.1` 把安装钉在这个发布上；去掉它则跟随默认分支。
 
 ### 方法二：用命令安装
 
@@ -165,108 +191,11 @@ Claude Code、Codex、dsh、CodeBuddy 用一行插件命令安装；Cursor、Win
 
 ## 仓库布局
 
-```text
-chelate-shell/
-├── .claude-plugin/                   # Claude Code 插件清单 + marketplace
-├── .clinerules/                      # Cline 规则文件
-├── .codebuddy-plugin/                # CodeBuddy 插件清单 + marketplace
-├── .codex-plugin/                    # Codex 插件清单 + marketplace
-├── .continue/rules/                  # Continue 规则目录
-├── .cursor/rules/                    # Cursor 规则文件（.mdc）
-├── .dsh-plugin/                      # DeepSeek Harness CJS 入口（apply(ctx)）
-├── .github/                          # GitHub Copilot 指令文件
-├── .gitignore
-├── .roo/rules/                       # Roo Code 规则目录
-├── .windsurf/rules/                  # Windsurf 规则文件
-├── agents/                           # 子 Agent 角色定义
-│   ├── spatial_agent.md              # 网格/3D 角色（3d-modeler）
-│   └── visual_agent.md               # 图表/可视化角色（sci-visualizer + latex-exporter）
-├── AGENTS.md                         # 通用 Agent 规范（Codex / Cursor / Copilot / opencode）
-├── assets/                           # icon.png（各插件清单共用）
-├── bootstrap.py                      # 各 run.py 共用的导入与门禁写入工具
-├── CHANGELOG.md                      # 版本发布说明
-├── cli.py                            # 命令行入口：list / run / pipeline
-├── commands/                         # 斜杠命令
-│   ├── figure.md                     # /figure —— 从 CSV 或 JSON 数据集出图
-│   └── model3d.md                    # /model3d —— OBJ 网格生成 / 合并 / 审计
-├── contracts/                        # 全局通信契约
-│   ├── __init__.py
-│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts}
-│   └── schema.json                   # manifest.json 的强校验规范
-├── cordis.patch.yml                  # cordis bundle 补丁
-├── core/                             # 微内核
-│   ├── __init__.py
-│   ├── registry.py                   # 扫描 skills/ 并注册进路由表
-│   ├── router.py                     # 确定性调度器（解析 manifest 生成流水线）
-│   ├── sandbox.py                    # 依赖隔离与 120 秒超时熔断
-│   ├── security_shield.py            # 提示注入文本扫描 + AST 危险调用扫描
-│   └── subagent_manager.py           # 子 Agent 角色注册表
-├── docs/                             # 设计笔记、审计报告、文件功能映射
-├── index.js                          # CJS 插件入口（dsh 生态）
-├── install.py                        # 一条命令装好所有规则文件的安装器（见安装章节）
-├── lib/chelate_core/                 # 共享底层逻辑库（逻辑住在这里）
-│   ├── __init__.py
-│   ├── adapter.py                    # 薄适配器工具箱：argparse、门禁发射、legacy 运行器
-│   ├── arxiv_search.py               # arXiv 搜索核心
-│   ├── bibtex_norm.py                # BibTeX 解析 / 去重 / 规范化核心
-│   ├── csv_profile.py                # CSV 体检核心（pandas）
-│   ├── debug.py                      # 贯通全链路的 [chelate:debug] 开关
-│   ├── doi_audit.py                  # DOI 抽取 + Crossref 核验核心
-│   ├── formula_merge.py              # legacy D1-D5 + pint 裁决合并策略
-│   ├── paths.py                      # 路径解析
-│   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
-│   └── yamlmini.py                   # assets/config.yaml 加载
-├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.0）
-├── package.json                      # npm/dsh 打包元数据
-├── README.md
-├── README_zh.md
-├── skills/                           # 20 个技能，全部平铺——一个技能一个目录
-│   ├── 3d-modeler/                   # [domain_extensions] 纯 Python OBJ 网格
-│   │                                 # 生成 / 合并 / 审计，含网格质检；沙箱运行
-│   ├── ai-trace-remover/             # [processors] 模板句清除与 0–100「AI 味」评分
-│   │                                 # （英文 + 中文词表）
-│   ├── bibtex-normalizer/            # [ingest]    .bib 解析、去重、规范化输出
-│   ├── capstone-labmate/             # [ingest]    PASCO Capstone .cap 二进制解析、
-│   │                                 # CSV/JSON 转换、带水印的草稿报告
-│   ├── conflict-detector/            # [gates]     跨文档矛盾引擎，正则数字抽取
-│   ├── data-profiler/                # [gates]     pandas CSV 体检：行数、缺失值、
-│   │                                 # 1.5·IQR 异常值比率、重复行、常值列
-│   ├── document-evolution-tracker/   # [workspace] 跨文档版本的段落级 diff、
-│   │                                 # 概念谱系追踪
-│   ├── formula-validator/            # [gates]     SymPy D1–D5 层（量纲分析、极限枚举、
-│   │                                 # 数值采样、符号证明）+ pint 单位交叉校验
-│   ├── fulltext-extractor/           # [ingest]    pdfminer.six 文本提取进 process/
-│   │                                 # （pypdf 回退）
-│   ├── latex-exporter/               # [processors] 把 process/ 下的 Markdown 与 process/figures/
-│   │                                 # 下的图形合并为一个可编译 .tex
-│   ├── literature-retriever/         # [ingest]    arXiv 关键词搜索转 JSON
-│   ├── longitudinal-analysis/        # [gates]     时间序列 OLS 加 R 支撑的 LMM（lme4）、
-│   │                                 # 中介分析（lavaan）、敏感性分析；
-│   │                                 # 缺少 Rscript 时降级为纯 Python 步骤
-│   ├── ml-auditor/                   # [gates]     数据泄漏与标签错误审计，基于
-│   │                                 # scikit-learn（cleanlab 可选）；沙箱运行
-│   ├── multi-dim-manager/            # [workspace] 参数空间展开、SHA-256 快照、
-│   │                                 # 哈希审计日志、回滚到任意历史轮次
-│   ├── quantitative-validator/       # [gates]     分子式与化学方程式的原子守恒
-│   │                                 # （Hill 记法文法 + rdkit 交叉校验）；沙箱运行
-│   ├── reference-auditor/            # [gates]     DOI 抽取与 Crossref 核验；
-│   │                                 # 假 DOI 直接 FAIL 门禁
-│   ├── sci-visualizer/               # [generation] 出版级统计图（matplotlib +
-│   │                                 # seaborn + pandas），含 AMOS 风格 SEM 路径图
-│   │                                 # 渲染器，另可扫描 gif 逐帧
-│   ├── security-guard/               # [infrastructure] 提示注入文本扫描 +
-│   │                                 # AST 危险调用点扫描
-│   ├── task-organizer/               # [workspace] 四区工作区初始化、文件整理
-│   │                                 # （C1–C8 校验、去重、快照、撤销/重做）、
-│   │                                 # _broadcast/INDEX.md 上下文索引
-│   └── video-tracker/                # [ingest]    OpenCV 坐标提取（CSRT/Template）、
-│                                     # FFT 频谱分析、物理一致性探针
-├── tests/                            # 自动化测试套件（357 个测试）
-└── THIRD_PARTY_LICENSES.txt          # 第三方许可清单
-```
+`core/` 是微内核，`lib/chelate_core/` 存放每个适配器都引用的共享逻辑，
+`skills/` 下每个技能一个目录（扁平——宿主扫描器不会下探到命名空间目录），
+各宿主的插件清单或规则文件各占一个点目录。
 
----
+逐目录说明，以及 20 个技能各自算什么：**[docs/REFERENCE_zh.md](docs/REFERENCE_zh.md)**。
 
 ## 测试
 
@@ -274,7 +203,17 @@ chelate-shell/
 python -m pytest tests/ -q
 ```
 
-共 357 个测试（347 通过，10 跳过——来自 `rdkit` 等依赖门禁与 fixture 判定）。测试套件覆盖：门禁契约、清单 schema 校验、扁平布局强制（manifest 必须正好位于 `skills/` 下一层）、流水线规划与 FAIL 终止、迁移守卫、legacy D1–D5 与 FFT/物理探针、v1.1.x 新增的 5 个技能、工作区输入路径解析、`--inputs` 自动接线、统一调试层、清单契约套件（四平台插件清单，以及 SKILL.md frontmatter 一致性）、无插件宿主的规则文件适配器、安全护盾、4 个重型引擎技能的真实逻辑与 `UNVERIFIED` 降级，以及仓库一致性守卫：每个技能的文档、清单、入口、`LICENSE` 与声明依赖始终保持一致。
+357 个测试：装齐可选依赖时 347 通过、10 跳过；只有 pytest 的环境里跳过 36 个，
+跑的是 `UNVERIFIED` 路径。另有 8 个技能自带上游套件，位于
+`skills/<skill>/tests/`，每个目录单独一个进程运行。
+
+两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
+
+## 安全与开源声明
+
+> **免责声明**：本仓库包含作者为自动化科研工作流而开发的辅助工具，并非经过同行评审的学术项目。部分样板代码或实用脚本可能在 AI 辅助下生成，并经过作者高层面的审查与修改整合。作者对任何第三方代码问题不承担责任，但承诺及时处理任何合理的诉求。
+>
+> 本工具**永远不会代替你做实验**。数据必须由学生在实验室手动采集，AI 在实验环节物理隔离。生成的报告仅为“数据分析草稿”，最终学术责任由使用者本人及所在机构承担。
 
 ## 已知局限
 

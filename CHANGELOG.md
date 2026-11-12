@@ -2,7 +2,7 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
-## [1.3.1] — 2026-11-11
+## [1.3.1] — 2026-11-12
 
 A release about the test suite being trustworthy, not about the skills.
 
@@ -25,13 +25,18 @@ A release about the test suite being trustworthy, not about the skills.
   string — the adapter reported FAIL for a config it could not read. The
   fallback now strips a trailing `#` outside quotes. Found by the CI job that
   installs no PyYAML, which is the install a user gets.
+- **Five changelog tests demanded CRLF, so Linux CI failed.** `conflict-detector`
+  and four others asserted that their `CHANGELOG.md` was CRLF — a property of a
+  Windows checkout, not of the file. They now assert that the line endings are
+  consistent (all CRLF or all LF), which is the thing the guard was really
+  about, and which holds on both platforms.
 - **`package.json` shipped the skills without the code they import.** The
   `files` list carried `skills/` and left out `core/`, `lib/`, `bootstrap.py`,
   `cli.py` and `contracts/`, so an npm install produced a tree the registry
   could not start. It now includes them, plus `commands/` and `agents/`.
 
 ### Added
-- **CI, in two jobs.** `.github/workflows/tests.yml` runs `python -m pytest` on
+- **CI, in three jobs.** `.github/workflows/tests.yml` runs `python -m pytest` on
   every push and pull request against Python 3.10 and 3.12. The `bare` job
   installs pytest and nothing else — the `UNVERIFIED` path is what a fresh
   user gets, so that is the path worth guarding — and the `extras` job
@@ -46,9 +51,21 @@ A release about the test suite being trustworthy, not about the skills.
   skips those modules instead of dying during collection. The PDF fixture is
   built by pypdf when pymupdf is absent, and without font metrics pdfminer
   emits one glyph per line, so its assertion now compares with whitespace
-  removed.
+  removed. The third job, `per-skill suites`, runs each skill's own
+  upstream suite in its own pytest process — they cannot share one, several
+  define a top-level `tests` module.
 
 ### Changed
+- **The README leads with what it does.** A one-line statement, three
+  audience bullets, a real `formula-validator` gate output, a 12-row
+  "what you can ask for → which skill" table, a single install command, and a
+  contents list. The security statement moved to the back, with a one-line
+  pointer at the top.
+- **The bulk moved to `docs/`.** The 100-line repository tree is now
+  `docs/REFERENCE.md`, the pipeline diagram and stage contract
+  `docs/ARCHITECTURE.md`, and the test detail `docs/TESTING.md` (each with a
+  Chinese twin). The README keeps a short section and a link, the way
+  `web-forager` splits its front page from `docs/REFERENCE.md`.
 - **Install commands moved to `docs/INSTALL_COMMANDS.md`** (and its Chinese
   twin). The README keeps methods 1 and 3 plus a pointer, so the front page is
   short again.

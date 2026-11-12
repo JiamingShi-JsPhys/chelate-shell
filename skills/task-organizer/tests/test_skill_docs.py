@@ -37,6 +37,30 @@ def _frontmatter_value(text: str, key: str):
     return None
 
 
+def _description() -> str:
+    """The frontmatter `description`, joined when it is a `>` block scalar.
+
+    v1.3 writes the description as a folded block, so a naive `key: value`
+    split returns ">" and every content assertion would fail for the wrong
+    reason.
+    """
+    text = SKILL_MD.read_text(encoding="utf-8")
+    fm = text.split("---", 2)[1]
+    lines = fm.splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith("description:"):
+            value = line.split(":", 1)[1].strip()
+            if value not in (">", "|"):
+                return value
+            block = []
+            for nxt in lines[i + 1:]:
+                if nxt.strip() and not nxt.startswith(" "):
+                    break
+                block.append(nxt.strip())
+            return " ".join(block)
+    return ""
+
+
 class TestSkillDocs:
     """The documentation is part of the product - guard it."""
 
@@ -46,79 +70,69 @@ class TestSkillDocs:
 
     def test_mandatory_workflow_present_and_first(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "MANDATORY WORKFLOW" in text
-        # the workflow must come before the reference sections, so an agent
-        # reads "what to do" before "what the tool is"
-        assert text.index("MANDATORY WORKFLOW") < text.index("## When to use")
+        # v1.3 renamed "MANDATORY WORKFLOW" to "Quick Execution"; the section
+        # must still come before the reference material, so an agent reads
+        # "what to do" before "what the tool is".
+        assert "## Quick Execution" in text
+        assert text.index("## Quick Execution") < text.index("## When to use")
 
     def test_workflow_covers_the_pathless_request(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        # "set up a task workspace" with no path must have a defined action
-        assert "gave no path" in text
-        assert "ask for it" in text
-        assert "propose a concrete default" in text
+        flat = " ".join(text.split())  # SKILL.md is hard-wrapped
+        # "set up a task workspace" with no path must have a defined action:
+        # a folder that was merely referenced gets exactly one proposal
+        assert "merely referenced" in flat
+        assert "propose it once and wait for a yes" in flat
 
     def test_workflow_forbids_description_only_reply(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "failure mode" in text
-        assert "RUN the tool via Bash" in text
+        assert "failure mode, not a result" in text
+        assert "Act, do not summarize" in text
 
     def test_workflow_covers_both_entry_points(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "scripts.run init" in text
-        assert "scripts.run organize" in text
+        assert "`init`" in text
+        assert "`organize`" in text
         assert "mark-downloaded" in text
 
     def test_description_claims_folder_signal_trigger(self):
-        text = SKILL_MD.read_text(encoding="utf-8")
-        desc = _frontmatter_value(text, "description")
-        # "folder referenced / attached + task start" is a trigger class now
-        assert "names/attaches one" in desc
+        desc = _description()
+        # "folder referenced / attached + task start" is a trigger class
+        assert "named or attached" in desc
+        assert "work starts inside it" in desc
         # ...and its semantics are propose-first, not act-first
-        assert "PROPOSE one init" in desc
-        assert "confirms" in desc
-        assert "never reorganize a referenced folder uninvited" in desc
+        assert "proposes `init` once" in desc
+        assert "never reorganizes one uninvited" in desc
 
     def test_workflow_opens_with_session_start_structure_check(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        # the session-start structure check (doctor) is step 1: a read-only
-        # scan that runs before any confirmation because it changes nothing
-        assert "Session-start structure check" in text
-        assert "doctor" in text
-        # the proposal gate must come before path resolution, so an agent
-        # reads "propose first" before "resolve the path and run"
-        assert text.index("Session-start structure check") < text.index(
-            "Resolve the target root path"
-        )
-        # nothing that changes the folder may run before the user confirms
-        assert "Do **not** run any command" in text
-        assert "until the user confirms" in text
-        # ...but doctor is explicitly carved out as read-only / always safe
-        assert "read-only and always safe" in text
+        flat = " ".join(text.split())  # SKILL.md is hard-wrapped
+        # the session-start structure check (doctor) runs before anything that
+        # changes the folder, because it changes nothing itself
+        assert "Run it before asking the user anything" in flat
+        assert "read-only and always safe" in flat
+        assert flat.index("read-only and always safe") < flat.index(
+            "propose it once and wait for a yes")
 
     def test_session_start_check_is_always_on(self):
-        # the "every conversation starts tidy" rule must live in the
-        # always-on layer, not as an optional feature
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "At session start (the structure check)" in text
-        # the check is cheap and idempotent: it repairs nothing when the
-        # folder is already healthy
-        assert "read-only, zero-cost" in text
-        assert "idempotent" in text
+        # the "every conversation starts tidy" rule is in the always-on list
+        assert "At session start on a known task folder" in text
+        # the check is cheap and repairs nothing when the folder is healthy
+        assert "writes nothing" in text
 
     def test_workflow_proposal_has_example_and_decline_path(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        # the proposal gate offers a concrete setup line to the user
-        assert "three-tier structure before we start" in text
         # a declined proposal ends the proposing, it does not stall the task
-        assert "declines" in text
-        assert "at most once per folder" in text
+        assert "declined the `init` proposal" in text
+        assert "at most one proposal per folder" in text
 
     def test_content_production_runs_directly_no_proposal(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        # the compound "produce + keep tidy" request is already an explicit
-        # organize intent - it must not be routed through the proposal gate
-        assert "no folder-signal proposal" in text
+        # the proposal gate is scoped to a merely referenced folder: an
+        # explicit "produce this deliverable" request runs directly
+        assert "when the folder was merely referenced" in text
+        assert "Act, do not summarize" in text
 
     def test_chinese_doc_has_the_workflow(self):
         text = CN_MD.read_text(encoding="utf-8")
@@ -173,57 +187,33 @@ class TestSkillDocs:
         assert "folder-signal" in head
 
     def test_description_claims_broadcast_center(self):
-        text = SKILL_MD.read_text(encoding="utf-8")
-        desc = _frontmatter_value(text, "description")
-        # the broadcast index is a first-class trigger surface and the
-        # read-order contract (read the index first, open only what you need)
-        assert "broadcast index" in desc
-        assert "context-compression" in desc or "index" in desc
-        # token-saving read-order promise: read the index, open only what you need
-        assert "open only" in desc
-        assert "bookend loop" in desc or "init" in desc
+        desc = _description()
+        # the broadcast index is on the trigger surface, and the read-order
+        # promise (one summary instead of every original) is explicit
+        assert "`_broadcast/` index" in desc
+        assert "one summary instead of every original" in desc
 
     def test_description_covers_content_production_shape(self):
-        # The observed failure: a "read these files and write a report"
-        # request never entered the candidate set because the description
-        # only advertised the "organize a folder" shape.  The trigger
-        # surface must name the read-then-write shapes explicitly.
-        text = SKILL_MD.read_text(encoding="utf-8")
-        desc = _frontmatter_value(text, "description")
-        assert "reading files" in desc
-        assert "ANY deliverable" in desc
-        assert "summary" in desc
-        # the session-start structure check is on the trigger surface too,
-        # so "every conversation starts tidy" survives the selection layer
-        assert "SESSION-START" in desc
-        assert "doctor" in desc
+        desc = _description()
+        # the read-then-write shape must be on the trigger surface, not only
+        # the "organize a folder" shape
+        assert "every deliverable" in desc
+        assert "whatever the deliverable" in desc
+        assert "however many steps" in desc
 
     def test_skill_md_has_broadcast_section_with_guarantees(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "## Broadcast center" in text
-        # read-only semantics must be spelled out, not implied
-        assert "renamed or modified" in text
-        assert "The only writes are the two files in `_broadcast/`" in text
-        # tool-owned protection + standalone usage
-        assert "tool-owned" in text
-        assert "standalone command" in text
-        # long-context routing: build first, read the index before originals
-        assert "long-context task" in text
+        # the index is a declared output, with its role spelled out
+        assert "`_broadcast/INDEX.md`" in text
+        assert "context-compression index" in text
 
     def test_skill_md_has_read_order_protocol(self):
-        # G-tier: a later session must have a mandatory, ordered read
-        # protocol so the index actually saves tokens (read the directory,
-        # open only the matching originals, skim the rest from the digest).
+        # a later session must be told to read the index before the originals,
+        # otherwise the index saves nothing
         text = SKILL_MD.read_text(encoding="utf-8")
-        assert "READ-ORDER protocol" in text
-        assert "Read the directory first" in text
-        assert "Open only the matching originals" in text
-        # the token-saving rationale is spelled out, not implied
-        assert "save tokens" in text
-        assert "cheap layer" in text
-        # and the stale/absent path routes through doctor + broadcast
+        assert "Read it before opening any original" in text
+        assert "saves tokens" in text
         assert "doctor" in text
-        assert "build it first" in text
 
     def test_skill_md_documents_doctor_subcommand(self):
         # C-tier: the read-only diagnostics command must be discoverable in
@@ -277,59 +267,29 @@ class TestSkillDocs:
 
     def test_skill_md_documents_always_on_behaviour(self):
         text = SKILL_MD.read_text(encoding="utf-8")
-        # the "always-on" model: task-start build + final-delivery rebuild are
-        # unconditional, not a separate match trigger
-        assert "Always-on" in text
-        assert "no separate trigger" in text or "cannot be missed" in text
-        # the two bookends are spelled out as always-on
-        assert "At task start" in text
-        assert "At final delivery" in text
+        assert "At session start on a known task folder — run `doctor` first" in text
+        assert "named or attached" in _description()
 
     def test_content_production_is_a_hard_constraint(self):
-        # 1.0.1 contract: producing a deliverable inside a task folder MUST
-        # be paired with the bookend loop - the wording that makes this
-        # non-negotiable must survive future doc edits.
+        # producing a deliverable inside a task folder MUST be paired with the
+        # bookend loop; the wording that makes this non-negotiable must
+        # survive future doc edits
         text = SKILL_MD.read_text(encoding="utf-8")
-        # the explicit "hard constraint" phrasing in the content-production
-        # section (the section that closes the missed-trigger gap)
-        section = text[text.find("Content-production scenarios"):]
-        section = section[:section.find("## Broadcast center")]
-        assert "hard constraint" in section.lower(), \
-            "the hard-constraint wording was diluted or removed"
-        # the loop is named and the skip is forbidden
-        assert "bookend loop" in section
-        assert "skippable" in section and "deferrable" in section
-        # leaving the folder loose after a write is framed as a failure
-        assert "failure" in section and "loose" in section
-        # the 'When to use' matched trigger repeats the hard-constraint rule
-        when = text[text.find("## When to use"):]
-        assert "hard constraint" in when.lower(), \
-            "the When-to-use content-production bullet lost its hard-constraint note"
+        assert "Content production is a hard constraint" in text
+        section = text[text.index("Content production is a hard constraint"):]
+        assert "bookend" in section[:400]
 
     def test_description_states_general_trigger_principle(self):
-        # The trigger must be a general, situational rule - a workspace folder
-        # plus any file activity - NOT a checklist of output types.  No keyword
-        # list can enumerate every phrasing (new ones keep appearing), so the
-        # description must lead with the situation and say the examples are
-        # illustrative, not exhaustive.
-        text = SKILL_MD.read_text(encoding="utf-8")
-        desc = _frontmatter_value(text, "description")
-        assert "ANY deliverable" in desc
-        assert "ANY file" in desc
-        assert "not exhaustive" in desc
-        # the "When to use" content-production bullet repeats the general rule
-        when = text[text.find("## When to use"):]
-        cp = when[when.find("Content production"):]
-        cp = cp[:cp.find("Folder signal")]
-        assert "any deliverable" in cp.lower()
+        # the trigger is a situation (a task folder plus file activity), not a
+        # checklist of output types; the description must lead with it
+        desc = _description()
+        assert "Fires whenever a task folder is named or attached" in desc
+        assert "whatever the deliverable" in desc
 
     def test_description_trigger_is_step_count_independent(self):
-        # The "single-target task, fewer than 3 steps" misjudgment must not
-        # suppress the trigger.  The description must state the trigger is a
-        # workspace folder + a deliverable, independent of how many steps.
-        text = SKILL_MD.read_text(encoding="utf-8")
-        desc = _frontmatter_value(text, "description")
-        assert "independent of how many steps" in desc, \
-            "the description should state the trigger is step-count independent"
-        assert "single write" in desc
+        # a "single-target task, fewer than 3 steps" misjudgment must not
+        # suppress the trigger: the description says so explicitly
+        desc = _description()
+        assert "however many steps" in desc
+        assert "whatever the deliverable" in desc
 

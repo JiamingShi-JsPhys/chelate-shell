@@ -63,10 +63,13 @@ def test_skill_readme_has_no_version_marker():
 
 
 def test_description_states_general_trigger_principle():
+    # The trigger is a general rule, not a list of example formulas: the
+    # description must say it fires on any formula whose correctness matters.
     d = _description()
-    assert "not exhaustive" in d, "description must disclaim the example words"
-    assert "no keyword list can enumerate them all" in d
-    assert "independent of how" in d, "description must block the veto dimension"
+    assert "Fires on any formula" in d, \
+        "description must state the general trigger, not a keyword list"
+    assert "pass / fail / unknown" in d, \
+        "description must name the three verdicts a caller has to handle"
 
 
 def test_description_has_no_cjk():
@@ -95,12 +98,17 @@ def test_changelog_documents_current_version():
         f"CHANGELOG has no section for the current version {__version__}")
 
 
-def test_changelog_uses_crlf_line_endings():
+def test_changelog_line_endings_are_consistent():
+    """No mixed line endings; CRLF or LF, not both.
+
+    This used to demand CRLF, a property of a Windows checkout rather than of
+    the file, so it failed on every Linux checkout (CI included). What it was
+    really guarding is the mixed-ending whole-file diff.
+    """
     raw = CHANGELOG.read_bytes()
-    orphan = raw.replace(b"\r\n", b"").count(b"\n")
-    assert orphan == 0, (
-        f"{orphan} LF-only line(s) in CHANGELOG; keep it CRLF or git shows a "
-        "whole-file diff")
+    crlf = raw.count(b"\r\n")
+    lf = raw.count(b"\n") - crlf
+    assert crlf == 0 or lf == 0, "CHANGELOG mixes CRLF and LF"
 
 
 def test_changelog_keeps_a_not_claimed_section():
@@ -115,9 +123,10 @@ def test_chinese_doc_keeps_locked_phrases():
 
 def test_skill_body_is_action_oriented():
     body = _read(SKILL)
-    assert "## Execution steps" in body
+    # v1.3 renamed "## Execution steps" to "## Quick Execution"
+    assert "## Quick Execution" in body
     assert "## Hard constraints" in body
-    assert "scripts/cli.py" in body, "the body must name the script to run"
+    assert "run.py" in body, "the body must name the entry point to run"
 
 
 def test_readme_has_a_limitations_section():

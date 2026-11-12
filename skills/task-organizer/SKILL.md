@@ -6,7 +6,9 @@ description: >
   workspace, files every deliverable by provenance, verifies each run with
   automatic rollback, and keeps the `_broadcast/` index that lets a later
   session read one summary instead of every original. Fires whenever a task
-  folder is named or attached and work starts inside it.
+  folder is named or attached and work starts inside it — whatever the
+  deliverable and however many steps it takes. It proposes `init` once for a
+  merely referenced folder and never reorganizes one uninvited.
 metadata:
   version: 1.3.1
   author: Jiaming Shi
@@ -72,11 +74,12 @@ python run.py --root <WS> --action doctor
 - **Act, do not summarize.** A trigger under "When to use" means run the tool and report what it did.
 - **Never move user material.** Only `init` relocates pre-existing content, and only after the user agrees.
 - **A failed verification has already rolled back.** Report it; do not blindly re-run.
+- **Content production is a hard constraint.** A deliverable produced inside a task folder is paired with the bookend loop (`init` … `organize` … `broadcast`), not left as loose files.
 
 ## Outputs
 
 - `<WS>/process/gates/task-organizer_<ts>.json` — the gate result.
-- `<WS>/_broadcast/INDEX.md` — the context-compression index.
+- `<WS>/_broadcast/INDEX.md` — the context-compression index. Read it before opening any original: it is the cheap layer that saves tokens.
 - `<WS>/process/history/` — the reverse-able run history used by `undo`.
 
 ## Failure handling

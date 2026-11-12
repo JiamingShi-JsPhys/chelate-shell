@@ -1,20 +1,84 @@
 # Chelate Shell
 
-> **A deterministic orchestrator for research and engineering workflows, with 20 skills included.**
->
-> You do not need to supply the skills yourself. Twenty research and engineering skills ship with the repository: formula validation (five check layers over SymPy plus a pint unit cross-check), atom conservation with RDKit, mixed models and mediation analysis through R, video trajectory extraction with OpenCV, publication-grade charts, PDF text extraction, and Markdown → compilable LaTeX export. All 20 are part of the install and run in the pipeline as shipped.
+**A deterministic orchestrator for research and engineering workflows — twenty research skills ship with it, and they run in the pipeline.**
+
+Individual skills solve isolated problems; an agent still has to decide which one to call, in what order, and where the output belongs. Chelate Shell puts both halves in one repository: the 20 engines, and a microkernel that routes them in a fixed stage order and writes a typed gate for every call.
+
+- **For researchers:** the skills compute. Five SymPy layers plus a pint cross-check, RDKit atom conservation, R mixed models and mediation, OpenCV trajectory tracking, publication-grade charts — not prompt templates.
+- **For agents:** `core/router.py` builds a deterministic plan, screens text inputs for prompt injection before dispatch, and stops the pipeline on the first `FAIL`.
+- **For the record:** every call leaves a `GateResult` in `process/gates/`. `PASS`, `UNVERIFIED` and `FAIL` are different states, and only the last one is terminal.
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.1 | **Skills:** 20
+**Version:** 1.3.1 | **License:** MIT | **Python:** 3.10+ | **Skills:** 20
+
+> Research assistance only. Read the [security & open-source statement](#security--open-source-statement) before relying on any output.
 
 ---
 
-## Security & Open Source Statement
+## Contents
 
-> **Disclaimer**: This repository contains auxiliary tools developed by the author to automate research workflows. It is not a peer-reviewed academic project. Some boilerplate or utility scripts may have been generated with the assistance of AI, and have been integrated with high-level review and modifications by the author. The author assumes no responsibility for any third-party code issues, but commits to promptly addressing any valid claims.
->
-> This tool **will never do the experiment for you**. Data must be collected manually by students in the lab; AI is absolutely physically isolated during the in-lab stage. Generated reports are merely "data-analysis drafts", and final academic responsibility lies with the user and their institution.
+**Getting started**
+
+- [See it work](#see-it-work)
+- [What you can ask for](#what-you-can-ask-for)
+- [Why Chelate Shell?](#why-chelate-shell)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+
+**How it works**
+
+- [How a run flows](#how-a-run-flows)
+- [Commands added in 1.3.0](#commands-added-in-130)
+- [Sub-agents added in 1.3.0](#sub-agents-added-in-130)
+- [Repository layout](#repository-layout)
+
+**The rest**
+
+- [Requirements](#requirements)
+- [Tests](#tests)
+- [Security & Open Source Statement](#security--open-source-statement)
+- [Known limitations](#known-limitations)
+- [Report issues](#report-issues)
+- [Acknowledgements](#acknowledgements)
+- [Trademarks](#trademarks)
+- [License](#license)
+
+---
+
+## See it work
+
+```text
+> /chelate-shell:formula-validator   v = d/t    units: v=m, d=m, t=s
+
+FAIL · SYMBOLIC
+pint unit mismatch — LHS [length], RHS [length]/[time]
+gate    → process/gates/formula-validator_20261112T130046Z.json
+report  → process/reports/equation-4c9b2ce5-20261112-210045.md
+```
+
+A wrong dimension is not a warning: it is a gate failure, a written report, and a pipeline that stops there.
+
+## What you can ask for
+
+| Ask in your own words | Routes to | You get back |
+|---|---|---|
+| "check `F = m*a` with units F=N, m=kg, a=m/s²" | `formula-validator` | PASS / FAIL across five check layers, plus a Markdown report |
+| "verify every DOI in draft.md" | `reference-auditor` | each DOI checked against Crossref; a fake one fails the gate |
+| "are these two drafts consistent?" | `conflict-detector` | every contradiction, with a severity |
+| "profile data.csv" | `data-profiler` | rows, missing values, 1.5·IQR outliers, duplicate rows |
+| "is there leakage in this labelled dataset?" | `ml-auditor` | leakage and label-error verdict, via scikit-learn |
+| "draw voltage against time" | `sci-visualizer` | a vector PDF and a PNG in `process/figures/` |
+| "extract text from these PDFs, pages 3–7" | `fulltext-extractor` | plain text plus a JSON sidecar in `process/` |
+| "find recent papers on X" | `literature-retriever` | arXiv metadata as JSON |
+| "track the ball in this video" | `video-tracker` | coordinates, an FFT spectrum, physics probes |
+| "merge my reports into a LaTeX file" | `latex-exporter` | one compilable `.tex` |
+| "build this mesh and check it" | `3d-modeler` | an OBJ plus winding / degenerate-face / bounding-box audit |
+| "is this text trying to inject instructions?" | `security-guard` | injection markers and dangerous call sites |
+
+All 20, with what each one actually computes, are listed under [Repository layout](#repository-layout).
+
+**Install it:** one plugin command, or three other routes — see [Installation](#installation).
 
 ---
 
@@ -32,61 +96,23 @@ Chelate Shell addresses this in two parts, and both are part of the same reposit
 
 ## How a run flows
 
-`core/router.py` is a microkernel: it reads the 20 `manifest.json` files, builds a plan in the canonical stage order, screens text inputs for prompt injection **before** dispatching anything, and then calls each skill's adapter. Every call writes a `GateResult` to `process/gates/` — `PASS`, `UNVERIFIED`, or `FAIL`.
+`core/router.py` reads the 20 manifests, builds a plan in the canonical stage
+order, screens text inputs for prompt injection before dispatching, and calls
+each skill's adapter. Every call writes a `GateResult`: `PASS` continues,
+`UNVERIFIED` degrades one skill and the run continues, and the first `FAIL`
+locks `process/` and stops the pipeline.
 
-A missing dependency degrades one skill to `UNVERIFIED` and the run continues. A single `FAIL` is terminal: the pipeline stops on the spot and leaves the intermediate products locked in `process/`. When no gate fails, `process/` is promoted into `results/`, and the run is summarised in a typed pipeline report plus the `_broadcast/` index that a later session reads before opening any original.
-
-```mermaid
-flowchart LR
-    IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>scan the 20 manifests"]
-    REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
-    PLAN --> SCAN["core/security_shield.py<br/>pre-dispatch injection scan"]
-    SCAN -->|"markers found"| BAD["FAIL: injection-scan<br/>blocked before dispatch"]
-
-    subgraph ROUTER["core/router.py — four-stage pipeline"]
-        direction TB
-        WS["workspace · 3 skills<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
-        ING["ingest · 5 skills<br/>capstone-labmate, video-tracker,<br/>fulltext-extractor, literature-retriever,<br/>bibtex-normalizer"]
-        GAT["gates · 7 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
-        PRO["processors · 2 skills<br/>ai-trace-remover, latex-exporter"]
-        WS --> ING --> GAT --> PRO
-    end
-
-    SCAN -->|"clean"| ING
-    WS -.->|"task-start bookend"| ING
-
-    subgraph CALL["per-skill execution — run_skill()"]
-        direction TB
-        AD["adapter run.py<br/>--root --action"]
-        SB["core/sandbox.py<br/>120 s breaker when required"]
-        AD -->|"sandboxed"| SB
-    end
-    GATE["process/gates/ — one GateResult<br/>PASS / UNVERIFIED / FAIL"]
-
-    ROUTER -->|"every planned skill"| AD
-    AD --> GATE
-    SB --> GATE
-    AD -.->|"missing dependency"| UNV["UNVERIFIED<br/>one skill degrades;<br/>run continues"]
-    UNV -.-> GATE
-
-    GATE -->|"any FAIL"| STOP["PIPELINE TERMINATED<br/>process/ locked"]
-    GATE -->|"no FAIL"| PROMOTE["results/promoted_TIMESTAMP/"]
-    GATE --> REPORT["results/pipeline_report_TIMESTAMP.json"]
-    REPORT --> BC["_broadcast/pipeline_index_TIMESTAMP.json"]
-
-    LAYER["category meta-skills<br/>security-guard, sci-visualizer, 3d-modeler"] -.->|"routed, outside canonical order"| ROUTER
-```
-
-Three things the diagram makes explicit:
-
-- **The automatic pipeline is `ingest → gates → processors`.** `workspace` (task-organizer) is the bookend at task start, entered before the pipeline or through `--selected`; `--mode a` does not schedule it.
-- **`UNVERIFIED` is not a failure.** It means a skill could not assert a verdict — a missing optional dependency, an input the caller has not supplied yet — and the rest of the run keeps going.
-- **Only `FAIL` is terminal.** It locks `process/` exactly where it stopped, so the intermediate products stay auditable but are never mistaken for results.
-
----
+The diagram, the four stages and the promotion path: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ## Installation
+
+If you are on Claude Code, this is the whole install:
+
+```bash
+claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-JsPhys/chelate-shell.git
+```
+
+Every other host has its own one-liner — Codex, dsh, CodeBuddy, and the eight rule-file hosts — collected on **[docs/INSTALL_COMMANDS.md](docs/INSTALL_COMMANDS.md)**.
 
 Three ways in. Plugin hosts install Chelate Shell as **one plugin** — the only form that keeps microkernel auto-routing intact. Hosts without a plugin channel take it as a **rule file**, and one script writes every rule file for you. The third way hands the whole job to an AI.
 
@@ -94,9 +120,12 @@ Three ways in. Plugin hosts install Chelate Shell as **one plugin** — the only
 
 Every host below has its own plugin marketplace. Register this repository's Git URL, then install the plugin it lists (registering the URL twice is harmless — the second call reports it is already known).
 
-```bash
-https://github.com/JiamingShi-JsPhys/chelate-shell
+```text
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin install chelate-shell@chelate-shell-marketplace
 ```
+
+The `#v1.3.1` suffix pins the release; drop it to follow the default branch.
 
 ### Method 2: install with commands
 
@@ -175,111 +204,12 @@ Python 3.10+ and nothing else to start: the microkernel and most skills run on t
 
 ## Repository layout
 
-```text
-chelate-shell/
-├── .claude-plugin/                   # Claude Code plugin manifest + marketplace
-├── .clinerules/                      # Cline rule file
-├── .codebuddy-plugin/                # CodeBuddy plugin manifest + marketplace
-├── .codex-plugin/                    # Codex plugin manifest + marketplace
-├── .continue/rules/                  # Continue rule directory
-├── .cursor/rules/                    # Cursor rule file (.mdc)
-├── .dsh-plugin/                      # DeepSeek Harness CJS entry (apply(ctx))
-├── .github/                          # GitHub Copilot instruction file
-├── .gitignore
-├── .roo/rules/                       # Roo Code rule directory
-├── .windsurf/rules/                  # Windsurf rule file
-├── agents/                           # sub-agent role definitions
-│   ├── spatial_agent.md              # mesh/3D role (3d-modeler)
-│   └── visual_agent.md               # figure/visualisation role (sci-visualizer + latex-exporter)
-├── AGENTS.md                         # generic agent contract (Codex / Cursor / Copilot / opencode)
-├── assets/                           # icon.png (shared by the plugin manifests)
-├── bootstrap.py                      # shared import + gate-write helper for every run.py
-├── CHANGELOG.md                      # release notes
-├── cli.py                            # CLI entry: list / run / pipeline
-├── commands/                         # slash commands
-│   ├── figure.md                     # /figure — chart from a CSV or JSON dataset
-│   └── model3d.md                    # /model3d — OBJ mesh generate / merge / audit
-├── contracts/                        # global contracts
-│   ├── __init__.py
-│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts}
-│   └── schema.json                   # manifest.json validation spec
-├── cordis.patch.yml                  # cordis bundle patch
-├── core/                             # microkernel
-│   ├── __init__.py
-│   ├── registry.py                   # scans skills/ into a routing table
-│   ├── router.py                     # dispatcher: manifest-driven pipeline
-│   ├── sandbox.py                    # dependency resolution / 120-second circuit-breaker
-│   ├── security_shield.py            # anti-injection text scan + AST dangerous-call scan
-│   └── subagent_manager.py           # sub-agent role registry
-├── docs/                             # design notes, audit reports, file-function map
-├── index.js                          # CJS plugin entry (dsh ecosystem)
-├── install.py                        # one-command rule-file installer (see Installation)
-├── lib/chelate_core/                 # shared core library (logic lives here)
-│   ├── __init__.py
-│   ├── adapter.py                    # thin-adapter toolkit: argparse, gate emission, legacy runner
-│   ├── arxiv_search.py               # arXiv search core
-│   ├── bibtex_norm.py                # BibTeX parse / dedupe / normalize core
-│   ├── csv_profile.py                # CSV profiling core (pandas)
-│   ├── debug.py                      # [chelate:debug] switch shared by every layer
-│   ├── doi_audit.py                  # DOI extraction + Crossref verification core
-│   ├── formula_merge.py              # legacy D1-D5 + pint verdict merge policy
-│   ├── paths.py                      # path resolution
-│   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
-│   └── yamlmini.py                   # assets/config.yaml loader
-├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.1)
-├── package.json                      # npm/dsh packaging metadata
-├── README.md
-├── README_zh.md
-├── skills/                           # 20 skills, all flat — one folder per skill
-│   ├── 3d-modeler/                   # [domain_extensions] pure-Python OBJ mesh generate /
-│   │                                 # merge / audit with mesh QC; sandboxed
-│   ├── ai-trace-remover/             # [processors] template-sentence removal and a
-│   │                                 # 0–100 "AI-likeness" score (EN + ZH lexicons)
-│   ├── bibtex-normalizer/            # [ingest]    .bib parsing, dedupe, normalized output
-│   ├── capstone-labmate/             # [ingest]    PASCO Capstone .cap binary parsing,
-│   │                                 # CSV/JSON conversion, watermarked drafts
-│   ├── conflict-detector/            # [gates]     cross-document contradiction engine
-│   │                                 # with regex number extraction
-│   ├── data-profiler/                # [gates]     pandas CSV profiling: row counts,
-│   │                                 # missing values, 1.5·IQR outliers, duplicates, constant columns
-│   ├── document-evolution-tracker/   # [workspace] paragraph-level diff across
-│   │                                 # document versions, concept-lineage tracking
-│   ├── formula-validator/            # [gates]     SymPy D1–D5 layers (dimensional analysis,
-│   │                                 # limit enumeration, numeric sampling, symbolic proof)
-│   │                                 # + pint unit cross-check
-│   ├── fulltext-extractor/           # [ingest]    pdfminer.six text extraction into process/
-│   │                                 # (pypdf fallback)
-│   ├── latex-exporter/               # [processors] merges process/ Markdown + process/figures/
-│   │                                 # into one compilable .tex
-│   ├── literature-retriever/         # [ingest]    arXiv keyword search to JSON
-│   ├── longitudinal-analysis/        # [gates]     time-series OLS plus R-backed LMM (lme4),
-│   │                                 # mediation (lavaan), sensitivity analysis;
-│   │                                 # pure-Python steps without Rscript
-│   ├── ml-auditor/                   # [gates]     data-leakage and label-error audit with
-│   │                                 # scikit-learn (cleanlab optional); sandboxed
-│   ├── multi-dim-manager/            # [workspace] parameter-space expansion, SHA-256 snapshots,
-│   │                                 # hash audit logs, rollback to any past round
-│   ├── quantitative-validator/       # [gates]     atom conservation for molecular formulae and
-│   │                                 # chemical equations (Hill-notation grammar + rdkit
-│   │                                 # cross-check); sandboxed
-│   ├── reference-auditor/            # [gates]     DOI extraction + Crossref verification;
-│   │                                 # a fake DOI fails the gate
-│   ├── sci-visualizer/               # [generation] publication-quality charts (matplotlib +
-│   │                                 # seaborn + pandas), incl. AMOS-style SEM path renderer,
-│   │                                 # plus gif frame scan
-│   ├── security-guard/               # [infrastructure] anti-injection text scan +
-│   │                                 # AST scan for dangerous call sites
-│   ├── task-organizer/               # [workspace] four-zone workspace init, file organization
-│   │                                 # (C1–C8 validation, dedupe, snapshots, undo/redo),
-│   │                                 # _broadcast/INDEX.md context index
-│   └── video-tracker/                # [ingest]    OpenCV coordinate extraction (CSRT/Template),
-│                                     # FFT spectrum, physics probes
-├── tests/                            # automated test suite (357 tests)
-└── THIRD_PARTY_LICENSES.txt          # upstream licence inventory
-```
+`core/` is the microkernel, `lib/chelate_core/` holds the shared logic every
+adapter imports, `skills/` holds one folder per skill (flat — the host
+scanners do not descend into namespace folders), and each host's plugin or rule
+file sits in its own dot-directory.
 
----
+Every directory, and what each of the 20 skills computes: **[docs/REFERENCE.md](docs/REFERENCE.md)**.
 
 ## Tests
 
@@ -287,7 +217,18 @@ chelate-shell/
 python -m pytest tests/ -q
 ```
 
-That is 357 tests (347 passed, 10 skipped — dependency gates such as `rdkit` and fixture-gated cases). The suite covers the gate contract, manifest schema validation, flat-layout enforcement (a manifest must sit exactly one level under `skills/`), pipeline planning and FAIL termination, the migration guard, the legacy D1–D5 and FFT/physics probes, the five skills added in v1.1.x, workspace input-path resolution, `--inputs` auto-wiring, the unified debug layer, the manifest-contract suite (plugin manifests for all four host platforms, plus SKILL.md frontmatter agreement), the rule-file adapters for the plugin-less hosts, the security shield, the four heavy engine skills' real logic and `UNVERIFIED` degradation, and the repo-consistency guard: every skill's docs, manifest, entrypoint, `LICENSE` and declared dependencies stay in agreement.
+357 tests: 347 pass and 10 skip with the optional dependencies installed;
+with nothing but pytest, 36 skip instead and the `UNVERIFIED` path is what
+runs. The eight skills that ship their own upstream suite under
+`skills/<skill>/tests/` are run one directory per process.
+
+Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.
+
+## Security & Open Source Statement
+
+> **Disclaimer**: This repository contains auxiliary tools developed by the author to automate research workflows. It is not a peer-reviewed academic project. Some boilerplate or utility scripts may have been generated with the assistance of AI, and have been integrated with high-level review and modifications by the author. The author assumes no responsibility for any third-party code issues, but commits to promptly addressing any valid claims.
+>
+> This tool **will never do the experiment for you**. Data must be collected manually by students in the lab; AI is absolutely physically isolated during the in-lab stage. Generated reports are merely "data-analysis drafts", and final academic responsibility lies with the user and their institution.
 
 ## Known limitations
 

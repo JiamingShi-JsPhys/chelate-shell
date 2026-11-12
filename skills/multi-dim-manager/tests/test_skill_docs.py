@@ -102,7 +102,11 @@ def test_skill_frontmatter_name_matches_dir():
 
 
 def test_skill_has_mandatory_workflow():
-    assert "MANDATORY WORKFLOW" in _read(SKILL)
+    text = _read(SKILL)
+    # v1.3 renamed "MANDATORY WORKFLOW" to "Quick Execution"; the run-it-first
+    # section must still come before the reference material
+    assert "## Quick Execution" in text
+    assert text.index("## Quick Execution") < text.index("## When to use")
 
 
 def test_skill_body_action_oriented():
@@ -125,14 +129,18 @@ def test_version_consistency():
         "CHANGELOG must document the version"
 
 
-def test_changelog_is_crlf():
-    data = CHANGELOG.read_bytes()
-    assert b"\r\n" in data
-    # After removing CRLF sequences, no bare LF should remain.
-    assert b"\n" not in data.replace(b"\r\n", b"")
+def test_changelog_line_endings_are_consistent():
+    """No mixed line endings: the file is either all CRLF or all LF.
+
+    This used to demand CRLF, which is a property of a Windows checkout, not
+    of the file — it failed on every Linux checkout, CI included.
+    """
+    raw = CHANGELOG.read_bytes()
+    crlf = raw.count(b"\r\n")
+    lf = raw.count(b"\n") - crlf
+    assert crlf == 0 or lf == 0, "CHANGELOG mixes CRLF and LF"
 
 
-# --- Release hygiene ------------------------------------------------------- #
 def test_release_assets_gitignored():
     text = _read(GITIGNORE)
     assert "output/" in text

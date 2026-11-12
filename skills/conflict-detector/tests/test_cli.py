@@ -36,10 +36,16 @@ def test_version_consistency() -> None:
     assert __version__ == manifest["version"]
 
 
-def test_changelog_is_crlf() -> None:
+def test_changelog_line_endings_are_consistent():
+    """No mixed line endings: the file is either all CRLF or all LF.
+
+    This used to demand CRLF, which is a property of a Windows checkout, not
+    of the file — it failed on every Linux checkout, CI included.
+    """
     raw = CHANGELOG_MD.read_bytes()
-    assert b"\n" not in raw.replace(b"\r\n", b""), "CHANGELOG.md must be CRLF"
-    assert b"\r\n" in raw
+    crlf = raw.count(b"\r\n")
+    lf = raw.count(b"\n") - crlf
+    assert crlf == 0 or lf == 0, "CHANGELOG_MD mixes CRLF and LF"
 
 
 def test_readme_md_is_pure_english() -> None:

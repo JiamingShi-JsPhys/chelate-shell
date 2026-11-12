@@ -8,6 +8,7 @@ shipped skill must satisfy.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -30,15 +31,22 @@ def test_version_consistency() -> None:
 
     fm_text = SKILL_MD.read_text(encoding="utf-8")
     assert _frontmatter_value(fm_text, "version") == __version__
-    assert __version__ == "1.3.0"
+    # Pinned to the manifest, not to a literal: a release bump must not break
+    # this test (it did in 1.3.1 — the assert still said 1.3.0).
+    manifest = json.loads((SKILL_DIR / "manifest.json").read_text(encoding="utf-8"))
+    assert __version__ == manifest["version"]
 
 
-def test_changelog_is_crlf() -> None:
-    """CHANGELOG.md must use CRLF line endings."""
+def test_changelog_line_endings_are_consistent():
+    """No mixed line endings: the file is either all CRLF or all LF.
+
+    This used to demand CRLF, which is a property of a Windows checkout, not
+    of the file — it failed on every Linux checkout, CI included.
+    """
     raw = CHANGELOG_MD.read_bytes()
-    # No bare LF not preceded by CR.
-    assert b"\n" not in raw.replace(b"\r\n", b""), "CHANGELOG.md must be CRLF"
-    assert b"\r\n" in raw
+    crlf = raw.count(b"\r\n")
+    lf = raw.count(b"\n") - crlf
+    assert crlf == 0 or lf == 0, "CHANGELOG_MD mixes CRLF and LF"
 
 
 def test_readme_md_is_pure_english() -> None:
