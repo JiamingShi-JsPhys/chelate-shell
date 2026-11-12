@@ -3,8 +3,6 @@
 > **A deterministic orchestrator for research and engineering workflows, with 20 skills included.**
 >
 > You do not need to supply the skills yourself. Twenty research and engineering skills ship with the repository: formula validation (five check layers over SymPy plus a pint unit cross-check), atom conservation with RDKit, mixed models and mediation analysis through R, video trajectory extraction with OpenCV, publication-grade charts, PDF text extraction, and Markdown → compilable LaTeX export. All 20 are part of the install and run in the pipeline as shipped.
->
-> `core/router.py` runs them in a fixed stage order, screens text inputs for prompt injection before dispatch, writes a typed `GateResult` for every call, and terminates the pipeline on the first `FAIL`.
 
 **English** · [简体中文](README_zh.md)
 
