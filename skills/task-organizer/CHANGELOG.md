@@ -4,6 +4,12 @@ All notable changes to this project are documented here, following
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-13
+
+### Security
+- `TASK_ORG_AI_BASE_URL` is accepted only with an http or https scheme, so a
+  `file://` value can no longer turn the chat call into a local-file read.
+
 ## [1.3.1] - 2026-11-11
 
 ### Changed

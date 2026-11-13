@@ -4,6 +4,12 @@ All notable changes to this project are documented here, following
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-13
+
+### Changed
+- Version declaration bumped to 1.3.2 across the repository.
+  No capability change to this skill.
+
 ## [1.3.1] - 2026-11-11
 
 ### Changed

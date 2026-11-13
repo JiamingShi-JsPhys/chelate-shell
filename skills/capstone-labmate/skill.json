@@ -1,6 +1,6 @@
 {
   "name": "capstone-labmate",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "status": "beta",
   "description": "PASCO Capstone 教学实验伴侣（Agent-Native 第三方互操作工具）。两阶段流程：(1) 课前预制——读取实验指导书 PDF/docx，自动生成满配 .cap 模板（采样率/数据列/公式/图表/坐标轴全预置，并按校验清单逐项核对）；(2) 课后报告——读取正式实验保存的最终 .cap，本地降采样 + CSV 导出，宿主 LLM 按模板生成忠实于数据、图文并茂、逐条覆盖手册要求的实验报告草稿（含随机误差语料库与强制学术诚信水印）。AI 不参与实验采集阶段；不内置任何 API Key；全部数据处理本地完成。",
   "author": "Jiaming Shi",

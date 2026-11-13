@@ -4,6 +4,15 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-13
+
+### Security
+- The plugin command is executed without a shell: the template is split into
+  an argv list (`shlex`, with Windows paths kept intact), placeholders are
+  substituted per token so paths with spaces stay one argument, and shell
+  operators (`|`, `&&`, `;`, `>`, ...) are refused with a clear error.
+- `plugin.command` also accepts a list of arguments, which needs no quoting.
+
 ## [1.3.1] - 2026-11-11
 
 ### Changed

@@ -2,6 +2,46 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.3.2] — 2026-11-13
+
+**Security release — upgrade recommended.** Two command-injection paths are
+closed, one dependency pointed at a package that does not exist, and the
+DeepSec shield audit of the tree reports 0 findings.
+
+### Security (important)
+- **`multi-dim-manager` no longer runs the plugin command through a shell.**
+  `subprocess.run(..., shell=True)` made every substituted `{PARAMS}` /
+  `{OUT}` path shell syntax: a workspace path containing `;` or `$()` ran
+  whatever followed it. The template is now split with `shlex` (POSIX rules
+  on POSIX, non-POSIX on Windows so `C:\...` keeps its backslashes) and
+  passed as an argument list; substitution happens per token, so a path with
+  spaces stays one argument. Shell-only syntax (`|`, `&&`, `;`, `>`, ...) is
+  refused with an explicit error instead of being silently reinterpreted, and
+  `plugin.command` accepts a list, which needs no quoting at all.
+- **The sandbox refuses executables that are not on a whitelist.**
+  `core/sandbox.py` launched whatever `cmd[0]` named. It now checks the
+  program against `ALLOWED_EXECUTABLES` (`python`, `node`, `gcc`, `clang`,
+  ...) before a child process is created, and again inside the child. The
+  running interpreter is always allowed, so `run_skill_sandboxed` keeps
+  working.
+- **A required dependency named a package that does not exist.**
+  `video-tracker` declared `cv2` — an import name, not a PyPI distribution;
+  `pip install cv2` returns 404. It now declares
+  `opencv-contrib-python-headless`, which its `requirements.txt` already used.
+- **`task-organizer` restricts its AI endpoint to http(s).**
+  `TASK_ORG_AI_BASE_URL` comes from the environment and any other scheme is
+  now rejected, so a `file://` value cannot turn the chat call into a
+  local-file read. `doi_audit` gained the matching host assertion for
+  Crossref: the URL is fixed-endpoint plus quoted DOI, and a hijacked host
+  now reports `indeterminate` instead of being fetched.
+
+### Fixed
+- **The whitelist accepts the interpreter that actually runs the skills.**
+  `run_skill_sandboxed` launches `sys.executable` by absolute path, so the
+  check compares resolved paths and also accepts versioned names such as
+  `python3.12`; a bare `python`/`node`/`gcc` list would have blocked every
+  sandboxed skill.
+
 ## [1.3.1] — 2026-11-12
 
 A release about the test suite being trustworthy, not about the skills.

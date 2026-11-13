@@ -121,3 +121,30 @@ def test_load_config_plugin_timeout_overrides_top_level():
         }
     )
     assert cfg.timeout == 7.0  # explicit plugin.timeout wins over top-level
+
+
+def test_load_config_accepts_list_command():
+    """The list form avoids all quoting, which is what Windows users need."""
+    cfg = load_config(
+        {
+            "dimensions": [{"name": "a", "values": [1]}],
+            "plugin": {"command": ["python", "p.py", "{PARAMS}", "{OUT}"]},
+        }
+    )
+    assert cfg.plugin_command == ["python", "p.py", "{PARAMS}", "{OUT}"]
+
+
+def test_load_config_accepts_bare_list_plugin():
+    cfg = load_config(
+        {"dimensions": [{"name": "a", "values": [1]}],
+         "plugin": ["python", "p.py", "{OUT}"]}
+    )
+    assert cfg.plugin_command == ["python", "p.py", "{OUT}"]
+
+
+def test_load_config_list_command_still_requires_out():
+    with pytest.raises(ConfigError):
+        load_config(
+            {"dimensions": [{"name": "a", "values": [1]}],
+             "plugin": {"command": ["python", "p.py"]}}
+        )

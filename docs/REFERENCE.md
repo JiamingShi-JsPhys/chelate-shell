@@ -61,7 +61,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.1)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.2)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md

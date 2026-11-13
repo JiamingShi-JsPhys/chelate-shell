@@ -10,7 +10,7 @@
 
 [English](README.md) · **简体中文**
 
-**版本：** 1.3.1 | **许可证：** MIT | **Python：** 3.10+ | **技能数：** 20
+**版本：** 1.3.2 | **许可证：** MIT | **Python：** 3.10+ | **技能数：** 20
 
 > 仅作科研辅助。依赖任何输出之前，请先读[安全与开源声明](#安全与开源声明)。
 
@@ -119,11 +119,11 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 下面每个宿主都有自己的插件市场。把本仓库的 Git URL 注册进去，再安装它列出的插件即可（URL 重复注册没有副作用，第二次会提示已存在）。
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.2
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.1` 把安装钉在这个发布上；去掉它则跟随默认分支。
+`#v1.3.2` 把安装钉在这个发布上；去掉它则跟随默认分支。
 
 ### 方法二：用命令安装
 

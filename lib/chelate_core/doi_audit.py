@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 CROSSREF_ENDPOINT = "https://api.crossref.org/works/"
 CONTACT_MAILTO = "chelate-shell@example.invalid"  # Crossref politeness param
-USER_AGENT = "chelate-shell/1.3.1"
+USER_AGENT = "chelate-shell/1.3.2"
 
 # 10.NNNN/suffix — NNNN is 4-9 digits; suffix runs until whitespace or a
 # closing delimiter commonly following a DOI in prose/bib entries.
@@ -40,11 +40,21 @@ def extract_dois(text: str) -> List[str]:
 def verify_doi(doi: str, timeout: int = 20) -> Dict:
     """Query Crossref for one DOI; return a per-DOI verdict dict."""
     import requests
+    from urllib.parse import urlsplit
 
     record = {"doi": doi, "status": "unknown", "title": None,
               "container": None, "year": None, "http_status": None}
+    # The DOI is only ever appended to the fixed Crossref endpoint as a quoted
+    # path segment, so no caller-supplied value can choose the host. The
+    # assertion makes that invariant explicit and fails closed if the
+    # endpoint constant is ever edited.
+    url = CROSSREF_ENDPOINT + requests.utils.quote(doi)
+    if urlsplit(url).netloc != "api.crossref.org":
+        record["status"] = "indeterminate"
+        record["error"] = "refused to contact a non-Crossref host"
+        return record
     try:
-        resp = requests.get(CROSSREF_ENDPOINT + requests.utils.quote(doi),
+        resp = requests.get(url,
                             params={"mailto": CONTACT_MAILTO},
                             timeout=timeout,
                             headers={"User-Agent":

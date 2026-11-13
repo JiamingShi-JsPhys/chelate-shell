@@ -1,13 +1,13 @@
 ---
 name: formula-validator
-version: 1.3.1
+version: 1.3.2
 description: >
   Deterministic formula checker for physics and maths. You extract the
   equation and declare the units; the tool runs five CAS layers plus a pint
   unit cross-check and returns a strict pass / fail / unknown verdict. Fires
   on any formula whose correctness matters.
 metadata:
-  version: 1.3.1
+  version: 1.3.2
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

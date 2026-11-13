@@ -1,13 +1,13 @@
 ---
 name: longitudinal-analysis
-version: 1.3.1
+version: 1.3.2
 description: >
   Runs a repeated-measures / panel analysis: descriptive statistics, a
   manipulation check, linear mixed models, mediation and sensitivity analysis.
   Python steps run anywhere; the mixed-model, mediation and sensitivity steps
   go through R and are skipped, not replaced, when Rscript is absent.
 metadata:
-  version: 1.3.1
+  version: 1.3.2
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

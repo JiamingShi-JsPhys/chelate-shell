@@ -1,4 +1,4 @@
-# 逐技能依赖（1.3.1）
+# 逐技能依赖（1.3.2）
 
 由每个技能的 `manifest.json` 声明，运行时由
 `core/sandbox.py` 检查。缺失必需依赖时，只有那一个技能降级为
@@ -25,7 +25,7 @@
 | `sci-visualizer` | `matplotlib`, `seaborn`, `pandas` | `Pillow`（gif/动画逐帧扫描） |
 | `security-guard` | 无（纯标准库） | 无 |
 | `task-organizer` | 无（纯标准库） | `openpyxl`（xlsx 快速通道）, `PyPDF2`（PDF 后端之一） |
-| `video-tracker` | `numpy`, `opencv-python` | `matplotlib`（FFT 频谱图）, `PyYAML`（`.yaml` 配置） |
+| `video-tracker` | `numpy`, `opencv-contrib-python-headless` | `matplotlib`（FFT 频谱图）, `PyYAML`（`.yaml` 配置） |
 
 所有第三方库均为运行时导入，**本仓库不内置（vendored）任何第三方代码**；每个库仍保持其自身许可（numpy/pandas 为 BSD，OpenCV 为 Apache-2.0，SymPy/pint/requests/bibtexparser/arxiv 为
 BSD/MIT/Apache，pdfminer.six 为 MIT，pypdf 为 BSD-3-Clause）。

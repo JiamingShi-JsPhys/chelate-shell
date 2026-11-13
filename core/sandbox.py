@@ -48,6 +48,70 @@ DEFAULT_TIMEOUT_SECONDS = 120
 _CHILD_TARGET: str = "_child_target"
 
 
+class SandboxSecurityError(RuntimeError):
+    """Raised when a command fails the sandbox executable whitelist."""
+
+
+# Executables the sandbox is willing to launch, by lower-cased basename with
+# any ``.exe`` suffix removed. A skill is a Python entry point in every
+# current manifest, so the interpreter case is the one that matters; the
+# others cover user-written helpers that shell out to a compiler or Node.
+ALLOWED_EXECUTABLES = frozenset({
+    "python", "python3", "pythonw", "py",
+    "node", "nodejs",
+    "gcc", "cc", "clang", "g++",
+})
+
+
+def _executable_basename(path: str) -> str:
+    """Return the lower-cased program name of *path*, without ``.exe``."""
+    name = os.path.basename(str(path).strip())
+    if name.lower().endswith(".exe"):
+        name = name[:-4]
+    return name.lower()
+
+
+def _looks_like_python(name: str) -> bool:
+    """Accept versioned interpreters such as ``python3.12``."""
+    if not name.startswith("python"):
+        return False
+    suffix = name[len("python"):]
+    return suffix == "" or all(ch.isdigit() or ch == "." for ch in suffix)
+
+
+def is_allowed_executable(path: str) -> bool:
+    """True when *path* is the running interpreter or a whitelisted program."""
+    candidate = os.path.normcase(os.path.abspath(str(path)))
+    if candidate == os.path.normcase(os.path.abspath(sys.executable)):
+        return True
+    name = _executable_basename(path)
+    return name in ALLOWED_EXECUTABLES or _looks_like_python(name)
+
+
+def check_command(cmd: List[str]) -> List[str]:
+    """Validate a sandbox command against the executable whitelist.
+
+    Only ``cmd[0]`` is checked: once a permitted interpreter is running, its
+    arguments are its business. The check is a policy gate against a manifest
+    or caller pointing the sandbox at an arbitrary binary — it is not a
+    containment boundary, and a whitelisted interpreter can still do whatever
+    the user account can.
+
+    Raises:
+        SandboxSecurityError: if *cmd* is not a non-empty argument list, or
+            its program is not whitelisted.
+    """
+    if not isinstance(cmd, (list, tuple)) or not cmd:
+        raise SandboxSecurityError(
+            "sandbox command must be a non-empty argument list")
+    argv = [str(part) for part in cmd]
+    if not is_allowed_executable(argv[0]):
+        raise SandboxSecurityError(
+            f"refusing to execute {argv[0]!r}: it is not on the sandbox "
+            f"executable whitelist ({', '.join(sorted(ALLOWED_EXECUTABLES))})")
+    return argv
+
+
 @dataclass
 class SandboxDecision:
     """Outcome of resolving an execution environment for one skill.
@@ -157,7 +221,14 @@ def _worker(cmd: List[str], q: "_mp.Queue") -> None:
         stdout = ""
         stderr = ""
         if cmd:
-            proc = subprocess.run(cmd, capture_output=True, text=True)
+            # Defence in depth: the parent validates too, but the child must
+            # not trust a command list handed to it through pickle. The
+            # validated argv is rebuilt as an explicit array at the call site:
+            # subprocess receives no command string, so a shell never parses
+            # an argument and a metacharacter cannot become an operator.
+            program, *arguments = check_command(cmd)
+            proc = subprocess.run([program, *arguments], capture_output=True,
+                                  text=True)
             rc = proc.returncode
             stdout = proc.stdout or ""
             stderr = proc.stderr or ""
@@ -187,9 +258,18 @@ def run_sandboxed(cmd: List[str],
 
     The 120-second circuit-breaker is the *timeout* parameter default;
     callers can override it per-skill via the router's ``--timeout`` flag.
+
+    Raises:
+        SandboxSecurityError: if ``cmd[0]`` is not on the executable
+            whitelist. Nothing is launched in that case.
     """
     import time
     started = time.time()
+
+    # 0. Refuse anything that is not a whitelisted program before a child
+    #    process is created. A command list may originate in a manifest or in
+    #    caller-supplied input; running it unchecked is arbitrary execution.
+    cmd = check_command(cmd)
 
     # 1. Pre-check dependencies in the *parent* interpreter.
     missing = missing_dependencies(dependencies)

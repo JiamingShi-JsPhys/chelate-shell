@@ -23,7 +23,10 @@ import pytest
 
 from core.sandbox import (
     DEFAULT_TIMEOUT_SECONDS,
+    SandboxSecurityError,
     _worker,
+    check_command,
+    is_allowed_executable,
     missing_dependencies,
     run_sandboxed,
 )
@@ -171,3 +174,51 @@ def test_run_sandboxed_propagates_gate_unverified_from_stdout():
     outcome = run_sandboxed(cmd, dependencies=[], timeout=30)
     assert outcome["status"] == "UNVERIFIED", outcome
     assert outcome["reason"] == "heavy dependency not installed"
+
+
+# ---------------------------------------------------------------- whitelist
+
+def test_whitelist_accepts_the_running_interpreter_and_known_names():
+    """run_skill_sandboxed launches sys.executable by absolute path, so the
+    whitelist has to accept the current interpreter, not just 'python'."""
+    assert is_allowed_executable(sys.executable)
+    assert is_allowed_executable("python")
+    assert is_allowed_executable("python3.12")
+    assert is_allowed_executable("PYTHON.EXE")
+    assert is_allowed_executable("node")
+    assert is_allowed_executable("gcc")
+
+
+def test_whitelist_rejects_arbitrary_programs(tmp_path):
+    assert not is_allowed_executable("rm")
+    assert not is_allowed_executable("/bin/sh")
+    assert not is_allowed_executable(str(tmp_path / "payload"))
+
+
+def test_check_command_rejects_empty_and_non_list():
+    with pytest.raises(SandboxSecurityError):
+        check_command([])
+    # a bare string would need re-splitting (and therefore a shell)
+    with pytest.raises(SandboxSecurityError):
+        check_command("python -c pass")  # type: ignore[arg-type]
+
+
+def test_run_sandboxed_refuses_unlisted_executable_before_launch(tmp_path):
+    """A command naming an arbitrary binary must be refused outright, not
+    handed to the child process."""
+    payload = tmp_path / "payload"
+    payload.write_text("x", encoding="utf-8")
+    with pytest.raises(SandboxSecurityError, match="whitelist"):
+        run_sandboxed([str(payload)], dependencies=[], timeout=5)
+
+
+def test_worker_refuses_unlisted_executable_independently(tmp_path):
+    """The child validates too, so a command list that bypassed the parent
+    (e.g. unpickled from elsewhere) cannot execute."""
+    payload = tmp_path / "payload"
+    payload.write_text("x", encoding="utf-8")
+    q = _mp.get_context("spawn").Queue()
+    _worker([str(payload)], q)
+    report = q.get(timeout=5)
+    assert report["rc"] == -1, report
+    assert "SandboxSecurityError" in report["error"], report

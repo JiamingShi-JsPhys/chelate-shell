@@ -4,6 +4,13 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-13
+
+### Fixed
+- The declared dependency is `opencv-contrib-python-headless`, not `cv2`.
+  `cv2` is an import name; no such package exists on PyPI, so following the
+  manifest's install hint failed with 404.
+
 ## [1.3.1] - 2026-11-11
 
 ### Changed

@@ -10,7 +10,7 @@ Individual skills solve isolated problems; an agent still has to decide which on
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.1 | **License:** MIT | **Python:** 3.10+ | **Skills:** 20
+**Version:** 1.3.2 | **License:** MIT | **Python:** 3.10+ | **Skills:** 20
 
 > Research assistance only. Read the [security & open-source statement](#security--open-source-statement) before relying on any output.
 
@@ -121,11 +121,11 @@ Three ways in. Plugin hosts install Chelate Shell as **one plugin** — the only
 Every host below has its own plugin marketplace. Register this repository's Git URL, then install the plugin it lists (registering the URL twice is harmless — the second call reports it is already known).
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.2
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-The `#v1.3.1` suffix pins the release; drop it to follow the default branch.
+The `#v1.3.2` suffix pins the release; drop it to follow the default branch.
 
 ### Method 2: install with commands
 

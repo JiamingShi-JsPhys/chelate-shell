@@ -26,7 +26,9 @@ from lib.chelate_core import adapter  # noqa: E402
 
 SKILL = "video-tracker"
 SKILL_ROOT = adapter.skill_root(__file__)
-DEPENDENCIES = ("numpy", "cv2")
+# Distribution names, not import names: probe_deps() translates each through
+# import_name(), and "cv2" is not a package on PyPI at all.
+DEPENDENCIES = ("numpy", "opencv-contrib-python-headless")
 
 ACTIONS = {
     "probe": ("scripts.run", "main", "sub"),

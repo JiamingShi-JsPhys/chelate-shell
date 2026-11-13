@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from .errors import ConfigError
 from .param_space import ParamSpace, load_space
@@ -21,7 +21,9 @@ class Config:
 
     space: ParamSpace
     critical_paths: list = field(default_factory=list)
-    plugin_command: str = ""
+    # Either a string template (split without a shell, honouring quotes) or a
+    # ready-made argument list, which is the safest form on Windows.
+    plugin_command: Union[str, list] = ""
     timeout: Optional[float] = None
     workdir: Path = field(default_factory=lambda: Path("./work"))
     output: Path = field(default_factory=lambda: Path("./output"))
@@ -72,13 +74,21 @@ def load_config(source) -> Config:
     space = load_space(raw)
     plugin = raw.get("plugin", {}) or {}
     if isinstance(plugin, str):
-        plugin_command = plugin
+        plugin_command: Union[str, list] = plugin
+    elif isinstance(plugin, list):
+        plugin_command = [str(part) for part in plugin]
     else:
-        plugin_command = str(plugin.get("command", ""))
+        command = plugin.get("command", "")
+        if isinstance(command, list):
+            plugin_command = [str(part) for part in command]
+        else:
+            plugin_command = str(command)
 
     if not plugin_command:
         raise ConfigError("plugin command is required (plugin.command)")
-    if "{OUT}" not in plugin_command:
+    template = (plugin_command if isinstance(plugin_command, str)
+                else " ".join(plugin_command))
+    if "{OUT}" not in template:
         raise ConfigError("plugin command must contain the {OUT} placeholder")
 
     top_timeout = raw.get("timeout")

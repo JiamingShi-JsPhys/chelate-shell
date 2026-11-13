@@ -262,7 +262,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.1).
+marketplace. Keep `version` in sync across all manifests (currently 1.3.2).
 
 ## 7. Hard constraints
 

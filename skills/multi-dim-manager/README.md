@@ -8,7 +8,7 @@ Part of [Chelate Shell](../../README.md) (MIT). The AI-facing instructions
 live in [SKILL.md](SKILL.md); the Router contract lives in
 [manifest.json](manifest.json).
 
-The test suite covers 87 cases.
+The test suite covers 93 cases.
 
 ## Usage
 

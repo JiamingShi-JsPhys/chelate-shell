@@ -1,6 +1,6 @@
 # JSON-Schema-like description of the longitudinal-analysis config.
 # (Documented only; the authoritative loader is src/config.py.)
-version: "1.3.1"
+version: "1.3.2"
 analysis_id: string
 data:
   input: path

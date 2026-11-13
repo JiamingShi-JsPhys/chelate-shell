@@ -13,7 +13,7 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 **Claude Code** — from inside a session (v2.1.275+), add the marketplace from the URL first, pinned to the release tag:
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.2
 ```
 
 Then install the entry it lists:
@@ -25,7 +25,7 @@ Then install the entry it lists:
 **Codex** — register the URL as a Git marketplace; `--ref` pins the release tag, and an SSH URL or a local path works in place of the HTTPS one:
 
 ```bash
-codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.3.1
+codex plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git --ref v1.3.2
 ```
 
 **Codex** — install the plugin from that marketplace:
@@ -37,13 +37,13 @@ codex plugin add chelate-shell@chelate-shell-marketplace
 **dsh (DeepSeek Harness)** — installs from the same repository URL straight into a profile:
 
 ```bash
-dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.3.1
+dsh plugin --profile web add github:JiamingShi-JsPhys/chelate-shell#v1.3.2
 ```
 
 **CodeBuddy** — add the URL as a Git marketplace:
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.1
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.2
 ```
 
 Then install the entry it lists:

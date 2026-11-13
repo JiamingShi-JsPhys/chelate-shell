@@ -1,12 +1,12 @@
 ---
 name: security-guard
-version: 1.3.1
+version: 1.3.2
 description: >
   Screens text and Python sources before dispatch: prompt-injection markers in
   external text, and an AST walk for dangerous call sites (`eval`, `exec`,
   `os.system`, `subprocess.*`). A screen, not a sandbox.
 metadata:
-  version: 1.3.1
+  version: 1.3.2
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

@@ -1,4 +1,4 @@
-# Per-skill dependencies (1.3.1)
+# Per-skill dependencies (1.3.2)
 
 Declared in each skill's `manifest.json` and enforced at run time by
 `core/sandbox.py`. A missing required dependency degrades that one
@@ -25,7 +25,7 @@ skill to an `UNVERIFIED` gate; it never crashes the pipeline.
 | sci-visualizer | `matplotlib`, `seaborn`, `pandas` | Pillow (gif/animation frame scan) |
 | security-guard | *(stdlib only)* | — |
 | task-organizer | *(stdlib only)* | openpyxl (fast `.xlsx` path), PyPDF2 (one PDF backend) |
-| video-tracker | numpy, opencv | matplotlib (FFT plots), PyYAML (`.yaml` configs) |
+| video-tracker | numpy, opencv-contrib-python-headless | matplotlib (FFT plots), PyYAML (`.yaml` configs) |
 
 Third-party packages are imported at run time only; none are vendored
 into this repository, and each stays under its own permissive licence

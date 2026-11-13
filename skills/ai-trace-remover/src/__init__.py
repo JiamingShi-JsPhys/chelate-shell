@@ -5,4 +5,4 @@ The model is never asked to "write around" the tells; every check is a
 deterministic scan that the agent reports. No third-party dependency.
 """
 
-__version__ = "1.3.1"
+__version__ = "1.3.2"

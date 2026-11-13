@@ -1336,6 +1336,13 @@ def _ai_chat(system: str, user: str, max_tokens: int, api_key: str) -> str:
 
         ).rstrip("/")
 
+        # Only http(s) is accepted: a file:// or ftp:// base URL picked up from
+        # the environment must not turn this call into a local-file read.
+
+        if urllib.parse.urlsplit(base_url).scheme not in ("http", "https"):
+
+            return ""
+
         model = os.environ.get(_AI_MODEL_ENV, "gpt-4o-mini")
 
 
@@ -1360,7 +1367,7 @@ def _ai_chat(system: str, user: str, max_tokens: int, api_key: str) -> str:
 
 
 
-        req = urllib.request.Request(
+        http_request = urllib.request.Request(
 
             f"{base_url}/chat/completions",
 
@@ -1378,7 +1385,7 @@ def _ai_chat(system: str, user: str, max_tokens: int, api_key: str) -> str:
 
         )
 
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(http_request, timeout=30) as resp:
 
             data = json.loads(resp.read().decode("utf-8"))
 

@@ -1,13 +1,13 @@
 ---
 name: video-tracker
-version: 1.3.1
+version: 1.3.2
 description: >
   Turns an experiment video into reproducible physics data: tracks declared
   objects (CSRT with template fallback), computes the amplitude spectrum of the
   coordinate series, and runs physics-consistency probes. Experimental and
   unstable — every run must be checked against a known reference.
 metadata:
-  version: 1.3.1
+  version: 1.3.2
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py
@@ -20,7 +20,7 @@ Extracts coordinates from a video, derives spectra, and probes physical
 consistency. It never modifies the raw video and requires every parameter to
 come from the config.
 
-- **Stage:** `ingest` · **Sandbox:** no · **Dependencies:** `numpy`, `opencv` (`matplotlib` optional for figures)
+- **Stage:** `ingest` · **Sandbox:** no · **Dependencies:** `numpy`, `opencv-contrib-python-headless` (`matplotlib` optional for figures)
 
 ## Quick Execution
 

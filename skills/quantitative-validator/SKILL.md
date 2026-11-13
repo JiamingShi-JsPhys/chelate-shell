@@ -1,13 +1,13 @@
 ---
 name: quantitative-validator
-version: 1.3.1
+version: 1.3.2
 description: >
   Atom-conservation gate for molecular formulae and chemical equations.
   Parses Hill notation, balances both sides and cross-checks with rdkit; runs
   inside the process sandbox and degrades to `UNVERIFIED` when rdkit is
   absent.
 metadata:
-  version: 1.3.1
+  version: 1.3.2
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py
