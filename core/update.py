@@ -176,6 +176,14 @@ def _write_cache(result: Dict[str, object]) -> None:
 
 # ------------------------------------------------------------------- hosts
 
+def _resolved(argv: List[str]) -> List[str]:
+    """Use the resolved executable: on Windows a bare ``zcode`` is a .cmd
+    shim that CreateProcess does not look for, so the PATH lookup has to
+    happen here."""
+    exe = shutil.which(argv[0])
+    return ([exe] + argv[1:]) if exe else list(argv)
+
+
 def installed_hosts() -> List[Dict[str, str]]:
     """Hosts that have this plugin installed, with the id their CLI expects.
 
@@ -185,11 +193,12 @@ def installed_hosts() -> List[Dict[str, str]]:
     found: List[Dict[str, str]] = []
     if shutil.which("zcode"):
         try:
-            out = subprocess.run(["zcode", "plugins", "list"],
-                                 capture_output=True, text=True, timeout=30)
+            out = subprocess.run(_resolved(["zcode", "plugins", "list"]),
+                                 capture_output=True, text=True, timeout=30,
+                                 encoding="utf-8", errors="replace")
         except (OSError, subprocess.SubprocessError):
             out = None
-        if out and out.returncode == 0:
+        if out and out.returncode == 0 and out.stdout:
             for line in out.stdout.splitlines():
                 line = line.strip()
                 if line.startswith(f"- {PLUGIN}@") and "[enabled]" in line:
@@ -199,13 +208,20 @@ def installed_hosts() -> List[Dict[str, str]]:
                                   "marketplace": marketplace})
     if shutil.which("claude"):
         try:
-            out = subprocess.run(["claude", "plugin", "list"],
-                                 capture_output=True, text=True, timeout=30)
+            out = subprocess.run(_resolved(["claude", "plugin", "list"]),
+                                 capture_output=True, text=True, timeout=30,
+                                 encoding="utf-8", errors="replace")
         except (OSError, subprocess.SubprocessError):
             out = None
-        if out and out.returncode == 0 and PLUGIN in out.stdout:
-            found.append({"host": "claude", "plugin": PLUGIN,
-                          "marketplace": ""})
+        if out and out.returncode == 0 and out.stdout:
+            # "❯ chelate-shell@marketplace" -- match the name exactly, so
+            # chelate-shell-canto is not mistaken for this plugin.
+            for line in out.stdout.splitlines():
+                name = line.strip().lstrip("❯").strip()
+                if name.split("@", 1)[0].strip() == PLUGIN:
+                    found.append({"host": "claude", "plugin": PLUGIN,
+                                  "marketplace": ""})
+                    break
     return found
 
 
@@ -229,8 +245,9 @@ def apply(hosts: Optional[List[Dict[str, str]]] = None,
             record: Dict[str, object] = {"host": host["host"],
                                          "command": " ".join(argv)}
             try:
-                proc = subprocess.run(argv, capture_output=True, text=True,
-                                      timeout=timeout)
+                proc = subprocess.run(_resolved(argv), capture_output=True,
+                                      text=True, timeout=timeout,
+                                      encoding="utf-8", errors="replace")
                 record["returncode"] = proc.returncode
                 record["output"] = (proc.stdout or "").strip()[-400:]
                 if proc.returncode != 0:

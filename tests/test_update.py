@@ -147,3 +147,38 @@ def test_apply_stops_after_a_failed_step(monkeypatch):
     assert len(calls) == 1, "the dependent command must not run"
     assert results[0]["returncode"] == 1
     assert results[0]["error"] == "boom"
+
+
+def _fake_hosts(monkeypatch, listings):
+    """Pretend both CLIs exist and answer from *listings* (argv[0] -> text)."""
+
+    class _Done:
+        def __init__(self, out):
+            self.stdout = out
+            self.stderr = ""
+            self.returncode = 0
+
+    monkeypatch.setattr(update_mod.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(update_mod.subprocess, "run",
+                        lambda argv, **kw: _Done(
+                            listings.get(argv[0].replace("\\", "/").split("/")[-1], "")))
+
+
+def test_a_host_is_found_only_when_this_plugin_is_installed(monkeypatch):
+    _fake_hosts(monkeypatch, {
+        "zcode": chr(10).join(["Plugins (2)",
+                              "- chelate-shell-canto@mp [disabled]",
+                              "- chelate-shell@mp [enabled]", ""]),
+        "claude": chr(10).join(["Installed plugins:", "",
+                               "  ❯ chelate-shell-canto@mp",
+                               "    Status: ✘ disabled", ""]),
+    })
+
+    hosts = update_mod.installed_hosts()
+    assert hosts == [{"host": "zcode", "plugin": "chelate-shell@mp",
+                      "marketplace": "mp"}], hosts
+
+
+def test_a_disabled_plugin_is_not_updated(monkeypatch):
+    _fake_hosts(monkeypatch, {"zcode": "- chelate-shell@mp [disabled]" + chr(10)})
+    assert update_mod.installed_hosts() == []
