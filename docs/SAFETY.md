@@ -188,11 +188,12 @@ tries X, the shell must not do it":
 | Promotion stamp containing `../` | `WorkspaceEscape` |
 | Sandboxed skill receives the workspace root | asserted (regression) |
 
-`tests/test_results_audit.py` — 9 cases covering the promotion log: a promotion
+`tests/test_results_audit.py` — 10 cases covering the promotion log: a promotion
 records the token that authorised it, a file placed in `results/` by hand is
 named, a promoted file edited afterwards is named, a forged log line is not
 believed, a corrupt line is reported instead of raised, a deliverable renamed
-to look like a report is still named, and `cli.py audit` exits 1.
+to look like a report is still named, a signed log with no reachable
+key fails closed instead of trusting the lines, and `cli.py audit` exits 1.
 
 Run them with:
 

@@ -146,6 +146,31 @@ def test_a_corrupt_log_line_is_reported_not_raised(tmp_path: Path) -> None:
     assert report["tampered"] == ["line 2: not an object"]
 
 
+def test_a_missing_key_fails_closed_instead_of_trusting_entries(
+        tmp_path: Path, monkeypatch) -> None:
+    """Signed entries with no reachable key are unverified, not approved.
+
+    Losing the key must not quietly downgrade the audit to "believe every
+    line"; that would make deleting one file a way to whitelist anything.
+    """
+    ws = _workspace(tmp_path)
+    router.promote(str(ws), STAMP, {"source": "scripted-run"})
+    assert router.audit_results(str(ws))["ok"] is True
+
+    empty = tmp_path / "no-keys-here"
+    empty.mkdir()
+    monkeypatch.setenv("CHELATE_KEY_ROOT", str(empty))
+
+    report = router.audit_results(str(ws))
+    assert report["ok"] is False
+    assert report["unapproved"] == [
+        f"results/promoted_{STAMP}/gates/data-profiler.json",
+        f"results/promoted_{STAMP}/profile.json"]
+    tampered = report["tampered"]
+    assert isinstance(tampered, list) and any("signature" in item
+                                              for item in tampered)
+
+
 def test_cli_audit_exits_non_zero_when_something_is_unapproved(
         tmp_path: Path) -> None:
     ws = _workspace(tmp_path)

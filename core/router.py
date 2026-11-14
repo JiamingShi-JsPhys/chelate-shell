@@ -478,7 +478,7 @@ def audit_results(root: str) -> Dict[str, object]:
     approved: Dict[str, str] = {}
     promotions = 0
     tampered: List[str] = []
-    keyed = approval.has_key(root)
+    parsed: List[tuple] = []
     log = os.path.join(results_dir, PROMOTION_LOG)
     if os.path.isfile(log):
         with open(log, encoding="utf-8", errors="replace") as fh:
@@ -494,19 +494,29 @@ def audit_results(root: str) -> Dict[str, object]:
                 if not isinstance(entry, dict):
                     tampered.append(f"line {number}: not an object")
                     continue
-                entry = dict(entry)
-                mac = entry.pop("mac", None)
-                if keyed and not (isinstance(mac, str)
-                                  and approval.verify(root, entry, mac)):
-                    tampered.append(f"line {number}: bad or missing signature")
-                    continue
-                files = entry.get("files")
-                if not isinstance(files, dict):
-                    tampered.append(f"line {number}: no file list")
-                    continue
-                promotions += 1
-                for rel, digest in files.items():
-                    approved[str(rel).replace("\\", "/")] = digest
+                parsed.append((number, entry))
+
+    # One signed entry means this workspace was keyed when it ran, so every
+    # entry has to verify. A key that cannot be found is not a reason to stop
+    # checking — the key living elsewhere is exactly what the signature is
+    # for — so that case fails closed instead.
+    require_signature = approval.has_key(root) or any(
+        "mac" in entry for _, entry in parsed)
+
+    for number, entry in parsed:
+        entry = dict(entry)
+        mac = entry.pop("mac", None)
+        if require_signature and not (isinstance(mac, str)
+                                      and approval.verify(root, entry, mac)):
+            tampered.append(f"line {number}: signature does not verify")
+            continue
+        files = entry.get("files")
+        if not isinstance(files, dict):
+            tampered.append(f"line {number}: no file list")
+            continue
+        promotions += 1
+        for rel, digest in files.items():
+            approved[str(rel).replace("\\", "/")] = digest
 
     unapproved: List[str] = []
     modified: List[str] = []

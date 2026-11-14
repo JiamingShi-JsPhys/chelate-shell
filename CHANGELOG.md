@@ -63,7 +63,9 @@ inside the workspace.
   verify, and an unverifiable one is reported under `tampered`), a corrupt
   line is reported instead of raising, and the report exemption now checks
   the file's shape as well as its name, so a deliverable renamed
-  `pipeline_report_*.json` is still named.
+  `pipeline_report_*.json` is still named. A log whose key cannot be found
+  fails closed: signed entries are reported as unverified rather than trusted,
+  so losing the key cannot quietly downgrade the audit.
 
 ### Fixed
 - **A withheld promotion exited 0.** `cli.py pipeline` printed
