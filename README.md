@@ -1,6 +1,6 @@
 # Chelate Shell
 
-**A deterministic orchestrator for research and engineering workflows — twenty research skills ship with it, and they run in the pipeline.**
+**A deterministic orchestrator for research and engineering workflows — nineteen research skills ship with it, and they run in the pipeline.**
 
 Individual skills solve isolated problems; an agent still has to decide which one to call, in what order, and where the output belongs. Chelate Shell puts both halves in one repository: the 19 engines, and a microkernel that routes them in a fixed stage order and writes a typed gate for every call.
 
@@ -221,9 +221,9 @@ Every directory, and what each of the 19 skills computes: **[docs/REFERENCE.md](
 python -m pytest tests/ -q
 ```
 
-387 tests: 376 pass and 11 skip with the optional dependencies installed;
+381 tests: 370 pass and 11 skip with the optional dependencies installed;
 with nothing but pytest, the dependency-gated cases skip instead and the
-`UNVERIFIED` path is what runs. The eight skills that ship their own upstream
+`UNVERIFIED` path is what runs. The seven skills that ship their own upstream
 suite under `skills/<skill>/tests/` are run one directory per process.
 
 Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.

@@ -205,8 +205,8 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 python -m pytest tests/ -q
 ```
 
-387 个测试：装齐可选依赖时 376 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
-改为跳过，跑的是 `UNVERIFIED` 路径。另有 8 个技能自带上游套件，位于
+381 个测试：装齐可选依赖时 370 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
+改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于
 `skills/<skill>/tests/`，每个目录单独一个进程运行。
 
 两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
