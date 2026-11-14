@@ -13,19 +13,52 @@ from core import update as update_mod
 
 
 def _serve(monkeypatch, files):
-    """Answer ``_fetch`` from *files*; anything else is unreachable."""
+    """Answer ``_read_published`` from *files*; anything else is unreachable."""
     calls = []
 
-    def fake_fetch(path, timeout=0):  # noqa: ARG001
-        calls.append(path)
-        return files.get(path)
+    def fake_read():
+        out = {}
+        for rel in update_mod.TRACKED:
+            calls.append(rel)
+            if rel not in files:
+                break  # same stop-at-the-first-failure semantics
+            out[rel] = files[rel]
+        return out
 
-    monkeypatch.setattr(update_mod, "_fetch", fake_fetch)
+    monkeypatch.setattr(update_mod, "_read_published", fake_read)
     return calls
 
 
 def _local_bytes(rel):
     return (update_mod.local_root() / rel).read_bytes()
+
+
+def test_the_only_addresses_are_the_tracked_files(monkeypatch):
+    """No argument names a URL: the module can only ask for its two files."""
+    import inspect
+
+    assert not inspect.signature(update_mod._read_published).parameters, \
+        "a parameter would be an address someone else controls"
+
+    asked = []
+
+    class _Resp:
+        def read(self):
+            return b"{}"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=0, **kwargs):  # noqa: ARG001
+        asked.append(request.full_url)
+        return _Resp()
+
+    monkeypatch.setattr(update_mod.urllib.request, "urlopen", fake_urlopen)
+    update_mod._read_published()
+    assert asked == [update_mod.RAW + rel for rel in update_mod.TRACKED]
 
 
 def test_an_identical_copy_is_not_a_difference(monkeypatch, tmp_path):

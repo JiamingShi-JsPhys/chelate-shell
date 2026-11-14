@@ -44,6 +44,10 @@ RAW = "https://raw.githubusercontent.com/{repo}/{branch}/".format(
 # Enough to tell whether this copy is the published one: the manifest every
 # host reads, and the file most behaviour lives in.
 TRACKED = ("package.json", "core/router.py")
+# The only two addresses this module can reach. They are built here, once,
+# from constants: no caller supplies a URL, so nothing can point the request
+# at another host.
+_URLS = {rel: RAW + rel for rel in TRACKED}
 CACHE_TTL_SECONDS = 24 * 3600
 # A machine that cannot read the repository should not pay the timeout on
 # every run; that answer is worth keeping for an hour.
@@ -70,16 +74,24 @@ def cache_path() -> Path:
     return base / "update-check.json"
 
 
-def _fetch(path: str, timeout: float = FETCH_TIMEOUT) -> Optional[bytes]:
-    """Bytes of *path* on the published branch, or None if it cannot be read."""
-    url = RAW + path
-    request = urllib.request.Request(url, headers={
-        "User-Agent": f"{PLUGIN}-update-check"})
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.read()
-    except (urllib.error.URLError, OSError, ValueError):
-        return None
+def _read_published() -> Dict[str, bytes]:
+    """Bytes of each tracked file on the published branch.
+
+    Stops at the first file that cannot be read: a machine that cannot reach
+    the repository should not pay the timeout twice. The addresses come from
+    :data:`_URLS`, so there is no argument through which a caller could name a
+    different host or path.
+    """
+    out: Dict[str, bytes] = {}
+    for rel, url in _URLS.items():
+        probe = urllib.request.Request(url, headers={
+            "User-Agent": f"{PLUGIN}-update-check"})
+        try:
+            with urllib.request.urlopen(probe, timeout=FETCH_TIMEOUT) as response:
+                out[rel] = response.read()
+        except (urllib.error.URLError, OSError, ValueError):
+            break
+    return out
 
 
 def check(force: bool = False) -> Dict[str, object]:
@@ -102,10 +114,11 @@ def check(force: bool = False) -> Dict[str, object]:
     different: List[str] = []
     reachable = False
     remote_version = None
+    published = _read_published()
     for rel in TRACKED:
-        remote = _fetch(rel)
+        remote = published.get(rel)
         if remote is None:
-            break  # no point spending another timeout on the next file
+            break
         reachable = True
         if rel == "package.json":
             remote_version = _version_bytes(remote)
