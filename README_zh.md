@@ -203,14 +203,37 @@ python cli.py pipeline --root <ws> --mode a     # 凭这条审批提升
 
 ```mermaid
 flowchart LR
-  IN["任务 + 输入"] --> W["workspace"]
-  W --> I["ingest"]
-  I --> G{"gates"}
-  G -->|"第一个 FAIL"| STOP["终止 · 锁定 process/"]
-  G -->|"PASS / UNVERIFIED"| P["processors"]
-  P --> A{"人工审批"}
-  A -->|"有 token"| R["promote → results/"]
-  A -->|"无 token"| HOLD["blocked: approval · 不写 results/"]
+  IN["任务 + 输入"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
+  CLI --> REG["core/registry.py<br/>扫描 19 个 manifest"]
+  REG --> PLAN{"build_plan<br/>规范阶段顺序"}
+  PLAN --> SCAN["security_shield<br/>派发前注入扫描"]
+  SCAN -->|"命中标记"| INJ["FAIL：injection-scan<br/>未派发就拦下"]
+
+  subgraph ROUTER["四阶段流水线 · core/router.py"]
+    direction TB
+    WS["workspace · 3<br/>task-organizer、multi-dim-manager、<br/>document-evolution-tracker"]
+    ING["ingest · 4<br/>fulltext-extractor、literature-retriever、<br/>bibtex-normalizer、video-tracker"]
+    GAT["gates · 7<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、<br/>quantitative-validator、ml-auditor、<br/>longitudinal-analysis"]
+    PRO["processors · 2<br/>ai-trace-remover、latex-exporter"]
+    WS --> ING --> GAT --> PRO
+  end
+
+  SCAN -->|"干净"| ING
+  ROUTER -->|"计划里的每个技能"| RUN["适配器 run.py<br/>声明时经 core/sandbox.py"]
+
+  RUN --> G{"process/gates/<br/>每次调用一个 GateResult"}
+  G -->|"PASS"| RUN
+  G -->|"UNVERIFIED"| DEG["该技能降级<br/>流水线继续"]
+  DEG --> RUN
+  G -->|"第一个 FAIL"| STOP["终止 · 锁定 process/<br/>中间产物留作审计"]
+  G -->|"计划跑完且无 FAIL"| AP{"人工审批<br/>绑定本次计划"}
+
+  AP -->|"有 token"| PROM["results/promoted_TIMESTAMP/"]
+  AP -->|"无 token"| HOLD["blocked: approval<br/>results/ 不写任何东西"]
+  PROM --> REP["流水线报告 + _broadcast 索引"]
+  STOP --> REP
+  HOLD --> REP
+  REP -.-> AUD["cli.py audit<br/>results/ 里没有提升记录的文件 → 退出码 1"]
 ```
 
 ---

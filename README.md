@@ -203,14 +203,37 @@ The gate guards `promote()`, not the directory: an agent holding a file-writing 
 
 ```mermaid
 flowchart LR
-  IN["task + inputs"] --> W["workspace"]
-  W --> I["ingest"]
-  I --> G{"gates"}
-  G -->|"first FAIL"| STOP["terminate · lock process/"]
-  G -->|"PASS / UNVERIFIED"| P["processors"]
-  P --> A{"human approval"}
-  A -->|"token"| R["promote → results/"]
-  A -->|"none"| HOLD["blocked: approval · nothing written"]
+  IN["task + inputs"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
+  CLI --> REG["core/registry.py<br/>scan 19 manifests"]
+  REG --> PLAN{"build_plan<br/>canonical stage order"}
+  PLAN --> SCAN["security_shield<br/>injection scan before dispatch"]
+  SCAN -->|"marker hit"| INJ["FAIL: injection-scan<br/>nothing dispatched"]
+
+  subgraph ROUTER["four stages · core/router.py"]
+    direction TB
+    WS["workspace · 3<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
+    ING["ingest · 4<br/>fulltext-extractor, literature-retriever,<br/>bibtex-normalizer, video-tracker"]
+    GAT["gates · 7<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
+    PRO["processors · 2<br/>ai-trace-remover, latex-exporter"]
+    WS --> ING --> GAT --> PRO
+  end
+
+  SCAN -->|"clean"| ING
+  ROUTER -->|"each skill the plan names"| RUN["adapter run.py<br/>+ core/sandbox.py when declared"]
+
+  RUN --> G{"process/gates/<br/>one GateResult per call"}
+  G -->|"PASS"| RUN
+  G -->|"UNVERIFIED"| DEG["that skill degrades<br/>the pipeline continues"]
+  DEG --> RUN
+  G -->|"first FAIL"| STOP["terminate · lock process/<br/>intermediates kept for audit"]
+  G -->|"plan complete, no FAIL"| AP{"human approval<br/>bound to this plan"}
+
+  AP -->|"token"| PROM["results/promoted_TIMESTAMP/"]
+  AP -->|"no token"| HOLD["blocked: approval<br/>results/ untouched"]
+  PROM --> REP["pipeline report + _broadcast index"]
+  STOP --> REP
+  HOLD --> REP
+  REP -.-> AUD["cli.py audit<br/>files in results/ with no promotion → exit 1"]
 ```
 
 ---

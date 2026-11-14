@@ -46,17 +46,22 @@ flowchart LR
     UNV -.-> GATE
 
     GATE -->|"任一 FAIL"| STOP["PIPELINE TERMINATED<br/>process/ 锁定"]
-    GATE -->|"无 FAIL"| PROMOTE["results/promoted_TIMESTAMP/"]
+    GATE -->|"无 FAIL"| APPROVE{"cli.py approve<br/>绑定本次计划的 token"}
+    APPROVE -->|"有 token"| PROMOTE["results/promoted_TIMESTAMP/"]
+    APPROVE -->|"无 token"| BLOCKED["blocked: approval<br/>results/ 不写任何东西"]
     GATE --> REPORT["results/pipeline_report_TIMESTAMP.json"]
+    PROMOTE -.-> LOG["results/.promotions.jsonl<br/>带签名；cli.py audit 读它"]
+    BLOCKED --> REPORT
     REPORT --> BC["_broadcast/pipeline_index_TIMESTAMP.json"]
 
     LAYER["分类元技能<br/>security-guard、sci-visualizer、3d-modeler"] -.->|"由 registry 路由，不占规范顺序"| ROUTER
 ```
 
-图里刻意说明的三件事：
+图里刻意说明的四件事：
 
 - **自动流水线是 `ingest → gates → processors`。** `workspace`（task-organizer）是任务开始时的书挡，在流水线之前或通过 `--selected` 进入；`--mode a` 不会自动调度它。
 - **`UNVERIFIED` 不是失败。** 它表示该技能无法给出判定——缺可选依赖、调用方还没提供输入——其余流程照常继续。
 - **只有 `FAIL` 是终止态。** 它把 `process/` 原样锁在中断处，中间产物可审计，但不会被误当成结果。
+- **提升是唯一不可逆的一步，所以由人授权。** `promote()` 需要一条针对本次计划的 token（action、工作区、模式/选择、每个输入文件的哈希、15 分钟有效期、HMAC 签名），并记入 `results/.promotions.jsonl`。这道锁跨运行有效：只要某个技能最新的一份门禁是 `FAIL`，即使当前计划没有调度它，提升也会被拒绝。`python cli.py audit` 把 `results/` 里没有对应提升记录的文件点名，并以退出码 1 结束。
 
 ---

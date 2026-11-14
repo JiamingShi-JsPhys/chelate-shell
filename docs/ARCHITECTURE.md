@@ -47,17 +47,22 @@ flowchart LR
     UNV -.-> GATE
 
     GATE -->|"any FAIL"| STOP["PIPELINE TERMINATED<br/>process/ locked"]
-    GATE -->|"no FAIL"| PROMOTE["results/promoted_TIMESTAMP/"]
+    GATE -->|"no FAIL"| APPROVE{"cli.py approve<br/>token bound to this plan"}
+    APPROVE -->|"token"| PROMOTE["results/promoted_TIMESTAMP/"]
+    APPROVE -->|"no token"| BLOCKED["blocked: approval<br/>results/ untouched"]
     GATE --> REPORT["results/pipeline_report_TIMESTAMP.json"]
+    PROMOTE -.-> LOG["results/.promotions.jsonl<br/>signed; cli.py audit reads it"]
+    BLOCKED --> REPORT
     REPORT --> BC["_broadcast/pipeline_index_TIMESTAMP.json"]
 
     LAYER["category meta-skills<br/>security-guard, sci-visualizer, 3d-modeler"] -.->|"routed, outside canonical order"| ROUTER
 ```
 
-Three things the diagram makes explicit:
+Four things the diagram makes explicit:
 
 - **The automatic pipeline is `ingest → gates → processors`.** `workspace` (task-organizer) is the bookend at task start, entered before the pipeline or through `--selected`; `--mode a` does not schedule it.
 - **`UNVERIFIED` is not a failure.** It means a skill could not assert a verdict — a missing optional dependency, an input the caller has not supplied yet — and the rest of the run keeps going.
 - **Only `FAIL` is terminal.** It locks `process/` exactly where it stopped, so the intermediate products stay auditable but are never mistaken for results.
+- **Promotion is the one irreversible step, so a person authorises it.** `promote()` needs a token a human issued for that exact plan (action, workspace, mode/selection, the hash of every input file, 15-minute expiry, HMAC signature), kept in `results/.promotions.jsonl`. The lock crosses runs: while the newest gate for any skill is `FAIL`, promotion is refused even if the current plan never planned that skill. `python cli.py audit` names anything in `results/` that no promotion accounts for, and exits 1.
 
 ---
