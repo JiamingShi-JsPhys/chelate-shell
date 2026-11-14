@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 
 import pytest
 
 from core import router
 from core.registry import Registry
-from conftest import requires
+from conftest import REPO_ROOT, requires
 
 # data-profiler reaches PASS only with pandas; in a bare environment it
 # degrades to UNVERIFIED and the promotion assertion below cannot hold.
@@ -121,7 +123,8 @@ def test_full_pass_promotes_process_to_results(workspace, monkeypatch):
     assert result["promoted"] is True
     # the run reports what results/ holds with no promotion behind it
     assert result["results_audit"] == {
-        "ok": True, "promotions": 1, "unapproved": [], "modified": []}
+        "ok": True, "promotions": 1, "unapproved": [], "modified": [],
+        "tampered": []}
     promoted = list((workspace / "results").glob("promoted_*"))
     assert len(promoted) == 1
     assert (promoted[0] / "gates").is_dir()
@@ -359,8 +362,30 @@ def test_unknown_input_type_yields_empty_plan_with_warning(workspace, capsys):
     result = router.run(str(workspace), mode="a", inputs=[str(xyz)],
                         dry_run=True)
     assert result.get("note") == "no skills matched the requested pipeline"
+    assert "results_audit" in result
     out = capsys.readouterr().out
     assert "[INPUT]" in out and "xyz" in out
+
+
+def test_a_selected_name_that_does_not_exist_is_an_error(workspace):
+    """A typo must not read as a successful run that did nothing."""
+    result = router.run(str(workspace), mode="c",
+                        selected=["reference-audit0r"])
+    assert "error" in result
+    assert "reference-audit0r" in result["error"]
+    assert result["decisions"] == []
+    assert result["promoted"] is False
+    assert "results_audit" in result
+
+
+def test_the_cli_exits_non_zero_for_an_unknown_selected_skill(workspace):
+    proc = subprocess.run(
+        [sys.executable, "cli.py", "pipeline", "--root", str(workspace),
+         "--mode", "c", "--selected", "nope"],
+        cwd=str(REPO_ROOT), capture_output=True, text=True,
+        stdin=subprocess.DEVNULL)
+    assert proc.returncode == 1
+    assert "unknown skill(s)" in proc.stdout
 
 
 def test_legacy_usage_error_degrades_to_unverified(tmp_path):

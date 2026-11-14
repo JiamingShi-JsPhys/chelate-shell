@@ -58,8 +58,26 @@ inside the workspace.
   when either is non-empty. Every pipeline report carries the same dict as
   `results_audit`. This does not prevent the write — nothing in-process can on
   a filesystem the user can write — it makes the write visible and auditable.
+  Probing the detector itself then closed three of its own holes: each entry
+  is HMAC-signed with the workspace key (so a hand-written line does not
+  verify, and an unverifiable one is reported under `tampered`), a corrupt
+  line is reported instead of raising, and the report exemption now checks
+  the file's shape as well as its name, so a deliverable renamed
+  `pipeline_report_*.json` is still named.
 
 ### Fixed
+- **A withheld promotion exited 0.** `cli.py pipeline` printed
+  `"blocked": "approval"`, wrote its report and told the caller nothing —
+  the exit status said success, while `docs/SAFETY.md` said the process
+  exits non-zero. Both entry points now return 1 for a withheld promotion,
+  so a caller that only reads the status cannot mistake a refusal for a
+  completed run.
+- **An unknown `--selected` name was a silent success.** A typo, or an agent
+  naming a skill it invented, narrowed the plan to nothing and finished with
+  exit 0 and no work done. It is now reported as
+  `"error": "unknown skill(s) in --selected: ...; known: ..."` and exits 1.
+  An empty plan that comes from inputs nothing consumes still carries the
+  `note` and exits 0, because that request did run — there was nothing to do.
 - **Three routes let an agent approve itself.** Measured against this
   release's approval layer before it was hardened, all three promoted
   successfully: appending `--no-approval`, calling `approval.issue()` from the

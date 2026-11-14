@@ -11,13 +11,14 @@ instead of passing silently.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 from conftest import REPO_ROOT
-from core import router
+from core import approval, router
 
 STAMP = "20260101T000000Z"
 
@@ -85,8 +86,64 @@ def test_pipeline_reports_are_not_mistaken_for_deliverables(
     ws = _workspace(tmp_path)
     (ws / "results").mkdir()
     (ws / "results" / f"pipeline_report_{STAMP}.json").write_text(
-        "{}", encoding="utf-8")
+        json.dumps({k: None for k in router.REPORT_KEYS}), encoding="utf-8")
     assert router.audit_results(str(ws))["ok"] is True
+
+
+def test_a_deliverable_named_like_a_report_is_not_hidden(
+        tmp_path: Path) -> None:
+    """The exemption is by name *and* shape, not by name alone."""
+    ws = _workspace(tmp_path)
+    (ws / "results").mkdir()
+    (ws / "results" / f"pipeline_report_{STAMP}.json").write_text(
+        json.dumps({"deliverable": "not a report at all"}), encoding="utf-8")
+
+    report = router.audit_results(str(ws))
+    assert report["ok"] is False
+    assert report["unapproved"] == [
+        f"results/pipeline_report_{STAMP}.json"]
+
+
+def test_a_forged_log_entry_is_not_believed(tmp_path: Path) -> None:
+    """Hand-writing a log line is the next move for an agent that read it."""
+    ws = _workspace(tmp_path)
+    # A key exists once anything approved in this workspace; mint it the way
+    # a promotion would, then forge the line an agent would add.
+    approval.sign(str(ws), {"mint": "key"}, create=True)
+    router.promote(str(ws), STAMP, {"source": "token", "nonce": "real"})
+
+    smuggled = ws / "results" / "smuggled.md"
+    smuggled.write_text("never approved", encoding="utf-8")
+    digest = hashlib.sha256(smuggled.read_bytes()).hexdigest()
+    forged = {
+        "action": "promote", "stamp": "x", "at": "2026-01-01T00:00:00Z",
+        "promoted_to": "results/promoted_x",
+        "approval": {"source": "token", "nonce": "forged"},
+        "files": {"results/smuggled.md": digest},
+    }
+    with (ws / "results" / router.PROMOTION_LOG).open(
+            "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(forged) + "\n")
+
+    report = router.audit_results(str(ws))
+    assert report["ok"] is False
+    assert report["unapproved"] == ["results/smuggled.md"]
+    tampered = report["tampered"]
+    assert isinstance(tampered, list)
+    assert any("signature" in item for item in tampered)
+
+
+def test_a_corrupt_log_line_is_reported_not_raised(tmp_path: Path) -> None:
+    """An agent can append junk; that must not be a way to silence the audit."""
+    ws = _workspace(tmp_path)
+    router.promote(str(ws), STAMP)
+    with (ws / "results" / router.PROMOTION_LOG).open(
+            "a", encoding="utf-8") as fh:
+        fh.write("[]\n")
+
+    report = router.audit_results(str(ws))
+    assert report["ok"] is False
+    assert report["tampered"] == ["line 2: not an object"]
 
 
 def test_cli_audit_exits_non_zero_when_something_is_unapproved(

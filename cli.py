@@ -145,7 +145,11 @@ def cmd_pipeline(args) -> int:
         require_approval=not args.no_approval,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 1 if result.get("terminated_by") else 0
+    # A withheld promotion is a refusal, not a success: a caller that
+    # only reads the exit status must not see the run as complete.
+    withheld = result.get("blocked") == "approval"
+    return 1 if (result.get("terminated_by") or result.get("error")
+                  or withheld) else 0
 
 
 def cmd_audit(args) -> int:

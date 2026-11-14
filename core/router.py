@@ -411,6 +411,11 @@ def _record_promotion(root: str, dst: str, stamp: str,
     The log is what makes a bypass visible. Anything in `results/` that no
     entry lists was not put there by a promotion, and `audit_results()`
     says so by name.
+
+    Each entry is HMAC-signed with the workspace's approval key, which lives
+    outside the workspace. The key exists as soon as anything approved in
+    this workspace, so a hand-written line — the obvious next move for an
+    agent that has read this file — does not verify.
     """
     entry = {
         "action": "promote",
@@ -420,9 +425,34 @@ def _record_promotion(root: str, dst: str, stamp: str,
         "approval": approval_info or {},
         "files": _digests_under(root, dst),
     }
+    # A scripted run has no token, so nothing has created a key yet; it is
+    # still a human-declared run (CHELATE_HUMAN=1), so it may mint one.
+    create = (approval_info or {}).get("source") == "scripted-run"
+    mac = approval.sign(root, entry, create=create)
+    if mac:
+        entry["mac"] = mac
     log = os.path.join(root, "results", PROMOTION_LOG)
     with open(log, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+# Every pipeline report carries these; a file that lacks them is not one.
+REPORT_KEYS = ("root", "mode", "started", "decisions", "promoted", "blocked")
+
+
+def _looks_like_report(path: str) -> bool:
+    """True when *path* parses as a pipeline report this shell wrote.
+
+    The exemption for reports is by name and by shape. A deliverable that
+    an agent renamed to `pipeline_report_*.json` will not have the fields a
+    report always has, so it is still reported as unapproved.
+    """
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and all(k in data for k in REPORT_KEYS)
 
 
 def audit_results(root: str) -> Dict[str, object]:
@@ -433,28 +463,49 @@ def audit_results(root: str) -> Dict[str, object]:
     agent's file tool — so this is the monitoring half: every promoted
     file is logged with its digest, everything else is named.
 
+    Entries are trusted only when they carry a valid signature from the
+    per-workspace key, once that key exists. A forged or unreadable line is
+    reported under `tampered` and grants nothing.
+
     Oracle for `python cli.py audit --root <ws>`; the pipeline embeds the
     same dict in every report as `results_audit`.
     """
     results_dir = os.path.join(root, "results")
     if not os.path.isdir(results_dir):
-        return {"ok": True, "promotions": 0, "unapproved": [], "modified": []}
+        return {"ok": True, "promotions": 0, "unapproved": [],
+                "modified": [], "tampered": []}
 
     approved: Dict[str, str] = {}
     promotions = 0
+    tampered: List[str] = []
+    keyed = approval.has_key(root)
     log = os.path.join(results_dir, PROMOTION_LOG)
     if os.path.isfile(log):
-        with open(log, encoding="utf-8") as fh:
-            for line in fh:
+        with open(log, encoding="utf-8", errors="replace") as fh:
+            for number, line in enumerate(fh, 1):
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     entry = json.loads(line)
                 except ValueError:
+                    tampered.append(f"line {number}: not JSON")
+                    continue
+                if not isinstance(entry, dict):
+                    tampered.append(f"line {number}: not an object")
+                    continue
+                entry = dict(entry)
+                mac = entry.pop("mac", None)
+                if keyed and not (isinstance(mac, str)
+                                  and approval.verify(root, entry, mac)):
+                    tampered.append(f"line {number}: bad or missing signature")
+                    continue
+                files = entry.get("files")
+                if not isinstance(files, dict):
+                    tampered.append(f"line {number}: no file list")
                     continue
                 promotions += 1
-                for rel, digest in (entry.get("files") or {}).items():
+                for rel, digest in files.items():
                     approved[str(rel).replace("\\", "/")] = digest
 
     unapproved: List[str] = []
@@ -468,7 +519,8 @@ def audit_results(root: str) -> Dict[str, object]:
             # The orchestrator writes its own reports here; they are not
             # deliverables and are not supposed to carry an approval.
             if (os.path.dirname(rel) == "results"
-                    and name.startswith("pipeline_report_")):
+                    and name.startswith("pipeline_report_")
+                    and _looks_like_report(full)):
                 continue
             if rel not in approved:
                 unapproved.append(rel)
@@ -476,10 +528,11 @@ def audit_results(root: str) -> Dict[str, object]:
                 modified.append(rel)
 
     return {
-        "ok": not unapproved and not modified,
+        "ok": not unapproved and not modified and not tampered,
         "promotions": promotions,
         "unapproved": sorted(unapproved),
         "modified": sorted(modified),
+        "tampered": tampered,
     }
 
 
@@ -643,6 +696,18 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         "registry_errors": list(reg.errors),
     }
     plan = build_plan(reg, mode, input_kind, selected)
+    # A name that does not exist would otherwise narrow the plan to nothing
+    # and finish with exit 0 — a typo, or an agent naming a skill it invented,
+    # would read as a successful run that did no work.
+    known = set(reg.names())
+    unknown_selected = [s for s in (selected or []) if s not in known]
+    if unknown_selected:
+        result["error"] = ("unknown skill(s) in --selected: "
+                           + ", ".join(unknown_selected)
+                           + "; known: " + ", ".join(sorted(known)))
+        result["results_audit"] = audit_results(root)
+        result["finished"] = _iso_now()
+        return result
     file_tokens = _input_tokens_by_file(inputs) if inputs else []
     for path, token in file_tokens:
         if token is None:
@@ -664,6 +729,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
     flat = [(stage, rec) for stage in STAGE_ORDER for rec in plan[stage]]
     if not flat:
         result["note"] = "no skills matched the requested pipeline"
+        result["results_audit"] = audit_results(root)
         result["finished"] = _iso_now()
         return result
 
@@ -810,7 +876,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                  inputs=resolved, selected=selected, dry_run=args.dry_run,
                  timeout=args.timeout, debug=args.debug)
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 1 if result.get("terminated_by") else 0
+    # A withheld promotion is a refusal, not a success: a caller that
+    # only reads the exit status must not see the run as complete.
+    withheld = result.get("blocked") == "approval"
+    return 1 if (result.get("terminated_by") or result.get("error")
+                  or withheld) else 0
 
 
 if __name__ == "__main__":

@@ -67,7 +67,8 @@ Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里
 由人签发的审批：先 `python cli.py approve --root <ws> --mode a`，按提示输入确认词，
 再 `python cli.py pipeline --root <ws> --mode a`。签名密钥存放在工作区之外，
 agent 无法自签。没有凭据时运行照常完成——尝试记录留在
-`process/` 里——但流水线不会往 `results/` 写任何东西。
+`process/` 里——但流水线不会往 `results/` 写任何东西，并以非零码退出：
+只看退出状态调用方不会把“提升被拒绝”当成成功。
 
 这道闸门守的是 `promote()`，不是目录本身：手上有文件写入工具的 agent 仍可以自己
 把文件拷进 `results/`，实测中确实有 agent 这么做了。所以现在每一次提升都会记入
@@ -212,7 +213,7 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 python -m pytest tests/ -q
 ```
 
-387 个测试：装齐可选依赖时 376 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
+393 个测试：装齐可选依赖时 382 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
 改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于
 `skills/<skill>/tests/`，每个目录单独一个进程运行。
 

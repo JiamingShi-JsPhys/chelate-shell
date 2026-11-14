@@ -138,14 +138,27 @@ python cli.py audit --root <workspace>
   "ok": false,
   "promotions": 0,
   "unapproved": ["results/README.md", "results/profile.json"],
-  "modified": []
+  "modified": [],
+  "tampered": []
 }
 ```
 
 `unapproved` names files no promotion accounts for; `modified` names promoted
-files whose content changed afterwards. The exit code is 1 when either list is
-non-empty. Every pipeline run embeds the same dict in its report as
-`results_audit`, so an unnoticed write shows up on the next run.
+files whose content changed afterwards. The exit code is 1 when any of the
+three lists is non-empty. Every pipeline run embeds the same dict in its report
+as `results_audit`, so an unnoticed write shows up on the next run.
+
+The log lives in the directory the agent can write, so the obvious next move
+is to add a line to it — that was measured too. Each entry is HMAC-SHA256
+signed with the workspace's approval key, which lives outside the workspace
+(the key exists as soon as anything is approved here, and a human-declared
+scripted run mints one so its own entries are signed). A line that does not
+verify grants nothing and is reported under `tampered`; so is a line that is
+not even JSON, so appending junk cannot silence the check. The same probe
+found that the report exemption — reports are not deliverables and carry no
+approval — was name-only, and a file renamed `pipeline_report_*.json` was
+skipped; it now also has to parse as a report with the fields every report
+carries.
 
 This does not prevent the bypass — a policy layer cannot, on a filesystem the
 same user can write. It makes the bypass **visible**: "no delivery without an
@@ -175,9 +188,11 @@ tries X, the shell must not do it":
 | Promotion stamp containing `../` | `WorkspaceEscape` |
 | Sandboxed skill receives the workspace root | asserted (regression) |
 
-`tests/test_results_audit.py` — 6 cases covering the promotion log: a promotion
+`tests/test_results_audit.py` — 9 cases covering the promotion log: a promotion
 records the token that authorised it, a file placed in `results/` by hand is
-named, a promoted file edited afterwards is named, and `cli.py audit` exits 1.
+named, a promoted file edited afterwards is named, a forged log line is not
+believed, a corrupt line is reported instead of raised, a deliverable renamed
+to look like a report is still named, and `cli.py audit` exits 1.
 
 Run them with:
 

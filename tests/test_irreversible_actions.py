@@ -354,6 +354,20 @@ def test_cli_approve_issues_a_token_the_pipeline_accepts(workspace):
                      _params(selected=["reference-auditor"]))
 
 
+def test_the_cli_exits_non_zero_when_the_promotion_is_withheld(workspace):
+    """A caller that only reads the exit status must not see success."""
+    env = {k: v for k, v in os.environ.items()
+           if k != approval._HUMAN_ENV}
+    proc = subprocess.run(
+        [sys.executable, "cli.py", "pipeline", "--root", str(workspace),
+         "--mode", "c", "--selected", "data-profiler"],
+        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=300,
+        env=env, stdin=subprocess.DEVNULL)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert '"blocked": "approval"' in proc.stdout
+    assert not list((workspace / "results").glob("promoted_*"))
+
+
 def test_cli_approve_refuses_a_subprocess_without_the_hatch(workspace):
     env = {k: v for k, v in os.environ.items()
            if k != approval._HUMAN_ENV}

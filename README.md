@@ -71,7 +71,8 @@ needs an approval a human issued for that plan: run
 for, then `python cli.py pipeline --root <ws> --mode a`. The signing key
 lives outside the workspace, so an agent cannot mint its own. Without a token
 the run still completes — the attempt stays visible in `process/` — but the
-pipeline writes nothing to `results/`.
+pipeline writes nothing to `results/` and exits non-zero, so a caller that
+only reads the status cannot mistake a withheld promotion for success.
 
 The gate guards `promote()`, not the directory: an agent with file-write tools
 can still copy a file into `results/` itself, and one did in testing. So every
@@ -228,7 +229,7 @@ Every directory, and what each of the 19 skills computes: **[docs/REFERENCE.md](
 python -m pytest tests/ -q
 ```
 
-387 tests: 376 pass and 11 skip with the optional dependencies installed;
+393 tests: 382 pass and 11 skip with the optional dependencies installed;
 with nothing but pytest, the dependency-gated cases skip instead and the
 `UNVERIFIED` path is what runs. The seven skills that ship their own upstream
 suite under `skills/<skill>/tests/` are run one directory per process.

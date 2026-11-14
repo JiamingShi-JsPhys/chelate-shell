@@ -202,6 +202,35 @@ def _load_key(workspace: str, create: bool = False) -> bytes:
     return key
 
 
+def has_key(workspace: str) -> bool:
+    """True once this workspace has a signing key (an approval happened)."""
+    return _key_path(workspace).is_file()
+
+
+def sign(workspace: str, payload: Dict[str, Any],
+         create: bool = False) -> Optional[str]:
+    """HMAC-SHA256 of a canonical payload with this workspace's key.
+
+    Returns ``None`` when the workspace has no key and *create* is false —
+    the caller decides whether an unsigned record is acceptable.
+    """
+    try:
+        key = _load_key(workspace, create=create)
+    except ApprovalRequired:
+        return None
+    return hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
+
+
+def verify(workspace: str, payload: Dict[str, Any], mac: str) -> bool:
+    """Constant-time check of a ``sign()`` result; False if the key is gone."""
+    try:
+        key = _load_key(workspace)
+    except (ApprovalRequired, ApprovalInvalid):
+        return False
+    expected = hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, str(mac))
+
+
 # ------------------------------------------------------------------ canonical
 
 def canonical(payload: Any) -> bytes:
