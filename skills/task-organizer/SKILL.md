@@ -38,7 +38,10 @@ python run.py --root <WS> --action doctor
   and writes nothing. Run it before asking the user anything.
 - `init` creates the whole skeleton and lifts pre-existing content into
   `material/initial/`. It moves files, so **propose it once and wait for a
-  yes** when the folder was merely referenced.
+  yes** when the folder was merely referenced. It also writes the workspace's
+  own rule files (`AGENTS.md`, `CLAUDE.md`) if the folder has none: most hosts
+  read a rule from the workspace root and never see the plugin's copy.
+  Existing ones are never overwritten, and they are never treated as material.
 - Every run writes its gate to `<WS>/process/gates/task-organizer_<ts>.json`.
 
 ## When to use

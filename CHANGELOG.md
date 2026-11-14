@@ -47,6 +47,14 @@ inside the workspace.
   containment. It records the measured residual too — once a human has
   approved in a workspace the key persists, and a process running as the same
   user can read it and sign its own token.
+- **Workspace rule files from `init`.** A host loads a plugin's *skills*, not
+  its `AGENTS.md`, and a skill's `SKILL.md` is loaded only when that skill is
+  invoked — so "just write this file into results/" reached no instruction at
+  all in testing. `task-organizer init` now writes `AGENTS.md` and
+  `CLAUDE.md` at the workspace root (never overwriting an existing one, never
+  treating them as material to lift), which is the file a host actually reads.
+  Measured in ZCode: with the file present the model refused a direct write
+  into `results/` and named the rule; without it, it wrote.
 - **The promotion log and `cli.py audit`.** Testing the plugin from a real
   agent session (ZCode) found a route the token layer cannot close: asked to
   promote, the agent skipped `cli.py pipeline` entirely and copied its profile

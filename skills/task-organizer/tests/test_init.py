@@ -484,3 +484,58 @@ def test_init_writes_an_audit_log(tmp_path: Path) -> None:
 
     assert "init" in res.log_path.read_text(encoding="utf-8")
 
+# ---------------------------------------------------------------------------
+
+# workspace rules
+
+# ---------------------------------------------------------------------------
+
+
+def test_init_writes_the_workspace_rule_files(tmp_path: Path) -> None:
+
+    """The rule reaches an agent only if the workspace carries it.
+
+    A plugin's own AGENTS.md is not read by hosts such as ZCode; only a rule
+
+    file at the workspace root is. Measured: without one, an agent asked to
+
+    write into ``results/`` simply did it.
+    """
+
+    init_mod.init_folder(tmp_path)
+
+    for name in init_mod.AGENT_RULE_FILES:
+
+        rule = tmp_path / name
+
+        assert rule.is_file(), name
+
+        assert "cli.py audit" in rule.read_text(encoding="utf-8")
+
+
+def test_init_never_overwrites_a_workspace_rule_file(tmp_path: Path) -> None:
+
+    mine = tmp_path / "AGENTS.md"
+
+    mine.write_text("# my own rules", encoding="utf-8")
+
+    init_mod.init_folder(tmp_path)
+
+    assert mine.read_text(encoding="utf-8") == "# my own rules"
+
+    assert (tmp_path / "CLAUDE.md").is_file()
+
+
+def test_a_second_init_does_not_lift_the_rule_files(tmp_path: Path) -> None:
+
+    init_mod.init_folder(tmp_path)
+
+    init_mod.init_folder(tmp_path)
+
+    initial = tmp_path / utils.TIER_ORGANIZE / utils.SUB_INIT
+
+    for name in init_mod.AGENT_RULE_FILES:
+
+        assert (tmp_path / name).is_file(), name
+
+        assert not (initial / name).exists(), name

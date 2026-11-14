@@ -160,6 +160,17 @@ approval — was name-only, and a file renamed `pipeline_report_*.json` was
 skipped; it now also has to parse as a report with the fields every report
 carries.
 
+The rule has to reach the agent to matter, and for a while it did not. Hosts
+give a plugin's skills, not its `AGENTS.md`, so the paragraph about never
+writing `results/` was read by nobody: driven from ZCode the model profiled a
+CSV, copied the output into `results/` by hand and reported success. The same
+holds for the 19 `SKILL.md` files, which load only when a skill is invoked —
+"just write this file into results/" invokes none. What does reach an agent is
+a rule file at the *workspace* root (`AGENTS.md`, and `CLAUDE.md` for Claude
+Code), so `task-organizer init` writes those now, never overwriting one the
+user already has. With that file in place the same ZCode prompt was refused,
+including one that asked to skip the process.
+
 This does not prevent the bypass — a policy layer cannot, on a filesystem the
 same user can write. It makes the bypass **visible**: "no delivery without an
 approval" becomes an auditable claim about a workspace, not an assumption
