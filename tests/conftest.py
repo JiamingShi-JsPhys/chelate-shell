@@ -153,11 +153,19 @@ def _hermetic_approval_keys(tmp_path_factory):
     root = tmp_path_factory.mktemp("chelate-keys")
     previous = os.environ.get("CHELATE_KEY_ROOT")
     os.environ["CHELATE_KEY_ROOT"] = str(root)
+    # The update notice would otherwise reach for github.com from every CLI
+    # subprocess a test starts; a test suite is not a place to ask the network.
+    previous_off = os.environ.get("CHELATE_UPDATE_OFF")
+    os.environ["CHELATE_UPDATE_OFF"] = "1"
     yield root
     if previous is None:
         os.environ.pop("CHELATE_KEY_ROOT", None)
     else:
         os.environ["CHELATE_KEY_ROOT"] = previous
+    if previous_off is None:
+        os.environ.pop("CHELATE_UPDATE_OFF", None)
+    else:
+        os.environ["CHELATE_UPDATE_OFF"] = previous_off
 
 
 @pytest.fixture()
