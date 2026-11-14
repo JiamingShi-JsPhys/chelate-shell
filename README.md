@@ -236,8 +236,9 @@ Both environments, the coverage list and the per-skill counts: **[docs/TESTING.m
 
 ## Known limitations
 
-Honest edge cases — read before relying on any output:
+Honest edge cases — read before relying on any output or on the safety layer:
 
+- **The approval layer is a policy gate, not containment**: once a human has approved anything in a workspace, the signing key persists in the per-user directory and a process running as that user can sign its own token. It reliably stops an agent that did not go looking; real containment needs an OS boundary (a separate user, a container, a syscall filter). Measured and disclosed in [docs/SAFETY.md](docs/SAFETY.md), together with the executable whitelist's limits.
 - **Automatic ROI detection can fail**: `video-tracker` may fail on low-contrast video; every run must be checked against the reference. Marked *experimental / unstable*.
 - **Formula checking is not a mathematical proof**: `formula-validator` is a deterministic verdict. An `unknown` return means one check "abstained" — a legitimate state that must never be reinterpreted as a pass.
 - **Longitudinal analysis depends on R**: some advanced statistical steps of `longitudinal-analysis` run through R scripts; if `Rscript` is absent those steps are skipped and logged — **never hand-write Python code to replace skipped R steps**.
