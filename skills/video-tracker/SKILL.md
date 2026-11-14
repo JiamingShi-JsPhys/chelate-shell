@@ -79,3 +79,12 @@ python run.py --root <WS> --action probe -- --config cfg.json
 - **Experimental / unstable** — treat every run as preliminary.
 - CSRT accuracy is target-specific; sub-pixel and optical-flow support are optional.
 - CPU-bound: a 1080p 60 fps clip with two objects can take several minutes.
+
+## Delivering results
+
+This skill writes intermediates to `process/`. Do not copy its output into
+`results/` yourself — `results/` is filled only by `python cli.py pipeline`
+after a human approved that exact plan. Before telling the user a deliverable
+is ready, run `python cli.py audit --root <ws>`: exit 1 means `results/` holds
+files no approval accounts for, and the honest answer is to report that
+instead of claiming delivery.

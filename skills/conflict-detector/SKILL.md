@@ -72,3 +72,12 @@ python run.py --root <WS> --action run -- --config config/examples/two_docs.yaml
 
 - Extraction is key-value oriented; free-text paragraphs only participate at the argument level.
 - Unit normalisation is table-driven (`unit_map`); custom units must be declared.
+
+## Delivering results
+
+This skill writes intermediates to `process/`. Do not copy its output into
+`results/` yourself — `results/` is filled only by `python cli.py pipeline`
+after a human approved that exact plan. Before telling the user a deliverable
+is ready, run `python cli.py audit --root <ws>`: exit 1 means `results/` holds
+files no approval accounts for, and the honest answer is to report that
+instead of claiming delivery.

@@ -68,3 +68,12 @@ python run.py --root <WS> --action process --input data.csv --chart bar
 
 - Static output; gif support is a frame scan, not video rendering.
 - Four chart types plus the SEM renderer.
+
+## Delivering results
+
+This skill writes intermediates to `process/`. Do not copy its output into
+`results/` yourself — `results/` is filled only by `python cli.py pipeline`
+after a human approved that exact plan. Before telling the user a deliverable
+is ready, run `python cli.py audit --root <ws>`: exit 1 means `results/` holds
+files no approval accounts for, and the honest answer is to report that
+instead of claiming delivery.

@@ -76,3 +76,12 @@ python run.py --root <WS> --action list-steps -- --config config/examples/behavi
 
 - R packages (`lme4`, `lavaan`, `emmeans`, `jsonlite`) must already be installed.
 - The mediation bootstrap count is the user's choice (default 5000) and dominates wall-clock time.
+
+## Delivering results
+
+This skill writes intermediates to `process/`. Do not copy its output into
+`results/` yourself — `results/` is filled only by `python cli.py pipeline`
+after a human approved that exact plan. Before telling the user a deliverable
+is ready, run `python cli.py audit --root <ws>`: exit 1 means `results/` holds
+files no approval accounts for, and the honest answer is to report that
+instead of claiming delivery.

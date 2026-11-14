@@ -66,3 +66,12 @@ python scripts/run.py --root <WS> --action gate --input data.csv --label target
 
 - Heuristic leakage detection; every suspect must be reviewed.
 - `cleanlab` is optional and only refines the label report.
+
+## Delivering results
+
+This skill writes intermediates to `process/`. Do not copy its output into
+`results/` yourself — `results/` is filled only by `python cli.py pipeline`
+after a human approved that exact plan. Before telling the user a deliverable
+is ready, run `python cli.py audit --root <ws>`: exit 1 means `results/` holds
+files no approval accounts for, and the honest answer is to report that
+instead of claiming delivery.
