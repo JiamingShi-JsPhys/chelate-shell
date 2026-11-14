@@ -65,6 +65,11 @@ python scripts/run.py --root <WS> --action gate --input data.csv --label target
 ## Limitations
 
 - Heuristic leakage detection; every suspect must be reviewed.
+- A column booked after the outcome is caught only in its clear shape (one
+  class on a single value, the other spread over many). Read the column list
+  against the study timeline; no statistic proves a column's provenance.
+- The label scan needs signal. When the features predict no better than the
+  majority class, `UNVERIFIED` is returned and no label verdict is possible.
 - `cleanlab` is optional and only refines the label report.
 
 ## Delivering results

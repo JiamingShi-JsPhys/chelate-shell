@@ -5,11 +5,15 @@ that silently destroy an ML result:
 
   1. **Data leakage** (deterministic, ``EXACT`` evidence) — a feature that is
      identical to the label, fully determined by the label, perfectly predicts
-     the label, or is (near-)perfectly correlated with it. Any of these is a
-     hard FAIL: the model would score almost perfectly for the wrong reason.
+     the label, is (near-)perfectly correlated with it, or varies for one
+     class only (booked *after* the outcome). Any of these is a hard FAIL: the
+     model would score almost perfectly for the wrong reason.
   2. **Label errors** (statistical, ``EMPIRICAL`` evidence) — samples whose
      cross-validated classifier assigns low probability to their recorded
      label. A suspect fraction above the threshold is a FAIL (label noise).
+     If the features predict no better than the majority class, the labels
+     cannot be judged and the gate says ``UNVERIFIED`` rather than blaming
+     rows the model got wrong by chance.
 
 Implementation is an independent, clean-room composition of scikit-learn
 primitives (``RandomForestClassifier`` + ``cross_val_predict``). ``cleanlab``
@@ -100,6 +104,52 @@ def _pick_label(deps, df, label_col):
     return df.columns[-1]
 
 
+def _post_outcome_signature(pd, f, y, classes) -> Optional[str]:
+    """A numeric feature whose value exists for one class only.
+
+    The leak the other four tests cannot see is a column booked *after* the
+    outcome: zero for almost every negative, a continuous amount for the
+    positives. It is not constant, not identical to the label, not discrete,
+    and its correlation with the label is ordinary -- yet a model fitted on it
+    scores perfectly for a reason that will not exist at prediction time.
+
+    Deliberately narrow, so ordinary data cannot trip it: the feature must be
+    continuous overall (>= 30 distinct values), one class must put >= 90% of
+    its rows on a single value, and the other class must spread over >= 30
+    distinct values with that same value covering <= 10% of it. A count column
+    (both classes take the same few values) and a column that is mostly zero
+    in *both* classes therefore never fire.
+
+    Returns a description of the asymmetry, or None.
+    """
+    if len(classes) != 2 or not pd.api.types.is_numeric_dtype(f):
+        return None
+    if int(f.nunique(dropna=True)) < 30:
+        return None
+    for c in classes:
+        here = f[y == c].dropna()
+        other = f[y != c].dropna()
+        if here.empty or other.empty:
+            continue
+        if len(here) < 20:
+            # A handful of rows on one value says nothing about provenance.
+            continue
+        other_distinct = int(other.nunique(dropna=True))
+        if other_distinct < 30:
+            continue
+        counts = here.value_counts()
+        modal = counts.index[0]
+        here_share = float(counts.iloc[0]) / float(len(here))
+        other_share = float((other == modal).mean())
+        if here_share >= 0.9 and other_share <= 0.1:
+            shown = c.item() if hasattr(c, "item") else c
+            return (f"post-outcome signature -- {here_share:.0%} of class "
+                    f"{shown!r} rows sit at one value, while the other class "
+                    f"spans {other_distinct} distinct values and only "
+                    f"{other_share:.0%} of it takes that value")
+    return None
+
+
 def _leakage_report(deps, X, y) -> Dict[str, list]:
     """Deterministic leakage / degeneracy scan over the feature frame."""
     pd = deps["pd"]
@@ -119,6 +169,10 @@ def _leakage_report(deps, X, y) -> Dict[str, list]:
             seen[key] = c
 
     y_is_regression = pd.api.types.is_numeric_dtype(y) and y.nunique(dropna=True) > 20
+    try:
+        classes = list(pd.unique(y.dropna()))
+    except Exception:
+        classes = []
 
     for c in X.columns:
         nun = X[c].nunique(dropna=False)
@@ -139,6 +193,13 @@ def _leakage_report(deps, X, y) -> Dict[str, list]:
         # meaningless there and is skipped.
         if 1 < nun <= 25 and (pair.groupby("f")["y"].nunique() <= 1).all():
             fatal.append(f"{c}: perfectly predicts the label (target leakage)")
+            continue
+        # feature support -> label : the feature varies for one class only.
+        # This is the shape of a column booked after the outcome, and it is
+        # invisible to both tests above (it is neither constant nor discrete).
+        signature = _post_outcome_signature(pd, X[c], y, classes)
+        if signature:
+            fatal.append(f"{c}: {signature}")
             continue
         if y_is_regression:
             try:
@@ -201,10 +262,26 @@ def _label_error_scan(deps, X, y):
                                           method="predict_proba")
         pred = proba.argmax(axis=1)
         maxp = proba.max(axis=1)
+        # Can the features support a judgement about the labels at all? On a
+        # feature set with no signal the model is confidently wrong by chance,
+        # and "wrong" is not evidence of a wrong label. Measured on a 600-row
+        # frame whose only informative column had been removed: OOF accuracy
+        # 52.8% against a 51.8% majority baseline, and 145/600 rows flagged as
+        # label errors where 12 had been flipped. Report that it cannot be
+        # assessed instead of accusing a quarter of the rows.
+        acc = float((pred == yv).mean())
+        prior = float(np.bincount(yv).max()) / float(len(yv))
+        if acc <= prior + 0.05:
+            return None, 0.0, (
+                f"OOF accuracy {acc:.1%} is at the majority-class baseline "
+                f"{prior:.1%} -- the features carry no signal to disagree "
+                f"with, so label errors cannot be assessed")
         # A label error = the model confidently predicts a DIFFERENT class
         # out-of-fold (confident disagreement), not merely low confidence —
         # overlapping-but-correct samples would otherwise be over-flagged.
-        suspects = np.where((pred != yv) & (maxp >= 0.6))[0]
+        # 0.75 rather than 0.6: at 0.6 the flag count runs ~10% ahead of the
+        # true flips even on learnable data, and the gate turns 5% into a FAIL.
+        suspects = np.where((pred != yv) & (maxp >= 0.75))[0]
 
         cl = _cleanlab()
         if cl is not None:
@@ -278,6 +355,16 @@ def audit(csv_path: str, label_col: Optional[str] = None,
     # 2) label-error scan (EMPIRICAL)
     suspects, ratio, note = _label_error_scan(deps, X, y)
     data["label_scan"] = note
+    if suspects is None:
+        # The features cannot support a judgement about the labels. Saying
+        # PASS would certify something no test performed; FAIL would accuse
+        # rows on the strength of chance. UNVERIFIED is what is true.
+        data.update({"suspect_count": 0, "suspect_ratio": 0.0,
+                     "suspect_indices": []})
+        return _verdict("UNVERIFIED", "UNVERIFIED",
+                        f"no leakage found, but label quality cannot be "
+                        f"assessed: {note}", data,
+                        artifacts=_maybe_report(root, data))
     data["suspect_count"] = int(len(suspects))
     data["suspect_ratio"] = round(float(ratio), 4)
     data["suspect_indices"] = [int(i) for i in list(suspects)[:50]]

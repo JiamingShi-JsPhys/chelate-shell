@@ -83,6 +83,25 @@ def _write_noisy_csv(path, flip=0.15):
     df.to_csv(path, index=False)
 
 
+def _write_post_outcome_csv(path, stray_negatives=4):
+    """A column booked after the outcome: 0 for almost every negative.
+
+    Not constant, not identical to the label, not discrete, only mildly
+    correlated -- invisible to the other four leakage rules, while a model
+    fitted on it scores ~0.98 for a reason that will not exist at prediction
+    time. This is the shape of the leak that got through a real audit run.
+    """
+    df = _clean_frame()
+    rng = np.random.default_rng(3)
+    y = df["label"].to_numpy()
+    amount = np.where(y == 1, rng.gamma(2.0, 300.0, len(y)), 0.0)
+    neg = np.flatnonzero(y == 0)
+    pick = rng.choice(neg, size=min(stray_negatives, len(neg)), replace=False)
+    amount[pick] = rng.uniform(10.0, 900.0, len(pick))
+    df["recovery"] = amount
+    df.to_csv(path, index=False)
+
+
 # ------------------------------------------------- graceful degradation
 
 def test_degradation_when_sklearn_missing(monkeypatch, tmp_path):
@@ -130,6 +149,64 @@ def test_fail_on_discrete_target_leakage(tmp_path):
     res = e.audit(str(tmp_path / "data.csv"), root=str(tmp_path))
     assert res["status"] == "FAIL", res
     assert "leakage" in res["reason"].lower()
+
+
+def test_fail_on_post_outcome_column(tmp_path):
+    """A column that exists only after the outcome is leakage, not a feature."""
+    e = _load_engine()
+    _write_post_outcome_csv(tmp_path / "data.csv")
+    res = e.audit(str(tmp_path / "data.csv"), root=str(tmp_path))
+    assert res["status"] == "FAIL", res
+    assert res["evidence_level"] == "EXACT"
+    assert any("post-outcome" in f for f in res["data"]["leak_fatal"])
+
+
+def test_a_count_column_is_not_a_post_outcome_column(tmp_path):
+    """Both classes take the same few values: nothing to separate."""
+    e = _load_engine()
+    df = _clean_frame()
+    df["late_payments"] = np.random.default_rng(5).integers(0, 7, len(df))
+    df.to_csv(tmp_path / "data.csv", index=False)
+    res = e.audit(str(tmp_path / "data.csv"), root=str(tmp_path))
+    assert res["data"]["leak_fatal"] == [], res["data"]["leak_fatal"]
+
+
+def test_a_column_mostly_zero_in_both_classes_is_not_flagged(tmp_path):
+    """A sparse amount that is sparse for everyone is not asymmetric."""
+    e = _load_engine()
+    df = _clean_frame()
+    rng = np.random.default_rng(6)
+    df["deposit"] = np.where(rng.random(len(df)) < 0.95, 0.0,
+                             rng.uniform(1.0, 900.0, len(df)))
+    df.to_csv(tmp_path / "data.csv", index=False)
+    res = e.audit(str(tmp_path / "data.csv"), root=str(tmp_path))
+    assert res["data"]["leak_fatal"] == [], res["data"]["leak_fatal"]
+
+
+def test_a_tiny_class_is_not_a_post_outcome_column():
+    """Ten rows on one value say nothing about where the column came from."""
+    e = _load_engine()
+    y = pd.Series([0] * 300 + [1] * 10)
+    f = pd.Series(np.r_[np.random.default_rng(2).uniform(1.0, 900.0, 300),
+                        np.zeros(10)])
+    assert e._post_outcome_signature(pd, f, y, [0, 1]) is None
+
+
+def test_labels_are_not_judged_when_the_features_carry_no_signal(tmp_path):
+    """Chance disagreement is not evidence of a wrong label.
+
+    With labels drawn at random the out-of-fold classifier is confidently
+    wrong by chance; the gate must say it cannot assess the labels instead of
+    accusing a fifth of the rows (measured: 145/600 on a real dataset).
+    """
+    e = _load_engine()
+    df = _clean_frame()
+    df["label"] = np.random.default_rng(7).integers(0, 2, len(df))
+    df.to_csv(tmp_path / "data.csv", index=False)
+    res = e.audit(str(tmp_path / "data.csv"), root=str(tmp_path))
+    assert res["status"] == "UNVERIFIED", res
+    assert "cannot be assessed" in res["reason"], res["reason"]
+    assert res["data"]["suspect_count"] == 0
 
 
 def test_fail_on_label_errors(tmp_path):

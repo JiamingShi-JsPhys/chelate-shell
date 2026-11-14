@@ -2,6 +2,30 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **ml-auditor missed a post-outcome column and still reported `PASS`.** A
+  600-row dataset with one column booked *after* the outcome (zero for the
+  negatives, a continuous amount for the positives) audited as
+  `PASS — no leakage; 13/600 suspected label errors`, while a model fitted on
+  it scored cross-validated AUC 0.979. The column is not constant, not
+  identical to the label, not discrete and only mildly correlated, so all four
+  leakage rules passed it. A fifth rule now fails the gate on the shape
+  itself: one class at ≥ 90% of a single value, the other spread over ≥ 30
+  distinct values and barely touching it. Count columns (same few values in
+  both classes) and columns that are mostly zero for *everyone* do not fire.
+- **ml-auditor accused rows the model got wrong by chance.** The label-error
+  scan flags out-of-fold confident disagreement, which on a feature set with
+  no signal is noise: after the leaked column above was removed the dataset
+  became unlearnable (OOF accuracy 52.8% against a 51.8% majority baseline)
+  and the gate FAILed on "145/600 suspected label errors" when 12 labels had
+  been flipped. It now returns `UNVERIFIED` — "no leakage found, but label
+  quality cannot be assessed" — when accuracy sits at the majority baseline,
+  and calls a row a suspect at ≥ 0.75 probability rather than 0.6 (measured:
+  precision 100% instead of 85–90% on 10–15% flip rates, recall unchanged at
+  0.75 for those).
+
 ## [1.3.3] — 2026-11-14
 
 A safety release: the pipeline's one irreversible write now needs an approval a
