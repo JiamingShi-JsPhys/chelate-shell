@@ -4,6 +4,12 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] - 2026-11-14
+
+### Changed
+- Version declaration bumped to 1.3.4 across the repository.
+  No capability change to this skill.
+
 ## [1.3.3] - 2026-11-14
 
 ### Changed

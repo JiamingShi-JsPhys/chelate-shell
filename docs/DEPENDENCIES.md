@@ -1,4 +1,4 @@
-# Per-skill dependencies (1.3.3)
+# Per-skill dependencies (1.3.4)
 
 Declared in each skill's `manifest.json` and enforced at run time by
 `core/sandbox.py`. A missing required dependency degrades that one

@@ -4,7 +4,7 @@ Chelate Shell is the core router of the ecosystem. It does not generate low-leve
 Python itself; it routes every request to the right local skill, enforces a
 standard workspace layout, and respects the platform / security constraints below.
 
-- Version: **v1.3.3**
+- Version: **v1.3.4**
 - Skills: **19**, all flat under `./skills` — one folder per skill (all fully implemented)
 - Stages: **7** (4 runtime: workspace / ingest / gates / processors; 3 architectural layers: infrastructure / generation / domain_extensions)
 - Entry point (DeepSeek Harness): `.dsh-plugin/index.js` (`apply(ctx)`)
@@ -272,7 +272,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.3).
+marketplace. Keep `version` in sync across all manifests (currently 1.3.4).
 
 ## 7. Hard constraints
 

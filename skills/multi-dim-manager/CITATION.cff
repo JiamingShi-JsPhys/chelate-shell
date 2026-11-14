@@ -1,9 +1,9 @@
 # multi-dim-manager
 
-cff-version: "1.3.3"
+cff-version: "1.2.0"
 title: "multi-dim-manager: multi-dimensional experiment state manager"
 type: software
-version: 1.3.3
+version: 1.3.4
 license: MIT
 date-created: 2026-10-14
 authors:

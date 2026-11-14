@@ -1,6 +1,6 @@
 ---
 name: task-organizer
-version: 1.3.3
+version: 1.3.4
 description: >
   Mandatory entry point for task folders. Builds the standard four-zone
   workspace, files every deliverable by provenance, verifies each run with
@@ -10,7 +10,7 @@ description: >
   deliverable and however many steps it takes. It proposes `init` once for a
   merely referenced folder and never reorganizes one uninvited.
 metadata:
-  version: 1.3.3
+  version: 1.3.4
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

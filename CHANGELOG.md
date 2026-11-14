@@ -2,7 +2,52 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
-## [Unreleased]
+## [1.3.4] — 2026-11-14
+
+The second half of the 1.3.3 safety release. The tag was cut before the
+promotion log, `cli.py audit` and the cross-run gate lock landed, so those
+three shipped on `main` with no version to name them; this release names them.
+It also adds the update check and closes two ml-auditor defects that a
+leakage-audit run found.
+
+### Added
+- **Every promotion is logged, and `cli.py audit` names what no promotion
+  accounts for.** `promote()` appends `results/.promotions.jsonl` — the token
+  nonce that authorised it and the SHA-256 of every file it copied — and
+  `python cli.py audit --root <ws>` lists whatever `results/` holds without
+  one, exiting 1. Every pipeline report carries the same dict as
+  `results_audit`. This exists because the gate guards `promote()`, not the
+  directory: measured in a real ZCode session, an agent never touched the gate
+  and copied its own file into `results/`. Nothing in-process can prevent that
+  on a filesystem the same user owns; the audit makes it visible afterwards.
+- **The log is signed, and a log whose key is gone fails closed.** Each line
+  carries an HMAC-SHA256 over its payload, signed with the approval key kept
+  outside the workspace. Once any signed line exists, an unsigned one is
+  reported as tampered rather than believed; if the key is gone, the audit
+  reports it instead of trusting the lines.
+- **A failed gate blocks promotion until that skill is re-run.** Driving a
+  manuscript through the pipeline exposed the hole: `reference-auditor` failed
+  on a DOI, and a later `--mode a` run planned only the ingest stage — then
+  promoted `process/` and copied the FAIL gate into `results/`. Promotion now
+  refuses while the newest gate for any skill is `FAIL`, and a narrower later
+  run cannot route around a failure it did not re-run.
+- **`cli.py update`, and a notice when the running copy has drifted.** A host
+  installs the plugin into a cache of its own, so a fix lands in the
+  repository and keeps not running: during this release the ZCode cache still
+  held pre-fix code after several commits. `cli.py update` compares the files
+  this copy runs with `main` (line endings aside) and names the ones that
+  differ; `--apply` runs the host's own update verb (`zcode plugins
+  marketplace update` + `plugins update`, or `claude plugin update`) for every
+  host that has the plugin installed. `pipeline` and `audit` print one stderr
+  line when the copy has drifted, cached for a day and short-circuited for an
+  hour when the repository cannot be reached; `CHELATE_UPDATE_OFF=1` silences
+  it.
+- **`task-organizer` writes a workspace rule file a host will actually read.**
+  A plugin's `AGENTS.md` never reaches the model and a `SKILL.md` loads only
+  on invocation, so the delivery rule — results only via the pipeline, never
+  set `CHELATE_HUMAN`, run `cli.py audit` — is now written to the workspace's
+  own `AGENTS.md`/`CLAUDE.md`, which is what the model sees. The files are
+  created once and never overwritten.
 
 ### Fixed
 - **ml-auditor missed a post-outcome column and still reported `PASS`.** A
@@ -23,8 +68,21 @@ All notable changes to Chelate Shell are documented in this file.
   been flipped. It now returns `UNVERIFIED` — "no leakage found, but label
   quality cannot be assessed" — when accuracy sits at the majority baseline,
   and calls a row a suspect at ≥ 0.75 probability rather than 0.6 (measured:
-  precision 100% instead of 85–90% on 10–15% flip rates, recall unchanged at
-  0.75 for those).
+  precision 100% instead of 85–90% on 10–15% flip rates).
+- **The update check could not be handed an address.** `core/update.py` read
+  its two files through a `_fetch(path)` parameter, which `deepsec` flagged as
+  an SSRF sink (`sast_ssrf_fetch_user_url`). The finding was a false positive
+  — the host is a constant and the paths were the two in `TRACKED` — but the
+  shape invited it, so the function now takes no argument at all and iterates
+  a module-level table of the two URLs. With that, `deepsec shield scan .`
+  reports 0 findings in the shipped code; with `--include-tests` it reports
+  the same five artefacts inside the fixtures.
+- Host detection on Windows: `zcode`/`claude` are `.cmd` shims that
+  `CreateProcess` will not find from a bare name, subprocess output is decoded
+  as UTF-8 rather than the local code page, and a plugin name is matched
+  exactly so `chelate-shell-canto` is not mistaken for this plugin.
+- Two `CITATION.cff` files declared `cff-version: "1.3.3"` — that field names
+  the Citation File Format, not this project. Corrected to `1.2.0`.
 
 ## [1.3.3] — 2026-11-14
 

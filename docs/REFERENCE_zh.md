@@ -59,7 +59,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.3）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.4）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md
