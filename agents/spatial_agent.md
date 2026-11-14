@@ -16,6 +16,11 @@ generation super-skill (for previews and texture maps), and the
 infrastructure security-guard, and may only write under the workspace's
 `assets/`, `process/`, and `results/` zones.
 
+Deliverables belong in `process/`. `results/` is filled only by
+`cli.py pipeline` after a human approval — never copy a file into it
+yourself; `python cli.py audit --root <ws>` names anything there that
+no promotion accounts for.
+
 3D generation is heavy and runs inside the `core.sandbox` isolation (#133);
 this agent declares a longer timeout and step budget to accommodate it.
 External text is scanned by `core.security_shield` before execution.

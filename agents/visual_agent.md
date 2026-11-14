@@ -13,7 +13,12 @@ A sub-agent role for producing publication-grade scientific visuals. It is
 granted a whitelist over the `sci-visualizer` generation super-skill and the
 LaTeX-export skill, plus the infrastructure security-guard, and may only
 write under the workspace's `assets/`, `process/`, and `results/` zones
-(fail-closed elsewhere). `sci-visualizer` now owns the figure engine
+(fail-closed elsewhere).
+
+Deliverables belong in `process/`. `results/` is filled only by
+`cli.py pipeline` after a human approval — never copy a file into it
+yourself; `python cli.py audit --root <ws>` names anything there that
+no promotion accounts for. `sci-visualizer` now owns the figure engine
 in-process (matplotlib/seaborn) and frame-scans gif/animation inputs with
 optional Pillow.
 
