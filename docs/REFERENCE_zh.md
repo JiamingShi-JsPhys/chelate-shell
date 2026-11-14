@@ -27,7 +27,7 @@ chelate-shell/
 ├── assets/                           # icon.png（各插件清单共用）
 ├── bootstrap.py                      # 各 run.py 共用的导入与门禁写入工具
 ├── CHANGELOG.md                      # 版本发布说明
-├── cli.py                            # 命令行入口：list / run / pipeline
+├── cli.py                            # 命令行入口：list / run / approve / pipeline / audit
 ├── commands/                         # 斜杠命令
 │   ├── figure.md                     # /figure —— 从 CSV 或 JSON 数据集出图
 │   └── model3d.md                    # /model3d —— OBJ 网格生成 / 合并 / 审计

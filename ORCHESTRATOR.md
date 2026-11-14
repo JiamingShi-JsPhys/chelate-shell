@@ -40,6 +40,14 @@ pipeline report plus the `_broadcast/` index, but copies `process/` into
 (`cli.py approve`). Without it the report records `"blocked": "approval"` and
 the attempt stays visible in `process/`.
 
+The approval guards the `promote()` call, not the `results/` directory — an
+agent with file-write tools can still copy a deliverable in itself, and one did
+in testing. So each promotion is appended to `results/.promotions.jsonl` with
+the token that authorised it and the hash of every file copied, and
+`python cli.py audit --root <ws>` reports `unapproved` (no promotion accounts
+for it) and `modified` (changed after promotion), exiting 1 when either is
+non-empty. Every pipeline report carries the same dict as `results_audit`.
+
 ```mermaid
 flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]

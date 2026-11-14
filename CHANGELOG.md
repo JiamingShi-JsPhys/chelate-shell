@@ -16,7 +16,8 @@ inside the workspace.
   expiry and an HMAC-SHA256 signature. Spending is atomic
   (`O_CREAT|O_EXCL`), so a token cannot be replayed. Without a valid token the
   run still completes — the agent's attempts stay visible in `process/` — but
-  it records `"blocked": "approval"` and writes nothing to `results/`.
+  it records `"blocked": "approval"` and the pipeline writes nothing to
+  `results/`.
 - **Issuing a token needs a person, not just a terminal.**
   `cli.py approve` asks the operator to type `approve promote` and treats EOF
   or any other answer as a refusal; `--no-approval` goes through the same
@@ -46,6 +47,17 @@ inside the workspace.
   containment. It records the measured residual too — once a human has
   approved in a workspace the key persists, and a process running as the same
   user can read it and sign its own token.
+- **The promotion log and `cli.py audit`.** Testing the plugin from a real
+  agent session (ZCode) found a route the token layer cannot close: asked to
+  promote, the agent skipped `cli.py pipeline` entirely and copied its profile
+  straight into `results/` with its file tool. No token, no gate, no pipeline
+  report. `promote()` now appends `results/.promotions.jsonl` — the token
+  nonce that authorised it and a SHA-256 for every file it copied — and
+  `python cli.py audit --root <ws>` reports `unapproved` (files no promotion
+  accounts for) and `modified` (promoted files changed afterwards), exiting 1
+  when either is non-empty. Every pipeline report carries the same dict as
+  `results_audit`. This does not prevent the write — nothing in-process can on
+  a filesystem the user can write — it makes the write visible and auditable.
 
 ### Fixed
 - **Three routes let an agent approve itself.** Measured against this

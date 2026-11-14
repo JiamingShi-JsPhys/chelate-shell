@@ -31,6 +31,7 @@ if _REPO_ROOT not in sys.path:
 
 from core import approval
 from core.registry import load_default_registry
+from core.router import audit_results
 from core.router import run as router_run
 from lib.chelate_core import debug as debug_mod
 from lib.chelate_core import paths
@@ -147,6 +148,14 @@ def cmd_pipeline(args) -> int:
     return 1 if result.get("terminated_by") else 0
 
 
+def cmd_audit(args) -> int:
+    """Report deliverables in results/ that no promotion put there."""
+    root = os.path.abspath(args.root)
+    report = audit_results(root)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["ok"] else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="cli.py", description="Chelate Shell microkernel CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -206,6 +215,13 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--ttl", type=int, default=approval.DEFAULT_TTL_SECONDS,
                     help="seconds the token stays valid (default 900)")
     pa.set_defaults(fn=cmd_approve)
+
+    pu = sub.add_parser(
+        "audit",
+        help="report files in results/ that no promotion accounts for "
+             "(exit 1 when there are any)")
+    pu.add_argument("--root", default=".")
+    pu.set_defaults(fn=cmd_audit)
     return p
 
 

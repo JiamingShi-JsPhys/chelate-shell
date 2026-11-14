@@ -67,7 +67,14 @@ Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里
 由人签发的审批：先 `python cli.py approve --root <ws> --mode a`，按提示输入确认词，
 再 `python cli.py pipeline --root <ws> --mode a`。签名密钥存放在工作区之外，
 agent 无法自签。没有凭据时运行照常完成——尝试记录留在
-`process/` 里——但 `results/` 什么都不会写入。威胁模型、对抗测试与已知边界：
+`process/` 里——但流水线不会往 `results/` 写任何东西。
+
+这道闸门守的是 `promote()`，不是目录本身：手上有文件写入工具的 agent 仍可以自己
+把文件拷进 `results/`，实测中确实有 agent 这么做了。所以现在每一次提升都会记入
+`results/.promotions.jsonl`（带上授权它的 token 以及每个文件的哈希），
+`python cli.py audit --root <ws>` 会把 `results/` 里没有对应提升记录的文件逐个
+列出并以退出码 1 结束；每次流水线报告里也会带同一份 `results_audit`。
+威胁模型、对抗测试与已知边界：
 **[docs/SAFETY.md](docs/SAFETY.md)**。
 
 流程图、四个阶段与提升路径：**[docs/ARCHITECTURE_zh.md](docs/ARCHITECTURE_zh.md)**。
@@ -205,7 +212,7 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 python -m pytest tests/ -q
 ```
 
-381 个测试：装齐可选依赖时 370 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
+387 个测试：装齐可选依赖时 376 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
 改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于
 `skills/<skill>/tests/`，每个目录单独一个进程运行。
 
@@ -221,7 +228,7 @@ python -m pytest tests/ -q
 
 诚实的边界声明；依赖以下输出或这套防护之前请务必注意：
 
-- **审批层是策略，不是隔离**：一旦有人在工作区里批准过任何一次，签名密钥就常驻在 per-user 目录，任何以该用户身份运行的进程都能自签 token。它可靠拦住的是没有去找路子的 agent；真正的隔离需要 OS 边界（独立用户、容器、系统调用过滤）。实测记录与执行白名单的边界见 [docs/SAFETY.md](docs/SAFETY.md)。
+- **审批层是策略，不是隔离**：一旦有人在工作区里批准过任何一次，签名密钥就常驻在 per-user 目录，任何以该用户身份运行的进程都能自签 token。它可靠拦住的是没有去找路子的 agent；真正的隔离需要 OS 边界（独立用户、容器、系统调用过滤）。它也守的是 `promote()` 这个函数，不是 `results/` 目录——手工往 `results/` 写文件不需要 token，实测里 agent 正是这么做的；`python cli.py audit` 会在事后把这类文件点出来。实测记录与执行白名单的边界见 [docs/SAFETY.md](docs/SAFETY.md)。
 - **自动 ROI 检测会翻车**：`video-tracker` 在低对比度视频上可能失败，每次运行必须对照参考验证。标记为*实验/不稳定*。
 - **公式检查不是数学证明**：`formula-validator` 是确定性判定。返回 `unknown` 代表某项检查“弃权”，这是合法状态，绝不能强行解释为通过。
 - **纵向分析依赖 R 语言**：`longitudinal-analysis` 的某些高级统计步骤经由 R 脚本执行；若环境中缺失 `Rscript`，这些步骤会被跳过并记入日志，**绝不要试图用 Python 手写代码替代被跳过的 R 步骤**。

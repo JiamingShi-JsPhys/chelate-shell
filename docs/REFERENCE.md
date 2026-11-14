@@ -29,7 +29,7 @@ chelate-shell/
 ├── assets/                           # icon.png (shared by the plugin manifests)
 ├── bootstrap.py                      # shared import + gate-write helper for every run.py
 ├── CHANGELOG.md                      # release notes
-├── cli.py                            # CLI entry: list / run / pipeline
+├── cli.py                            # CLI entry: list / run / approve / pipeline / audit
 ├── commands/                         # slash commands
 │   ├── figure.md                     # /figure — chart from a CSV or JSON dataset
 │   └── model3d.md                    # /model3d — OBJ mesh generate / merge / audit

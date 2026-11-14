@@ -70,8 +70,15 @@ needs an approval a human issued for that plan: run
 `python cli.py approve --root <ws> --mode a`, type the confirmation it asks
 for, then `python cli.py pipeline --root <ws> --mode a`. The signing key
 lives outside the workspace, so an agent cannot mint its own. Without a token
-the run still completes — the attempt stays visible in `process/` — but
-nothing is written to `results/`. Threat model, adversarial tests and limits:
+the run still completes — the attempt stays visible in `process/` — but the
+pipeline writes nothing to `results/`.
+
+The gate guards `promote()`, not the directory: an agent with file-write tools
+can still copy a file into `results/` itself, and one did in testing. So every
+promotion is logged with the token that authorised it and the hash of each
+file it copied, and `python cli.py audit --root <ws>` names anything in
+`results/` no promotion accounts for (exit 1), as does every pipeline report
+under `results_audit`. Threat model, adversarial tests and limits:
 **[docs/SAFETY.md](docs/SAFETY.md)**.
 
 The diagram, the four stages and the promotion path: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
@@ -221,7 +228,7 @@ Every directory, and what each of the 19 skills computes: **[docs/REFERENCE.md](
 python -m pytest tests/ -q
 ```
 
-381 tests: 370 pass and 11 skip with the optional dependencies installed;
+387 tests: 376 pass and 11 skip with the optional dependencies installed;
 with nothing but pytest, the dependency-gated cases skip instead and the
 `UNVERIFIED` path is what runs. The seven skills that ship their own upstream
 suite under `skills/<skill>/tests/` are run one directory per process.
@@ -238,7 +245,7 @@ Both environments, the coverage list and the per-skill counts: **[docs/TESTING.m
 
 Honest edge cases — read before relying on any output or on the safety layer:
 
-- **The approval layer is a policy gate, not containment**: once a human has approved anything in a workspace, the signing key persists in the per-user directory and a process running as that user can sign its own token. It reliably stops an agent that did not go looking; real containment needs an OS boundary (a separate user, a container, a syscall filter). Measured and disclosed in [docs/SAFETY.md](docs/SAFETY.md), together with the executable whitelist's limits.
+- **The approval layer is a policy gate, not containment**: once a human has approved anything in a workspace, the signing key persists in the per-user directory and a process running as that user can sign its own token. It reliably stops an agent that did not go looking; real containment needs an OS boundary (a separate user, a container, a syscall filter). It also guards `promote()`, not the `results/` directory — a file written there by hand needs no token, and an agent test did exactly that; `python cli.py audit` names such files after the fact. Measured and disclosed in [docs/SAFETY.md](docs/SAFETY.md), together with the executable whitelist's limits.
 - **Automatic ROI detection can fail**: `video-tracker` may fail on low-contrast video; every run must be checked against the reference. Marked *experimental / unstable*.
 - **Formula checking is not a mathematical proof**: `formula-validator` is a deterministic verdict. An `unknown` return means one check "abstained" — a legitimate state that must never be reinterpreted as a pass.
 - **Longitudinal analysis depends on R**: some advanced statistical steps of `longitudinal-analysis` run through R scripts; if `Rscript` is absent those steps are skipped and logged — **never hand-write Python code to replace skipped R steps**.

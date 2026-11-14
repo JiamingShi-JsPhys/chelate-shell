@@ -51,6 +51,7 @@ router and every skill subprocess; see lib/chelate_core/debug.py.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -381,8 +382,110 @@ def _print_decision(record: dict) -> None:
         print(_color(line, _YELLOW))
 
 
-def promote(root: str, stamp: str) -> Optional[str]:
-    """Copy process/ into results/promoted_<stamp>/ (full-pass promotion)."""
+PROMOTION_LOG = ".promotions.jsonl"
+
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _digests_under(root: str, base: str) -> Dict[str, str]:
+    """Map workspace-relative posix paths under *base* to their SHA-256."""
+    out: Dict[str, str] = {}
+    for dirpath, _dirnames, filenames in os.walk(base):
+        for name in filenames:
+            full = os.path.join(dirpath, name)
+            out[os.path.relpath(full, root).replace(os.sep, "/")] = (
+                _sha256_file(full))
+    return out
+
+
+def _record_promotion(root: str, dst: str, stamp: str,
+                      approval_info: Optional[Dict]) -> None:
+    """Append one line to results/.promotions.jsonl.
+
+    The log is what makes a bypass visible. Anything in `results/` that no
+    entry lists was not put there by a promotion, and `audit_results()`
+    says so by name.
+    """
+    entry = {
+        "action": "promote",
+        "stamp": stamp,
+        "at": _iso_now(),
+        "promoted_to": os.path.relpath(dst, root).replace(os.sep, "/"),
+        "approval": approval_info or {},
+        "files": _digests_under(root, dst),
+    }
+    log = os.path.join(root, "results", PROMOTION_LOG)
+    with open(log, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def audit_results(root: str) -> Dict[str, object]:
+    """Report files in results/ that no promotion accounts for.
+
+    The approval gate binds `promote()`. It cannot stop a process that
+    writes into `results/` with its own hands — a shell, an editor, an
+    agent's file tool — so this is the monitoring half: every promoted
+    file is logged with its digest, everything else is named.
+
+    Oracle for `python cli.py audit --root <ws>`; the pipeline embeds the
+    same dict in every report as `results_audit`.
+    """
+    results_dir = os.path.join(root, "results")
+    if not os.path.isdir(results_dir):
+        return {"ok": True, "promotions": 0, "unapproved": [], "modified": []}
+
+    approved: Dict[str, str] = {}
+    promotions = 0
+    log = os.path.join(results_dir, PROMOTION_LOG)
+    if os.path.isfile(log):
+        with open(log, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except ValueError:
+                    continue
+                promotions += 1
+                for rel, digest in (entry.get("files") or {}).items():
+                    approved[str(rel).replace("\\", "/")] = digest
+
+    unapproved: List[str] = []
+    modified: List[str] = []
+    for dirpath, _dirnames, filenames in os.walk(results_dir):
+        for name in filenames:
+            full = os.path.join(dirpath, name)
+            rel = os.path.relpath(full, root).replace(os.sep, "/")
+            if rel == f"results/{PROMOTION_LOG}":
+                continue
+            # The orchestrator writes its own reports here; they are not
+            # deliverables and are not supposed to carry an approval.
+            if (os.path.dirname(rel) == "results"
+                    and name.startswith("pipeline_report_")):
+                continue
+            if rel not in approved:
+                unapproved.append(rel)
+            elif approved[rel] != _sha256_file(full):
+                modified.append(rel)
+
+    return {
+        "ok": not unapproved and not modified,
+        "promotions": promotions,
+        "unapproved": sorted(unapproved),
+        "modified": sorted(modified),
+    }
+
+
+def promote(root: str, stamp: str,
+            approval_info: Optional[Dict] = None) -> Optional[str]:
+    """Copy process/ into results/promoted_<stamp>/ and log the promotion."""
     src = os.path.join(root, "process")
     if not os.path.isdir(src):
         return None
@@ -392,6 +495,7 @@ def promote(root: str, stamp: str) -> Optional[str]:
     paths.ensure_within(root, dst, what="promotion target")
     os.makedirs(os.path.join(root, "results"), exist_ok=True)
     shutil.copytree(src, dst, dirs_exist_ok=True)
+    _record_promotion(root, dst, stamp, approval_info)
     return dst
 
 
@@ -625,7 +729,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         params = approval.pipeline_params(mode, input_kind, inputs, selected)
         if require_approval:
             try:
-                approval.consume(root, "promote", params)
+                token = approval.consume(root, "promote", params)
             except (approval.ApprovalRequired,
                     approval.ApprovalInvalid) as exc:
                 result["blocked"] = "approval"
@@ -633,7 +737,10 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                 print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
                       file=sys.stderr)
             else:
-                promoted = promote(root, stamp)
+                promoted = promote(root, stamp, {
+                    "source": "token",
+                    "nonce": token.get("nonce"),
+                })
                 result["promoted"] = promoted is not None
                 result["promoted_to"] = promoted
         else:
@@ -649,10 +756,14 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                 print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
                       file=sys.stderr)
             else:
-                promoted = promote(root, stamp)
+                promoted = promote(root, stamp, {"source": "scripted-run"})
                 result["promoted"] = promoted is not None
                 result["promoted_to"] = promoted
 
+    # The gate binds promote(). It cannot stop a process that writes into
+    # results/ itself, so every run reports what is there without a
+    # promotion behind it. `cli.py audit` runs the same check on demand.
+    result["results_audit"] = audit_results(root)
     result["finished"] = _iso_now()
     paths = write_reports(root, result)
     result["report"] = paths["report"]

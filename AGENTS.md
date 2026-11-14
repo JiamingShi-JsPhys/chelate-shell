@@ -18,6 +18,10 @@ per skill directly under `skills/`).
 - `python cli.py approve --root <workspace> --mode a|b|c` — issue the one-time
   approval for a promotion (needs a terminal, or `CHELATE_HUMAN=1`)
 - `python cli.py pipeline --root <workspace> --mode a|b|c` — run the pipeline
+- `python cli.py audit --root <workspace>` — name anything in `results/` that
+  no promotion accounts for (exit 1). Never copy a file into `results/`
+  yourself: the gate guards `promote()`, not the directory, and the audit is
+  how that difference shows up.
 - `.dsh-plugin/index.js` — non-Python harness entry (`apply(ctx)`)
 
 ## Pipeline (strict order)
