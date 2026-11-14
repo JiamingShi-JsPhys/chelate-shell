@@ -32,6 +32,7 @@ if _REPO_ROOT not in sys.path:
 from core import approval
 from core.registry import load_default_registry
 from core.router import audit_results
+from core import update as update_mod
 from core.router import run as router_run
 from lib.chelate_core import debug as debug_mod
 from lib.chelate_core import paths
@@ -124,6 +125,9 @@ def cmd_approve(args) -> int:
 
 def cmd_pipeline(args) -> int:
     debug_mod.flag(args.debug)  # sets CHELATE_DEBUG for skill subprocesses
+    note = update_mod.notice()  # one line, cached for a day, never fatal
+    if note:
+        print(note, file=sys.stderr)
     root = os.path.abspath(args.root)
     inputs, missing = paths.resolve_inputs(root, args.inputs)
     if missing:
@@ -154,10 +158,41 @@ def cmd_pipeline(args) -> int:
 
 def cmd_audit(args) -> int:
     """Report deliverables in results/ that no promotion put there."""
+    note = update_mod.notice()  # the audit's verdict is worth trusting only
+    if note:                    # from the published code
+        print(note, file=sys.stderr)
     root = os.path.abspath(args.root)
     report = audit_results(root)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["ok"] else 1
+
+
+def cmd_update(args) -> int:
+    """Say whether this copy is the published one, and refresh the hosts."""
+    if args.apply:
+        report = {
+            "hosts": update_mod.installed_hosts(),
+            "results": update_mod.apply(),
+            "check": update_mod.check(force=True),
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        failed = [r for r in report["results"]
+                  if r.get("returncode") not in (0,)]
+        return 1 if failed else 0
+
+    result = update_mod.check(force=args.force)
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    elif not result["reachable"]:
+        print("could not reach the repository; this copy's state is unknown")
+    elif result["different"]:
+        print("this copy differs from {}: {}".format(
+            update_mod.BRANCH, ", ".join(str(f) for f in result["files"])))
+        print("refresh it with: python cli.py update --apply")
+    else:
+        print("up to date ({} on {})".format(update_mod.BRANCH,
+                                             result["local_version"]))
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -226,6 +261,17 @@ def build_parser() -> argparse.ArgumentParser:
              "(exit 1 when there are any)")
     pu.add_argument("--root", default=".")
     pu.set_defaults(fn=cmd_audit)
+
+    pw = sub.add_parser(
+        "update",
+        help="check whether this installed copy is the published one, or "
+             "refresh the hosts that have it installed (--apply)")
+    pw.add_argument("--apply", action="store_true",
+                    help="run each host's own update command")
+    pw.add_argument("--force", action="store_true",
+                    help="ignore the cached answer (24 h by default)")
+    pw.add_argument("--json", action="store_true")
+    pw.set_defaults(fn=cmd_update)
     return p
 
 

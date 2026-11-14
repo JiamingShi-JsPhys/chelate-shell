@@ -9,6 +9,17 @@ human issued for that exact plan, and every workspace write is checked to stay
 inside the workspace.
 
 ### Added
+- **`cli.py update`, and a notice when the running copy has drifted.** A host
+  installs the plugin into a cache of its own, so a fix lands in the
+  repository and keeps not running: during this release the ZCode cache still
+  held pre-fix code after several commits. `cli.py update` compares the files
+  this copy runs with `main` (line endings aside, because versions do not move
+  during a release window) and names the ones that differ; `--apply` runs the
+  host's own update verb (`zcode plugins marketplace update` + `plugins
+  update`, or `claude plugin update`) for each host that has the plugin
+  installed. `pipeline` and `audit` print one stderr line when the copy has
+  drifted, cached for a day and short-circuited for an hour when the
+  repository cannot be reached; `CHELATE_UPDATE_OFF=1` silences it.
 - **One-time approval before promotion.** `router.promote()` turns provisional
   `process/` intermediates into `results/` deliverables; it now requires a
   token from `cli.py approve`, bound to the action, the resolved workspace,

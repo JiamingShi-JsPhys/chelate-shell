@@ -18,6 +18,9 @@ per skill directly under `skills/`).
 - `python cli.py approve --root <workspace> --mode a|b|c` — issue the one-time
   approval for a promotion (needs a terminal, or `CHELATE_HUMAN=1`)
 - `python cli.py pipeline --root <workspace> --mode a|b|c` — run the pipeline
+- `python cli.py update [--apply]` — check whether this installed copy still
+  matches `main`, or refresh the host cache that runs it. A human runs this;
+  an agent should not update the code it is being judged by mid-task.
 - `python cli.py audit --root <workspace>` — name anything in `results/` that
   no promotion accounts for (exit 1). Never copy a file into `results/`
   yourself: the gate guards `promote()`, not the directory, and the audit is

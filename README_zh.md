@@ -92,6 +92,23 @@ claude plugin install chelate-shell --marketplace https://github.com/JiamingShi-
 
 一共三种装法。有插件市场的宿主把整套装成**一个插件**——这是保留微内核自动调度的唯一形式；没有插件通道的宿主则以**规则文件**接入，一个脚本就能把全部规则文件一次写好；第三种是把这件事直接交给 AI。
 
+### 保持已安装副本是最新的
+
+宿主会把插件装进自己的缓存，所以真正运行的那份副本冻结在安装那一刻——
+修好的 bug 要等缓存刷新才停止运行。两条命令补上这个缺口：
+
+```bash
+python cli.py update            # 这份副本和 main 还一致吗？
+python cli.py update --apply    # 调用各宿主自己的更新命令
+```
+
+`update` 把正在运行的文件和 `main` 上的逐一比较（忽略换行符差异），点出不同
+的文件；只比版本号是看不出发版窗口里的改动的。`--apply` 会给真正装了本插件的
+宿主执行 `zcode plugins …` 或 `claude plugin update`，并汇报每一步的结果。
+两者都是尽力而为：离线就是"不知道"，不是报错。`cli.py pipeline` 和
+`cli.py audit` 在副本已漂移时会往 stderr 打一行提示，每天最多检查一次并缓存；
+设 `CHELATE_UPDATE_OFF=1` 可关闭。
+
 ### 方法一：从插件市场用 URL 安装
 
 下面每个宿主都有自己的插件市场。把本仓库的 Git URL 注册进去，再安装它列出的插件即可（URL 重复注册没有副作用，第二次会提示已存在）。
@@ -213,7 +230,7 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 python -m pytest tests/ -q
 ```
 
-397 个测试：装齐可选依赖时 386 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
+405 个测试：装齐可选依赖时 394 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
 改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于
 `skills/<skill>/tests/`，每个目录单独一个进程运行。
 

@@ -98,6 +98,26 @@ Every other host has its own one-liner — Codex, dsh, CodeBuddy, and the eight 
 
 Three ways in. Plugin hosts install Chelate Shell as **one plugin** — the only form that keeps microkernel auto-routing intact. Hosts without a plugin channel take it as a **rule file**, and one script writes every rule file for you. The third way hands the whole job to an AI.
 
+### Keeping an installed copy current
+
+A host installs a plugin into a cache of its own, so the copy that runs is
+frozen at install time — and a fixed bug keeps running until that cache is
+refreshed. Two commands close that gap:
+
+```bash
+python cli.py update            # does this copy still match main?
+python cli.py update --apply    # run each host's own update command
+```
+
+`update` compares the files this copy is running with the ones on `main` (line
+endings aside) and names the ones that differ; version numbers alone would not
+notice a release window. `--apply` runs `zcode plugins …` or `claude plugin
+update` for the hosts that actually have the plugin installed, and reports what
+each one said. Both are best-effort: offline means "unknown", not an error.
+`cli.py pipeline` and `cli.py audit` print one stderr line when the copy has
+drifted, checked at most once a day and cached; `CHELATE_UPDATE_OFF=1` silences
+it.
+
 ### Method 1: install from the plugin marketplace by URL
 
 Every host below has its own plugin marketplace. Register this repository's Git URL, then install the plugin it lists (registering the URL twice is harmless — the second call reports it is already known).
@@ -231,7 +251,7 @@ Every directory, and what each of the 19 skills computes: **[docs/REFERENCE.md](
 python -m pytest tests/ -q
 ```
 
-397 tests: 386 pass and 11 skip with the optional dependencies installed;
+405 tests: 394 pass and 11 skip with the optional dependencies installed;
 with nothing but pytest, the dependency-gated cases skip instead and the
 `UNVERIFIED` path is what runs. The seven skills that ship their own upstream
 suite under `skills/<skill>/tests/` are run one directory per process.
