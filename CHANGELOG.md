@@ -2,6 +2,92 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.3.3] — 2026-11-14
+
+A safety release: the pipeline's one irreversible write now needs an approval a
+human issued for that exact plan, and every workspace write is checked to stay
+inside the workspace.
+
+### Added
+- **One-time approval before promotion.** `router.promote()` turns provisional
+  `process/` intermediates into `results/` deliverables; it now requires a
+  token from `cli.py approve`, bound to the action, the resolved workspace,
+  the mode/selection and the SHA-256 of every input file, with a 15-minute
+  expiry and an HMAC-SHA256 signature. Spending is atomic
+  (`O_CREAT|O_EXCL`), so a token cannot be replayed. Without a valid token the
+  run still completes — the agent's attempts stay visible in `process/` — but
+  it records `"blocked": "approval"` and writes nothing to `results/`.
+- **Issuing a token needs a person, not just a terminal.**
+  `cli.py approve` asks the operator to type `approve promote` and treats EOF
+  or any other answer as a refusal; `--no-approval` goes through the same
+  check. `CHELATE_HUMAN=1` is the declared hatch for CI. This release measured
+  why a TTY check alone was not enough: under an agent harness a spawned
+  subprocess inherits the parent's terminal, so `isatty()` is `True` for a
+  shell an agent drives.
+- **The signing key moved out of the workspace** to
+  `%LOCALAPPDATA%\chelate\keys\` (or `$XDG_DATA_HOME/chelate/keys/`), because
+  the workspace is the directory the agent is allowed to write. Tokens stay in
+  `<ws>/.chelate/approvals/` where a human can see what was issued.
+- **`lib/chelate_core/paths.ensure_within()`** — a realpath-resolved
+  containment check, applied to every workspace directory the shell creates,
+  to the promotion target and to the output flags the adapter injects, so
+  `--output ../../etc` and outward-pointing symlinks are refused before the
+  write happens.
+- **`tests/attacks/`** — the two probes behind the safety claims ship with the
+  repository instead of living in the author's scratch folder:
+  `self_approve.py` runs six agent-posture trials against the approval gate
+  (three self-approval routes, plus the two boundary probes), and
+  `tty_probe.py` drives the same approval through a real Windows console with
+  `WriteConsoleInputW`. Both are standard library only, take under a minute,
+  and write scratch workspaces to a temp directory, so neither leaves residue
+  in the tree it tests.
+- **`docs/SAFETY.md`** — the threat model, the control list, the adversarial
+  matrix and the limitations stated plainly: this is a policy layer, not OS
+  containment. It records the measured residual too — once a human has
+  approved in a workspace the key persists, and a process running as the same
+  user can read it and sign its own token.
+
+### Fixed
+- **Three routes let an agent approve itself.** Measured against this
+  release's approval layer before it was hardened, all three promoted
+  successfully: appending `--no-approval`, calling `approval.issue()` from the
+  agent's own process, and forging a key plus token inside the workspace. All
+  three now fail; the trials and their output are kept with the release notes
+  rather than only asserted in tests.
+- **Sandboxed skills were handed the repository root instead of the
+  workspace.** `router.run_skill()` passed `_REPO_ROOT` to
+  `run_skill_sandboxed()`, so a sandboxed skill wrote its gate into the source
+  tree rather than the workspace the user named.
+- **`python core/router.py` could not start.** The parser was built with
+  `argparse.ArgumentParser(pro=...)`, which is not a parameter; the typo
+  shipped in 1.3.2 and is fixed here.
+- **The task-organizer AI call would send its key to a plaintext remote host.**
+  `TASK_ORG_AI_BASE_URL` decides where the request goes and the request
+  carries `Authorization: Bearer <key>`, so `http://` to anything but loopback
+  put the key on the wire in clear text. `_key_safe_base_url()` now accepts
+  https anywhere, plaintext http only to `localhost`/`127.0.0.0/8`/`::1`, and
+  refuses URLs with embedded credentials. Any OpenAI-compatible endpoint —
+  DeepSeek, Qwen, Moonshot, vLLM, Ollama — still works; what stops working is
+  a remote endpoint over unencrypted http.
+
+### Removed
+- **`capstone-labmate`**, in full. Its bundled `assets/blank.base.cap` was a
+  template saved by PASCO's Capstone (root element `DSProExperiment`,
+  `Version="2.12.2"`), so every release since v1.3.0 was redistributing a
+  vendor-produced artifact. The scan of that file found no credentials,
+  paths, serials or personal data — 50 format GUIDs and nothing else — so the
+  objection is distribution, not leakage. The skill's own generator
+  (`_blank_base_xml()`) can build a skeleton, but the capability is being
+  reissued separately rather than shipped under a third-party trademark.
+  Also removed: the trademark notice in both READMEs, the PASCO rows in the
+  dependency matrix and the reference trees, the ingest entry in the plan
+  diagram, and the tests that pinned the skill's modules. Skill count 20 → 19.
+
+### Changed
+- **Promotion requires approval by default.** Skipping the token at all needs
+  a human channel (a terminal plus the typed phrase, or `CHELATE_HUMAN=1`), so
+  `--no-approval` is no longer reachable by an agent that simply appends it.
+
 ## [1.3.2] — 2026-11-13
 
 **Security release — upgrade recommended.** Two command-injection paths are

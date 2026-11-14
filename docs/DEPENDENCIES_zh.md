@@ -1,4 +1,4 @@
-# 逐技能依赖（1.3.2）
+# 逐技能依赖（1.3.3）
 
 由每个技能的 `manifest.json` 声明，运行时由
 `core/sandbox.py` 检查。缺失必需依赖时，只有那一个技能降级为
@@ -9,7 +9,6 @@
 | `3d-modeler` | 无（纯标准库） | 无 |
 | `ai-trace-remover` | 无（纯标准库） | 无 |
 | `bibtex-normalizer` | `bibtexparser` | 无 |
-| `capstone-labmate` | 无（纯标准库） | `numpy`（向量化加速）, `matplotlib`（绘图）, `pypdf`（PDF 文本） |
 | `conflict-detector` | 无（纯标准库） | `PyYAML`（读取 `.yaml` 配置；JSON 配置零依赖） |
 | `data-profiler` | `pandas` | 无 |
 | `document-evolution-tracker` | 无（纯标准库） | `PyYAML`（读取 `.yaml` 配置；JSON 配置零依赖） |

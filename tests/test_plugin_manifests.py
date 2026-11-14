@@ -130,10 +130,17 @@ def test_icon_asset_present():
     assert icon.is_file() and icon.stat().st_size > 0
 
 
-def test_orchestrator_doc_describes_v11_layout():
+def test_orchestrator_doc_describes_the_current_layout():
     doc = (REPO_ROOT / "ORCHESTRATOR.md").read_text(encoding="utf-8")
-    assert "v1.3.0" in doc
-    assert "20" in doc  # skill count
+    version = _skill_version()
+    # Derive the expected string instead of pinning a literal: this assertion
+    # was still demanding "v1.3.0" two releases later, so it silently stopped
+    # checking and still passed while the header drifted.
+    assert f"v{version}" in doc, f"ORCHESTRATOR.md header is not v{version}"
+    assert version in doc, "the manifest-sync note is stale"
+    n_skills = len([d for d in (REPO_ROOT / "skills").iterdir() if d.is_dir()])
+    assert str(n_skills) in doc, f"skill count {n_skills} is not in the doc"
+    assert "approve" in doc, "the approval entry point is undocumented"
     for stage in ("workspace", "ingest", "gates", "processors"):
         assert stage in doc
     for skill in ("task-organizer", "longitudinal-analysis",

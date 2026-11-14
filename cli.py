@@ -29,6 +29,7 @@ _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+from core import approval
 from core.registry import load_default_registry
 from core.router import run as router_run
 from lib.chelate_core import debug as debug_mod
@@ -92,6 +93,34 @@ def parse_skill_args(pairs) -> dict:
     return out
 
 
+def cmd_approve(args) -> int:
+    """Issue a one-time approval token for an irreversible action."""
+    root = os.path.abspath(args.root)
+    inputs, missing = paths.resolve_inputs(root, args.inputs)
+    if missing:
+        print("input file(s) not found (resolved against --root "
+              f"{root}): " + ", ".join(missing), file=sys.stderr)
+        return 2
+    selected = [s.strip() for s in args.selected.split(",") if s.strip()] \
+        if args.selected else []
+    params = approval.pipeline_params(args.mode, args.input_kind,
+                                      inputs, selected)
+    try:
+        token = approval.issue(root, "promote", params, ttl=args.ttl)
+    except approval.HumanRequired as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    except (approval.ApprovalInvalid, ValueError) as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    print(f"approved promote for {root} — token valid for {args.ttl}s:",
+          file=sys.stderr)
+    print(json.dumps({"token": str(token), "action": "promote",
+                      "ttl_seconds": args.ttl, "params": params},
+                     ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_pipeline(args) -> int:
     debug_mod.flag(args.debug)  # sets CHELATE_DEBUG for skill subprocesses
     root = os.path.abspath(args.root)
@@ -112,6 +141,7 @@ def cmd_pipeline(args) -> int:
         skill_args=skill_args,
         timeout=args.timeout,
         debug=args.debug,
+        require_approval=not args.no_approval,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 1 if result.get("terminated_by") else 0
@@ -152,7 +182,30 @@ def build_parser() -> argparse.ArgumentParser:
                     help="per-skill subprocess timeout in seconds")
     pp.add_argument("--debug", action="store_true",
                     help="verbose stderr diagnostics (same as CHELATE_DEBUG=1)")
+    pp.add_argument("--no-approval", action="store_true",
+                    help="skip the token and promote directly. Still needs a "
+                         "human channel (a terminal, or CHELATE_HUMAN=1), so "
+                         "an agent subprocess cannot use it; for scripted runs "
+                         "a human already supervises")
     pp.set_defaults(fn=cmd_pipeline)
+
+    pa = sub.add_parser(
+        "approve",
+        help="issue a one-time approval token for an irreversible action "
+             "(needs a terminal, or CHELATE_HUMAN=1)")
+    pa.add_argument("--root", default=".")
+    pa.add_argument("--action", default="promote",
+                    choices=list(approval.IRREVERSIBLE_ACTIONS),
+                    help="irreversible action to authorise (default: promote)")
+    pa.add_argument("--mode", choices=["a", "b", "c"], default="a")
+    pa.add_argument("--input-kind", default="")
+    pa.add_argument("--inputs", nargs="+", default=[], metavar="FILE",
+                    help="the same inputs you will pass to `pipeline`; their "
+                         "content hashes are bound into the token")
+    pa.add_argument("--selected", default="")
+    pa.add_argument("--ttl", type=int, default=approval.DEFAULT_TTL_SECONDS,
+                    help="seconds the token stays valid (default 900)")
+    pa.set_defaults(fn=cmd_approve)
     return p
 
 

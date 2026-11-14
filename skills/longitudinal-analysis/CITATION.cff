@@ -1,9 +1,9 @@
 # longitudinal-analysis
 
-cff-version: "1.3.2"
+cff-version: "1.3.3"
 title: "longitudinal-analysis: reproducible longitudinal / panel-data analysis pipeline"
 type: software
-version: 1.3.2
+version: 1.3.3
 license: MIT
 date-created: 2026-10-15
 authors:

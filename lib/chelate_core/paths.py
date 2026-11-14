@@ -19,6 +19,27 @@ def repo_root() -> str:
     return REPO_ROOT
 
 
+class WorkspaceEscape(ValueError):
+    """Raised when a path resolves outside the workspace it belongs to."""
+
+
+def ensure_within(root: str, path: str, what: str = "path") -> str:
+    """Resolve *path* and refuse it when it escapes *root*.
+
+    Symlinks are resolved before the comparison, so a link planted inside the
+    workspace that points at ``C:\\Windows`` is rejected rather than followed.
+    Returns the resolved path so callers can use one canonical value for both
+    the check and the write.
+    """
+    root_real = os.path.normcase(os.path.realpath(root))
+    target = os.path.normcase(os.path.realpath(path))
+    if target != root_real and not target.startswith(root_real + os.sep):
+        raise WorkspaceEscape(
+            f"{what} escapes the workspace root: {path!r} -> {target!r} "
+            f"(root {root_real!r})")
+    return os.path.realpath(path)
+
+
 def skills_dir() -> str:
     """Absolute path of the flat skills/ directory."""
     return SKILLS_DIR
@@ -40,6 +61,7 @@ def workspace(root: str, *parts: str) -> str:
     and results/ are created here.
     """
     path = os.path.join(root, *parts)
+    ensure_within(root, path, what="workspace directory")
     os.makedirs(path, exist_ok=True)
     return path
 

@@ -1316,6 +1316,36 @@ def _ai_summarize(
 
 
 
+def _key_safe_base_url(base_url: str) -> bool:
+
+    """True when an API key may be sent to *base_url*.
+
+    http(s) only, no credentials embedded in the URL, and plaintext http
+    only to this machine -- a bearer token must either stay local or
+    travel encrypted.
+    """
+
+    import urllib.parse
+
+    parts = urllib.parse.urlsplit(base_url)
+
+    if parts.scheme not in ("http", "https"):
+
+        return False
+
+    if parts.username or parts.password:
+
+        return False
+
+    if parts.scheme == "https":
+
+        return True
+
+    host = (parts.hostname or "").lower()
+
+    return host in ("localhost", "::1") or host.startswith("127.")
+
+
 def _ai_chat(system: str, user: str, max_tokens: int, api_key: str) -> str:
 
     """One OpenAI-compatible chat-completions round trip. Returns "" on failure."""
@@ -1336,10 +1366,10 @@ def _ai_chat(system: str, user: str, max_tokens: int, api_key: str) -> str:
 
         ).rstrip("/")
 
-        # Only http(s) is accepted: a file:// or ftp:// base URL picked up from
-        # the environment must not turn this call into a local-file read.
+        # The base URL comes from the environment and the key rides on the
+        # request, so this decides where a bearer token travels.
 
-        if urllib.parse.urlsplit(base_url).scheme not in ("http", "https"):
+        if not _key_safe_base_url(base_url):
 
             return ""
 

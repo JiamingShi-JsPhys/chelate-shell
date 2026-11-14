@@ -20,7 +20,7 @@ def test_all_routed_skills_registered():
     left. v1.3.0 adds security-guard, which declares stage=infrastructure.)"""
     reg = Registry().scan(str(SKILLS_DIR))
     assert reg.names() == sorted(ROUTED_SKILLS)
-    assert len(reg) == 20
+    assert len(reg) == 19
     # any residual skeleton would be reported, not silently dropped
     reported = " ".join(reg.errors)
     for s in SKELETON_SKILLS:
@@ -94,7 +94,7 @@ def test_manifest_rejects_legacy_and_bad_fields():
 def test_stage_partition_matches_blueprint():
     reg = Registry().scan(str(SKILLS_DIR))
     assert sorted(r.name for r in reg.by_stage("ingest")) == [
-        "bibtex-normalizer", "capstone-labmate", "fulltext-extractor",
+        "bibtex-normalizer", "fulltext-extractor",
         "literature-retriever", "video-tracker"]
     assert sorted(r.name for r in reg.by_stage("gates")) == [
         "conflict-detector", "data-profiler", "formula-validator",

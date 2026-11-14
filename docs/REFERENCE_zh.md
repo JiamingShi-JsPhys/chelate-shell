@@ -2,7 +2,7 @@
 
 # 参考
 
-仓库里的每一个目录，以及 20 个技能各自做什么。README 首页只留简版：`core/`
+仓库里的每一个目录，以及 19 个技能各自做什么。README 首页只留简版：`core/`
 是微内核，`lib/chelate_core/` 是共享逻辑，`skills/` 下每个技能一个目录。
 
 ## 仓库布局
@@ -59,18 +59,16 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.0）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.3）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md
-├── skills/                           # 20 个技能，全部平铺——一个技能一个目录
+├── skills/                           # 19 个技能，全部平铺——一个技能一个目录
 │   ├── 3d-modeler/                   # [domain_extensions] 纯 Python OBJ 网格
 │   │                                 # 生成 / 合并 / 审计，含网格质检；沙箱运行
 │   ├── ai-trace-remover/             # [processors] 模板句清除与 0–100「AI 味」评分
 │   │                                 # （英文 + 中文词表）
 │   ├── bibtex-normalizer/            # [ingest]    .bib 解析、去重、规范化输出
-│   ├── capstone-labmate/             # [ingest]    PASCO Capstone .cap 二进制解析、
-│   │                                 # CSV/JSON 转换、带水印的草稿报告
 │   ├── conflict-detector/            # [gates]     跨文档矛盾引擎，正则数字抽取
 │   ├── data-profiler/                # [gates]     pandas CSV 体检：行数、缺失值、
 │   │                                 # 1.5·IQR 异常值比率、重复行、常值列

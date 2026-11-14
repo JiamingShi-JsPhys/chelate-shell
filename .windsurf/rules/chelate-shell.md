@@ -1,9 +1,9 @@
 ---
 trigger: always_on
-description: Chelate Shell orchestrator operating rules (v1.3.2)
+description: Chelate Shell orchestrator operating rules (v1.3.3)
 ---
 
-# Chelate Shell — agent operating rules (v1.3.2)
+# Chelate Shell — agent operating rules (v1.3.3)
 
 Chelate Shell is a deterministic **orchestrator** for local agent skills. It
 routes work to the right skill through a gated pipeline; it does not generate
@@ -38,7 +38,7 @@ per skill directly under `skills/`).
 ## Skills (20 total)
 
 - **workspace**: task-organizer, multi-dim-manager, document-evolution-tracker
-- **ingest**: bibtex-normalizer, capstone-labmate, fulltext-extractor,
+- **ingest**: bibtex-normalizer, fulltext-extractor,
   literature-retriever, video-tracker
 - **gates**: conflict-detector, data-profiler, formula-validator,
   longitudinal-analysis, quantitative-validator, ml-auditor, reference-auditor

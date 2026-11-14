@@ -1,12 +1,12 @@
 ---
 name: bibtex-normalizer
-version: 1.3.2
+version: 1.3.3
 description: >
   Parses a `.bib` file, removes duplicate entries and writes a normalised
   bibliography in a fixed field order. Fires before any citation-dependent
   stage so downstream tools see one consistent shape.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

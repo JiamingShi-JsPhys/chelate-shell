@@ -1,4 +1,4 @@
-# Per-skill dependencies (1.3.2)
+# Per-skill dependencies (1.3.3)
 
 Declared in each skill's `manifest.json` and enforced at run time by
 `core/sandbox.py`. A missing required dependency degrades that one
@@ -9,7 +9,6 @@ skill to an `UNVERIFIED` gate; it never crashes the pipeline.
 | 3d-modeler | *(stdlib only)* | — |
 | ai-trace-remover | *(stdlib only)* | — |
 | bibtex-normalizer | `bibtexparser` | — |
-| capstone-labmate | *(stdlib only)* | numpy (vectorized paths), matplotlib (plots), pypdf (PDF text) |
 | conflict-detector | *(stdlib only)* | PyYAML (`.yaml` configs; JSON configs need nothing) |
 | data-profiler | `pandas` | — |
 | document-evolution-tracker | *(stdlib only)* | PyYAML (`.yaml` configs; JSON configs need nothing) |

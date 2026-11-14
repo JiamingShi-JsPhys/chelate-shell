@@ -4,6 +4,19 @@ All notable changes to this project are documented here, following
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] - 2026-11-14
+
+### Changed
+- Version declaration bumped to 1.3.3 across the repository.
+
+### Security
+- `TASK_ORG_AI_BASE_URL` no longer sends the API key to a plaintext remote
+  host. The URL decides where `Authorization: Bearer <key>` travels, so
+  `_key_safe_base_url()` now allows https anywhere, plaintext http only to
+  loopback (`localhost`, `127.0.0.0/8`, `::1`), and refuses URLs with embedded
+  credentials. Local endpoints (Ollama, vLLM) keep working; a remote
+  `http://` endpoint does not.
+
 ## [1.3.2] - 2026-11-13
 
 ### Security

@@ -1,6 +1,6 @@
 [project]
 name = "longitudinal-analysis"
-version = "1.3.2"
+version = "1.3.3"
 description = "Longitudinal statistical analysis pipeline (LMM / lagged mediation / sensitivity) with reproducible auditing."
 authors = [{ name = "Jiaming Shi" }]
 license = { text = "MIT" }

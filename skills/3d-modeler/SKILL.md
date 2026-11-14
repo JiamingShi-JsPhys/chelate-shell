@@ -1,12 +1,12 @@
 ---
 name: 3d-modeler
-version: 1.3.2
+version: 1.3.3
 description: >
   Pure-Python OBJ mesh work: generate a mesh from a JSON spec, merge several
   OBJ files, and audit an existing mesh (winding, degenerate faces, bounds).
   Runs inside the process sandbox.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py

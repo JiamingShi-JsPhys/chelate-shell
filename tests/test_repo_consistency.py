@@ -1,4 +1,4 @@
-"""Repo-wide consistency guard: the 20 skills stay organized.
+"""Repo-wide consistency guard: the 19 skills stay organized.
 
 The SEM module and the three graduated heavy skills each landed as separate
 pieces of work. This suite is the anti-drift net that keeps the whole
@@ -39,7 +39,7 @@ from conftest import SKILLS_DIR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERSION = "1.3.2"
+EXPECTED_VERSION = "1.3.3"
 CANONICAL_CONTACT_EMAIL = "jiamingshi_git@outlook.com"
 # v1.3.0 extended the four runtime stages (workspace/ingest/gates/processors)
 # with three architectural categories: infrastructure (security-guard),
@@ -220,7 +220,7 @@ def _parse_dep_table(text: str) -> dict:
 
 def test_every_skill_ships_the_full_surface():
     dirs = _skill_dirs()
-    assert len(dirs) == 20, f"expected 20 skills, found {len(dirs)}"
+    assert len(dirs) == 19, f"expected 19 skills, found {len(dirs)}"
     missing = {d.name: f for d in dirs for f in SURFACE_FILES
                if not (d / f).is_file()}
     assert not missing, f"skills missing surface files: {missing}"

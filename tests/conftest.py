@@ -20,7 +20,7 @@ SKILLS_DIR = REPO_ROOT / "skills"
 
 ALL_SKILLS = [
     "task-organizer", "document-evolution-tracker",
-    "capstone-labmate", "video-tracker",
+    "video-tracker",
     "formula-validator", "conflict-detector",
     "fulltext-extractor", "literature-retriever", "bibtex-normalizer",
     "reference-auditor", "data-profiler",
@@ -31,8 +31,8 @@ ALL_SKILLS = [
     "3d-modeler",
     "longitudinal-analysis", "ai-trace-remover", "multi-dim-manager",
 ]
-LEGACY_SKILLS = ALL_SKILLS[:9]
-NEW_SKILLS = ALL_SKILLS[9:]
+LEGACY_SKILLS = ALL_SKILLS[:8]
+NEW_SKILLS = ALL_SKILLS[8:]
 # Skeleton skills used to ship manifest + SKILL.md only (run.py deferred)
 # and were recorded as registry errors / excluded from routing. As of v1.2.0
 # all three (quantitative-validator, ml-auditor, latex-exporter) have
@@ -100,7 +100,7 @@ STAGE_OF = {
     "task-organizer": "workspace",
     "document-evolution-tracker": "workspace",
     "multi-dim-manager": "workspace",
-    "capstone-labmate": "ingest", "video-tracker": "ingest",
+    "video-tracker": "ingest",
     "fulltext-extractor": "ingest", "literature-retriever": "ingest",
     "bibtex-normalizer": "ingest",
     "formula-validator": "gates",
@@ -127,7 +127,7 @@ def run_in_skill(skill: str, code: str, timeout: int = 300) -> dict:
     env = dict(os.environ)
     skill_dir = skill_root(skill)
     # skill root first (packages `scripts` / `src` win), then the bare-module
-    # folder used by capstone-labmate (scripts/_capx.py, no __init__.py).
+    # folder for adapters that import helpers without an __init__.py.
     paths = [str(skill_dir), str(skill_dir / "scripts")]
     env["PYTHONPATH"] = os.pathsep.join(paths) + os.pathsep \
         + env.get("PYTHONPATH", "")
@@ -140,6 +140,24 @@ def run_in_skill(skill: str, code: str, timeout: int = 300) -> dict:
             f"stdout: {proc.stdout[-2000:]}\nstderr: {proc.stderr[-2000:]}")
     lines = [l for l in proc.stdout.strip().splitlines() if l.strip()]
     return json.loads(lines[-1])
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _hermetic_approval_keys(tmp_path_factory):
+    """Keep approval keys out of the user's real per-user key directory.
+
+    ``core.approval`` puts signing keys in ``%LOCALAPPDATA%`` (or
+    ``$XDG_DATA_HOME``) so they are unreachable from a workspace; the suite
+    redirects them to a temp directory instead of littering that path.
+    """
+    root = tmp_path_factory.mktemp("chelate-keys")
+    previous = os.environ.get("CHELATE_KEY_ROOT")
+    os.environ["CHELATE_KEY_ROOT"] = str(root)
+    yield root
+    if previous is None:
+        os.environ.pop("CHELATE_KEY_ROOT", None)
+    else:
+        os.environ["CHELATE_KEY_ROOT"] = previous
 
 
 @pytest.fixture()

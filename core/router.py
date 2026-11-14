@@ -65,6 +65,7 @@ _REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+from core import approval  # noqa: E402
 from core.registry import Registry, load_default_registry  # noqa: E402
 from core.sandbox import resolve_environment  # noqa: E402
 from lib.chelate_core import debug as debug_mod  # noqa: E402
@@ -255,7 +256,7 @@ def run_skill(rec, root: str, action: str, extra_args: List[str],
         if debug:
             debug_mod.log(f"{rec.name}: dispatching via sandbox "
                           f"(timeout={timeout}s)")
-        outcome = run_skill_sandboxed(rec, _REPO_ROOT, action, extra_args,
+        outcome = run_skill_sandboxed(rec, root, action, extra_args,
                                      timeout=timeout, debug=debug)
         # fold the sandbox outcome into the same record shape run_skill uses
         record = {
@@ -386,6 +387,9 @@ def promote(root: str, stamp: str) -> Optional[str]:
     if not os.path.isdir(src):
         return None
     dst = os.path.join(root, "results", f"promoted_{stamp}")
+    # The promotion target is derived from a timestamp, but it is still a
+    # write: prove it lands inside the workspace before copying anything.
+    paths.ensure_within(root, dst, what="promotion target")
     os.makedirs(os.path.join(root, "results"), exist_ok=True)
     shutil.copytree(src, dst, dirs_exist_ok=True)
     return dst
@@ -494,7 +498,8 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         selected: Optional[List[str]] = None, dry_run: bool = False,
         extra_args: Optional[List[str]] = None,
         skill_args: Optional[Dict[str, List[str]]] = None,
-        timeout: int = 600, debug: bool = False) -> dict:
+        timeout: int = 600, debug: bool = False,
+        require_approval: bool = True) -> dict:
     """Execute the pipeline; returns the full decision record (see module doc).
 
     `extra_args` are appended to every skill invocation; `skill_args` maps a
@@ -530,6 +535,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         "decisions": [],
         "terminated_by": None,
         "promoted": False,
+        "blocked": None,
         "registry_errors": list(reg.errors),
     }
     plan = build_plan(reg, mode, input_kind, selected)
@@ -613,9 +619,39 @@ def run(root: str, mode: str = "a", input_kind: str = "",
 
     if not terminated:
         stamp = _ts()
-        promoted = promote(root, stamp)
-        result["promoted"] = promoted is not None
-        result["promoted_to"] = promoted
+        # Promotion is the pipeline's one irreversible write: intermediate
+        # products become deliverables and later stages stop seeing them as
+        # provisional. It needs a token a human issued for this exact plan.
+        params = approval.pipeline_params(mode, input_kind, inputs, selected)
+        if require_approval:
+            try:
+                approval.consume(root, "promote", params)
+            except (approval.ApprovalRequired,
+                    approval.ApprovalInvalid) as exc:
+                result["blocked"] = "approval"
+                result["reason"] = f"promotion withheld: {exc}"
+                print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
+                      file=sys.stderr)
+            else:
+                promoted = promote(root, stamp)
+                result["promoted"] = promoted is not None
+                result["promoted_to"] = promoted
+        else:
+            # `--no-approval` is not a synonym for "no human".  It only means
+            # the human is supervising a script instead of signing a token,
+            # so the same human channel is still required.
+            try:
+                approval.require_human("skipping the approval for promotion",
+                                       "promote")
+            except approval.HumanRequired as exc:
+                result["blocked"] = "approval"
+                result["reason"] = f"promotion withheld: {exc}"
+                print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
+                      file=sys.stderr)
+            else:
+                promoted = promote(root, stamp)
+                result["promoted"] = promoted is not None
+                result["promoted_to"] = promoted
 
     result["finished"] = _iso_now()
     paths = write_reports(root, result)
@@ -635,7 +671,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(pro="router.py",
+    p = argparse.ArgumentParser(prog="router.py",
                                 description="Chelate Shell microkernel router")
     p.add_argument("--root", default=".", help="workspace root")
     p.add_argument("--mode", choices=["a", "b", "c"], default="a")

@@ -1,12 +1,12 @@
 ---
 name: reference-auditor
-version: 1.3.2
+version: 1.3.3
 description: >
   Extracts every DOI from a draft and verifies it against the Crossref API. A
   DOI that does not exist fails the gate and stops the pipeline; a network
   failure is reported as unknown, never as a pass.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

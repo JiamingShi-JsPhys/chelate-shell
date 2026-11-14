@@ -1,12 +1,12 @@
 ---
 name: data-profiler
-version: 1.3.2
+version: 1.3.3
 description: >
   Profiles a CSV with pandas: row and column counts, per-column missing-value
   statistics, 1.5·IQR outlier ratios, duplicate rows and constant columns. It
   certifies that the file was read and characterised — never that it is clean.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

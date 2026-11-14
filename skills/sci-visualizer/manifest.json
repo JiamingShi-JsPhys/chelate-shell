@@ -1,6 +1,6 @@
 {
   "name": "sci-visualizer",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "stage": "generation",
   "input_types": [
     "csv",

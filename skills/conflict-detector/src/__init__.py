@@ -4,4 +4,4 @@ Detects factual / clause / argument-level contradictions across a set of
 documents (text or JSON). Pure standard library; no external dependencies.
 """
 
-__version__ = "1.3.2"
+__version__ = "1.3.3"

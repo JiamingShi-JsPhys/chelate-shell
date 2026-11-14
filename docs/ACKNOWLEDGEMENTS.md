@@ -18,3 +18,13 @@ on every push, come from this report.
 The same issue found `package.json`'s `files` list shipping `skills/` without
 `core/`, `lib/`, `cli.py`, `bootstrap.py` or `contracts/`, so an npm install
 carried every skill and none of the code they import.
+
+## DeepSec
+
+The code-security auditor this tree is scanned with (`deepsec shield scan`).
+Its L1 pattern set and SAST rules found the two command-injection paths that
+1.3.2 closed — `multi-dim-manager` running a plugin template through
+`shell=True`, and `core/sandbox.py` executing whatever program a manifest
+named. It is also the scanner behind the "0 findings" line quoted in the
+1.3.2 and 1.3.3 changelog entries, and it has no stake in the result: several rounds of fixes were rejected by it before one came back
+clean.

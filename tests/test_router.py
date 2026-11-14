@@ -28,16 +28,15 @@ def _record(status, skill="reference-auditor", stage="gates"):
 
 def test_build_plan_modes(reg):
     plan_a = router.build_plan(reg, "a", "pdf", None)
-    # a PDF matches both capstone-labmate (.cap + pdf) and fulltext-extractor
+    # a PDF matches fulltext-extractor, the only ingest skill taking pdf
     ingest_names = [r.name for r in plan_a["ingest"]]
-    assert ingest_names == ["capstone-labmate", "fulltext-extractor"]
+    assert ingest_names == ["fulltext-extractor"]
     assert len(plan_a["gates"]) == 7
     assert [r.name for r in plan_a["processors"]] == [
         "ai-trace-remover", "latex-exporter"]
 
     plan_b = router.build_plan(reg, "b", "pdf", None)
-    assert [r.name for r in plan_b["ingest"]] == ["capstone-labmate",
-                                                  "fulltext-extractor"]
+    assert [r.name for r in plan_b["ingest"]] == ["fulltext-extractor"]
     assert plan_b["gates"] == [] and plan_b["processors"] == []
 
     plan_c = router.build_plan(reg, "c", "",
@@ -73,7 +72,7 @@ def test_dry_run_lists_plan_without_executing(reg, workspace, monkeypatch,
     result = router.run(str(workspace), mode="a", input_kind="pdf",
                         dry_run=True)
     planned = [p["skill"] for p in result["planned"]]
-    assert planned[0] == "capstone-labmate"  # pdf matches capstone first
+    assert planned[0] == "fulltext-extractor"  # pdf matches it first
     assert "fulltext-extractor" in planned
     assert "reference-auditor" in planned
     assert planned[-1] == "latex-exporter"
@@ -110,12 +109,14 @@ def test_gate_fail_terminates_pipeline_and_locks_process(workspace,
 
 
 def test_full_pass_promotes_process_to_results(workspace, monkeypatch):
+    monkeypatch.setenv("CHELATE_HUMAN", "1")  # supervised scripted run
     monkeypatch.setattr(router, "load_default_registry",
                         lambda: _FakeRegistry())
     monkeypatch.setattr(router, "run_skill",
                         lambda rec, root, action, extra, timeout=600, debug=False:
                         _record("PASS", skill=rec.name))
-    result = router.run(str(workspace), mode="a", input_kind="pdf")
+    result = router.run(str(workspace), mode="a", input_kind="pdf",
+                        require_approval=False)
     assert result["terminated_by"] is None
     assert result["promoted"] is True
     promoted = list((workspace / "results").glob("promoted_*"))
@@ -230,12 +231,14 @@ def test_dry_run_shows_auto_wired_inputs(workspace, capsys):
 
 
 @_needs_pandas
-def test_inputs_auto_wired_end_to_end(workspace, tmp_path):
+def test_inputs_auto_wired_end_to_end(workspace, tmp_path, monkeypatch):
     """--inputs data.csv must reach data-profiler without --skill-arg."""
+    monkeypatch.setenv("CHELATE_HUMAN", "1")  # supervised scripted run
     csv = tmp_path / "data.csv"
     csv.write_text("x,y\n1,2\n3,4\n5,6\n", encoding="utf-8")
     result = router.run(str(workspace), mode="c",
-                        selected=["data-profiler"], inputs=[str(csv)])
+                        selected=["data-profiler"], inputs=[str(csv)],
+                        require_approval=False)
     assert result["terminated_by"] is None
     assert result["promoted"] is True
     assert result["auto_inputs"] == {"data-profiler": str(csv)}

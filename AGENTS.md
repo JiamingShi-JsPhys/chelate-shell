@@ -1,4 +1,4 @@
-# Chelate Shell — agent operating rules (v1.3.2)
+# Chelate Shell — agent operating rules (v1.3.3)
 
 Chelate Shell is a deterministic **orchestrator** for local agent skills. It
 routes work to the right skill through a gated pipeline; it does not generate
@@ -15,6 +15,8 @@ per skill directly under `skills/`).
 
 - `python cli.py list` — list registered skills
 - `python cli.py run <skill> --root <workspace> [args...]` — run one skill
+- `python cli.py approve --root <workspace> --mode a|b|c` — issue the one-time
+  approval for a promotion (needs a terminal, or `CHELATE_HUMAN=1`)
 - `python cli.py pipeline --root <workspace> --mode a|b|c` — run the pipeline
 - `.dsh-plugin/index.js` — non-Python harness entry (`apply(ctx)`)
 
@@ -30,10 +32,10 @@ per skill directly under `skills/`).
    locks `process/`.
 4. **processors** — clean, transform and export into `results/`.
 
-## Skills (20 total)
+## Skills (19 total)
 
 - **workspace**: task-organizer, multi-dim-manager, document-evolution-tracker
-- **ingest**: bibtex-normalizer, capstone-labmate, fulltext-extractor,
+- **ingest**: bibtex-normalizer, fulltext-extractor,
   literature-retriever, video-tracker
 - **gates**: conflict-detector, data-profiler, formula-validator,
   longitudinal-analysis, quantitative-validator, ml-auditor, reference-auditor
@@ -52,5 +54,8 @@ manifest `stage` field, not in a folder name.
   `core/sandbox.py`; missing dependencies degrade to `UNVERIFIED`, never crash.
 - Screen text inputs for prompt injection (`core/security_shield.py`).
 - Keep intermediate products in `process/` and final products in `results/`.
+- Promotion needs a human approval issued for that exact plan. A run without
+  one still completes (report says `"blocked": "approval"`) but writes nothing
+  to `results/`; `--no-approval` skips the token, not the human.
 
 Full contract: `ORCHESTRATOR.md`.

@@ -1,13 +1,13 @@
 ---
 name: document-evolution-tracker
-version: 1.3.2
+version: 1.3.3
 description: >
   Tracks how a family of document versions evolved: discovers the version
   files, aligns them block by block, and reports paragraph-level changes plus
   the lineage of named concepts across versions. Fires when a set of drafts
   must be compared over time rather than one pair of files.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

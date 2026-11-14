@@ -36,3 +36,4 @@ test_workspace/
 
 # Test residue (pytest tmp workdirs)
 tmp*/
+.chelate/

@@ -4,11 +4,11 @@ Chelate Shell is the core router of the ecosystem. It does not generate low-leve
 Python itself; it routes every request to the right local skill, enforces a
 standard workspace layout, and respects the platform / security constraints below.
 
-- Version: **v1.3.0**
-- Skills: **20**, all flat under `./skills` — one folder per skill (all fully implemented)
+- Version: **v1.3.3**
+- Skills: **19**, all flat under `./skills` — one folder per skill (all fully implemented)
 - Stages: **7** (4 runtime: workspace / ingest / gates / processors; 3 architectural layers: infrastructure / generation / domain_extensions)
 - Entry point (DeepSeek Harness): `.dsh-plugin/index.js` (`apply(ctx)`)
-- Entry point (CLI): `python cli.py list | run <skill> | pipeline`
+- Entry point (CLI): `python cli.py list | run <skill> | approve | pipeline`
 - Per-platform manifests: `.claude-plugin/plugin.json`, `.codebuddy-plugin/plugin.json`,
   `.codex-plugin/plugin.json`, `.dsh-plugin/plugin.json`
 - Cross-host rule files: `AGENTS.md`, `.cursor/rules/chelate-shell.mdc`,
@@ -30,18 +30,20 @@ mechanism that performs the following:
 
 ### 1.1 Pipeline flow
 
-The router is a microkernel over the 20 manifests. It screens text inputs for
+The router is a microkernel over the 19 manifests. It screens text inputs for
 prompt injection before dispatch, runs the planned skills in canonical stage
 order, and turns every skill call into a `GateResult` under `process/gates/`.
 A missing dependency degrades one skill to `UNVERIFIED`; only `FAIL` terminates
-the run and keeps `process/` locked. A run with no failing gate promotes
-`process/` into `results/` and writes the pipeline report plus the
-`_broadcast/` index.
+the run and keeps `process/` locked. A run with no failing gate writes the
+pipeline report plus the `_broadcast/` index, but copies `process/` into
+`results/` only when a human issued an approval for that exact plan
+(`cli.py approve`). Without it the report records `"blocked": "approval"` and
+the attempt stays visible in `process/`.
 
 ```mermaid
 flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>scan the 20 manifests"]
+    CLI --> REG["core/registry.py<br/>scan the 19 manifests"]
     REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
     PLAN --> SCAN["core/security_shield.py<br/>pre-dispatch injection scan"]
     SCAN -->|"markers found"| BAD["FAIL: injection-scan<br/>blocked before dispatch"]
@@ -49,7 +51,7 @@ flowchart LR
     subgraph ROUTER["core/router.py — four-stage pipeline"]
         direction TB
         WS["workspace · 3 skills<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
-        ING["ingest · 5 skills<br/>capstone-labmate, video-tracker,<br/>fulltext-extractor, literature-retriever,<br/>bibtex-normalizer"]
+        ING["ingest · 4 skills<br/>video-tracker, fulltext-extractor,<br/>literature-retriever, bibtex-normalizer"]
         GAT["gates · 7 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
         PRO["processors · 2 skills<br/>ai-trace-remover, latex-exporter"]
         WS --> ING --> GAT --> PRO
@@ -82,7 +84,7 @@ flowchart LR
 
 ## 2. Skill inventory and pipeline stages
 
-The system contains **20 skills**, each at `skills/<name>/`. They are planned
+The system contains **19 skills**, each at `skills/<name>/`. They are planned
 according to seven stages — four runtime stages plus three architectural
 categories — and within each stage the skills are listed alphabetically. A
 skill's category lives in its manifest `stage` field, never in its folder path:
@@ -107,9 +109,6 @@ folders.
 
 - **bibtex-normalizer** — parse and normalize `.bib` entries into a canonical
   field order.
-- **capstone-labmate** — PASCO Capstone (`.cap`) template generation and
-  strictly local down-sampling. (PASCO is a third-party trademark; see
-  `skills/capstone-labmate/NOTICE`.)
 - **fulltext-extractor** — page-range PDF text extraction with a JSON sidecar.
 - **literature-retriever** — arXiv search with rate limiting and retries.
 - **video-tracker** — motion trajectory extraction and FFT frequency spectra.
@@ -222,7 +221,7 @@ Required fields: `name`, `version`, `stage`, `input_types`, `output_type`,
   network failure, incomplete invocation) never does — it reports honestly
   instead of pretending.
 
-### 4.3 Adapter CLI (uniform across all 20 skills)
+### 4.3 Adapter CLI (uniform across all 19 skills)
 
 ```
 python skills/<name>/<entrypoint> --root <workspace> --action <action> [args]
@@ -244,8 +243,11 @@ keeping the stdout contract clean.
    `input_types` declare its type. An explicit `--selected` list always wins.
 3. **FAIL is a hard stop.** When a gate fails, intermediate products stay in
    `process/` and nothing is promoted. Fix the cause; do not bypass the gate.
-4. **Promotion is earned.** Only when every gate passes is `process/` copied to
-   `results/promoted_<ts>/`, followed by the `processors` stage.
+4. **Promotion is earned twice.** Every gate must pass *and* a human must have
+   approved this exact plan: `cli.py approve` (type the confirmation it asks
+   for), then `cli.py pipeline`. Without the token the run still completes and
+   the report records `"blocked": "approval"`, but nothing is copied to
+   `results/promoted_<ts>/`. `--no-approval` skips the token, not the human.
 5. **Degrade honestly.** A missing dependency yields `UNVERIFIED` with the
    missing package named — never a crash, never a silent pass.
 6. **Debug with one switch.** `--debug` (or `CHELATE_DEBUG=1`, inherited by
@@ -262,7 +264,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.2).
+marketplace. Keep `version` in sync across all manifests (currently 1.3.3).
 
 ## 7. Hard constraints
 
@@ -274,5 +276,3 @@ marketplace. Keep `version` in sync across all manifests (currently 1.3.2).
 - **Academic integrity.** The orchestrator never fabricates experimental data;
   analysis outputs are drafts with watermarks and randomized error-corpus pools
   where the skill defines them.
-- **Trademarks.** PASCO / Capstone are third-party marks; the clean-room
-  implementation carries a NOTICE and makes no compatibility claim.

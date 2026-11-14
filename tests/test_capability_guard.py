@@ -38,12 +38,6 @@ INVENTORY = {
         ("src.versioning", []),
         ("src.cli", ["main"]),
     ],
-    "capstone-labmate": [
-        ("_capx", ["extract_datasets", "parse_main_xml", "open_cap_zip",
-                   "build_time_axis", "extract_document_text"]),
-        ("process_cap", ["run", "main"]),
-        ("draft_report", ["main"]),
-    ],
     "video-tracker": [
         ("scripts.fft_analyzer", ["compute_spectrum", "SpectrumResult"]),
         ("scripts.physics", ["score_trajectory", "teleport_metric",
@@ -103,13 +97,6 @@ def test_legacy_key_functions_exist(skill):
         out = run_in_skill(skill, code, timeout=120)
         assert out["ok"], f"{skill}:{module} missing {out.get('missing')} " \
                           f"error={out.get('error')}"
-
-
-def test_capstone_templates_and_configs_migrated():
-    root = SKILLS_DIR / "capstone-labmate"
-    assert (root / "assets" / "blank.base.cap").is_file()
-    assert any((root / "templates").glob("*.md")) or \
-        any((root / "templates").glob("*.txt"))
 
 
 def _sha(path):
@@ -428,9 +415,13 @@ def test_no_python_file_lost():
     # minus the 54 .py files lost to the three skill removals
     # that were in place at v1.2.0 (multi-dim-manager, longitudinal-
     # analysis, ai-trace-remover were removed then re-added at v1.3.0
-    # but are *not* in LEGACY_SKILLS, so they do not count here)
-    assert total == 179 + 9 + 1 - 54, \
-        f"expected 135 py files, found {total}"
+    # but are *not* in LEGACY_SKILLS, so they do not count here),
+    # minus capstone-labmate's 11 .py files: that skill was removed in
+    # v1.3.3 because its bundled .cap template came from vendor software,
+    # plus tests/task-organizer/test_ai_endpoint.py, added in v1.3.3 with
+    # the API-endpoint guard.
+    assert total == 125, \
+        f"expected 125 py files, found {total}"
 
 
 # --- mask unit tests (mutation-tested) -------------------------------------- #
@@ -467,7 +458,7 @@ def test_mask_version_decl_blanks_the_contact_line():
     `test_contact_email_is_unified` would flag it.)"""
     stale = b"jiamingshi_git@outlook.com".replace(b"git", b"phys")
     assert stale != b"jiamingshi_git@outlook.com"  # derivation changed it
-    old = (b'[project]\nname = "capstone-labmate"\n'
+    old = (b'[project]\nname = "formula-validator"\n'
            b'authors = [\n'
            b'    { name = "Jiaming Shi", email = "' + stale + b'" }\n'
            b']\nlicense = "MIT"\n')

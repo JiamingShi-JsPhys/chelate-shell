@@ -1,6 +1,6 @@
 ---
 name: multi-dim-manager
-version: 1.3.2
+version: 1.3.3
 description: >
   Runs a parameter sweep over many rounds and keeps a hash-based audit trail.
   Snapshots the declared critical files before and after each round, records
@@ -8,7 +8,7 @@ description: >
   non-destructively. Fires when a workflow repeats over a Cartesian parameter
   space or when rollback to an earlier round must stay possible.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

@@ -2,7 +2,7 @@
 
 # Reference
 
-Every directory in the repository, and what each of the 20 skills does. The
+Every directory in the repository, and what each of the 19 skills does. The
 front page of the README keeps the short version: **core/** is the microkernel,
 **lib/chelate_core/** is the shared logic, **skills/** holds one folder per
 skill.
@@ -61,18 +61,16 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.2)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.3)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md
-├── skills/                           # 20 skills, all flat — one folder per skill
+├── skills/                           # 19 skills, all flat — one folder per skill
 │   ├── 3d-modeler/                   # [domain_extensions] pure-Python OBJ mesh generate /
 │   │                                 # merge / audit with mesh QC; sandboxed
 │   ├── ai-trace-remover/             # [processors] template-sentence removal and a
 │   │                                 # 0–100 "AI-likeness" score (EN + ZH lexicons)
 │   ├── bibtex-normalizer/            # [ingest]    .bib parsing, dedupe, normalized output
-│   ├── capstone-labmate/             # [ingest]    PASCO Capstone .cap binary parsing,
-│   │                                 # CSV/JSON conversion, watermarked drafts
 │   ├── conflict-detector/            # [gates]     cross-document contradiction engine
 │   │                                 # with regex number extraction
 │   ├── data-profiler/                # [gates]     pandas CSV profiling: row counts,

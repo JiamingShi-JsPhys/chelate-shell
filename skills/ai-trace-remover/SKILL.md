@@ -1,12 +1,12 @@
 ---
 name: ai-trace-remover
-version: 1.3.2
+version: 1.3.3
 description: >
   Removes template sentences from a manuscript and scores its 0–100
   "AI-likeness" with English and Chinese lexicons. It rewrites only matched
   patterns and always reports what it changed.
 metadata:
-  version: 1.3.2
+  version: 1.3.3
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py
