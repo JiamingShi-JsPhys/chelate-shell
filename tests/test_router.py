@@ -119,6 +119,9 @@ def test_full_pass_promotes_process_to_results(workspace, monkeypatch):
                         require_approval=False)
     assert result["terminated_by"] is None
     assert result["promoted"] is True
+    # the run reports what results/ holds with no promotion behind it
+    assert result["results_audit"] == {
+        "ok": True, "promotions": 1, "unapproved": [], "modified": []}
     promoted = list((workspace / "results").glob("promoted_*"))
     assert len(promoted) == 1
     assert (promoted[0] / "gates").is_dir()
