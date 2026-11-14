@@ -4,6 +4,12 @@ People who reported a problem that changed this project, with what they reported
 
 **English** · [简体中文](ACKNOWLEDGEMENTS_zh.md)
 
+## Some of my friends
+
+They used this plugin for tests in mathematics, theoretical physics, and experimental physics, and helped me improve it from 1.3.3 to 1.3.4 through many real-world scenarios.
+
+A real problem is not the same as a written test case. Putting the plugin to work on a question you actually care about produces inputs a suite never will: a way of writing a formula that makes the checker abstain, a magnitude where the model and the expectation disagree, a dataset that gets a verdict which does not survive a second look. A fair share of what changed between 1.3.3 and 1.3.4 grew out of those scenarios.
+
 ## NotFatJustRound
 
 [issue #1](https://github.com/JiamingShi-JsPhys/chelate-shell/issues/1).

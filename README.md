@@ -333,6 +333,8 @@ Stated plainly; read them before depending on any output or on this safeguard:
 
 **DeepSec** — the code-security auditor this repository is scanned with. It found the two command-injection paths closed in 1.3.2, and in 1.3.4 it turned the update check from "carries a URL argument" into "can only request two fixed addresses".
 
+Some of my friends — who used this plugin for tests in mathematics, theoretical physics, and experimental physics — helped me improve it from 1.3.3 to 1.3.4 through many real-world scenarios.
+
 [Full acknowledgements](docs/ACKNOWLEDGEMENTS.md)
 
 ## Trademarks
