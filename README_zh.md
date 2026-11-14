@@ -61,7 +61,7 @@ Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里
 
 `core/router.py` 读取 19 个 manifest，按规范阶段顺序生成计划，派发前先对文本输入做
 提示注入扫描，然后逐个调用技能适配器。每次调用写下一个 `GateResult`：`PASS` 继续，
-`UNVERIFIED` 只让该技能降级、流水线继续，第一个 `FAIL` 则锁定 `process/` 并终止。
+`UNVERIFIED` 只让该技能降级、流水线继续，第一个 `FAIL` 则锁定 `process/` 并终止——这条锁定跨运行有效：只要某个技能最新的一份门禁是 `FAIL`，提升就会被拒绝，后面一次范围更窄的运行不能绕过它没有重跑的那次失败。
 
 从 `process/` 提升到 `results/` 是唯一不可逆的一步，所以它需要一条针对本次计划、
 由人签发的审批：先 `python cli.py approve --root <ws> --mode a`，按提示输入确认词，
@@ -213,7 +213,7 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 python -m pytest tests/ -q
 ```
 
-394 个测试：装齐可选依赖时 383 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
+397 个测试：装齐可选依赖时 386 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例
 改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于
 `skills/<skill>/tests/`，每个目录单独一个进程运行。
 

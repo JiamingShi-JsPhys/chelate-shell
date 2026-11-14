@@ -147,7 +147,7 @@ def cmd_pipeline(args) -> int:
     print(json.dumps(result, ensure_ascii=False, indent=2))
     # A withheld promotion is a refusal, not a success: a caller that
     # only reads the exit status must not see the run as complete.
-    withheld = result.get("blocked") == "approval"
+    withheld = bool(result.get("blocked"))
     return 1 if (result.get("terminated_by") or result.get("error")
                   or withheld) else 0
 

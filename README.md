@@ -63,7 +63,9 @@ Chelate Shell addresses this in two parts, and both are part of the same reposit
 order, screens text inputs for prompt injection before dispatching, and calls
 each skill's adapter. Every call writes a `GateResult`: `PASS` continues,
 `UNVERIFIED` degrades one skill and the run continues, and the first `FAIL`
-locks `process/` and stops the pipeline.
+locks `process/` and stops the pipeline — including across runs: promotion
+refuses while any skill's newest gate is a `FAIL`, so a later, narrower plan
+cannot deliver around a failure it did not re-run.
 
 Promotion from `process/` to `results/` is the one irreversible step, so it
 needs an approval a human issued for that plan: run
@@ -229,7 +231,7 @@ Every directory, and what each of the 19 skills computes: **[docs/REFERENCE.md](
 python -m pytest tests/ -q
 ```
 
-394 tests: 383 pass and 11 skip with the optional dependencies installed;
+397 tests: 386 pass and 11 skip with the optional dependencies installed;
 with nothing but pytest, the dependency-gated cases skip instead and the
 `UNVERIFIED` path is what runs. The seven skills that ship their own upstream
 suite under `skills/<skill>/tests/` are run one directory per process.

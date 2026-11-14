@@ -385,6 +385,44 @@ def _print_decision(record: dict) -> None:
 PROMOTION_LOG = ".promotions.jsonl"
 
 
+class PromotionLocked(RuntimeError):
+    """Raised when process/ still holds a gate that failed."""
+
+
+def failed_gates(root: str) -> List[Dict[str, str]]:
+    """The newest gate per skill, where that newest gate is a ``FAIL``.
+
+    The pipeline stops at the first ``FAIL``, but a later run plans only its
+    own stages: a ``FAIL`` left in ``process/gates/`` would otherwise be
+    copied into ``results/`` by the next promotion, and the deliverable would
+    carry a failed check that nobody looked at. Re-running the skill writes a
+    newer gate, which is how a failure is cleared.
+    """
+    gates_dir = os.path.join(root, "process", "gates")
+    if not os.path.isdir(gates_dir):
+        return []
+    newest: Dict[str, tuple] = {}
+    for name in sorted(os.listdir(gates_dir)):
+        if not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(gates_dir, name), encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        skill = str(data.get("skill") or name.rsplit("_", 1)[0])
+        stamp = str(data.get("timestamp") or "")
+        newest[skill] = (stamp, name, data)
+    out: List[Dict[str, str]] = []
+    for skill, (_stamp, name, data) in sorted(newest.items()):
+        if str(data.get("status") or "").upper() == "FAIL":
+            out.append({"skill": skill, "gate": f"process/gates/{name}",
+                        "reason": str(data.get("reason") or "")})
+    return out
+
+
 def _sha256_file(path: str) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -552,6 +590,12 @@ def promote(root: str, stamp: str,
     src = os.path.join(root, "process")
     if not os.path.isdir(src):
         return None
+    failed = failed_gates(root)
+    if failed:
+        raise PromotionLocked(
+            "process/ holds a failed gate ("
+            + ", ".join(sorted({f["skill"] for f in failed}))
+            + "); fix the input and re-run that skill")
     dst = os.path.join(root, "results", f"promoted_{stamp}")
     # The promotion target is derived from a timestamp, but it is still a
     # write: prove it lands inside the workspace before copying anything.
@@ -797,6 +841,17 @@ def run(root: str, mode: str = "a", input_kind: str = "",
             terminated = True
             break
 
+    failed = failed_gates(root)
+    if not terminated and failed:
+        names = ", ".join(sorted({f["skill"] for f in failed}))
+        result["blocked"] = "gate"
+        result["reason"] = (
+            "promotion withheld: " + names + " failed in this workspace and "
+            "has not been re-run since; fix the input and run that skill again")
+        print(_color(f"PROMOTION WITHHELD — {result['reason']}", _RED),
+              file=sys.stderr)
+        terminated = True
+
     if not terminated:
         stamp = _ts()
         # Promotion is the pipeline's one irreversible write: intermediate
@@ -813,10 +868,15 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                 print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
                       file=sys.stderr)
             else:
-                promoted = promote(root, stamp, {
-                    "source": "token",
-                    "nonce": token.get("nonce"),
-                })
+                try:
+                    promoted = promote(root, stamp, {
+                        "source": "token",
+                        "nonce": token.get("nonce"),
+                    })
+                except PromotionLocked as exc:
+                    result["blocked"] = "gate"
+                    result["reason"] = f"promotion withheld: {exc}"
+                    promoted = None
                 result["promoted"] = promoted is not None
                 result["promoted_to"] = promoted
         else:
@@ -832,7 +892,12 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                 print(_color(f"PROMOTION WITHHELD — {exc}", _RED),
                       file=sys.stderr)
             else:
-                promoted = promote(root, stamp, {"source": "scripted-run"})
+                try:
+                    promoted = promote(root, stamp, {"source": "scripted-run"})
+                except PromotionLocked as exc:
+                    result["blocked"] = "gate"
+                    result["reason"] = f"promotion withheld: {exc}"
+                    promoted = None
                 result["promoted"] = promoted is not None
                 result["promoted_to"] = promoted
 
@@ -888,7 +953,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(json.dumps(result, ensure_ascii=False, indent=2))
     # A withheld promotion is a refusal, not a success: a caller that
     # only reads the exit status must not see the run as complete.
-    withheld = result.get("blocked") == "approval"
+    withheld = bool(result.get("blocked"))
     return 1 if (result.get("terminated_by") or result.get("error")
                   or withheld) else 0
 

@@ -1,6 +1,7 @@
 """Router tests: plan building, dry-run, FAIL hard-block, promotion lock."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -376,6 +377,56 @@ def test_a_selected_name_that_does_not_exist_is_an_error(workspace):
     assert result["decisions"] == []
     assert result["promoted"] is False
     assert "results_audit" in result
+
+
+def _write_gate(workspace, skill, status, stamp):
+    gates = workspace / "process" / "gates"
+    gates.mkdir(parents=True, exist_ok=True)
+    path = gates / f"{skill}_{stamp}.json"
+    path.write_text(json.dumps({
+        "skill": skill, "status": status, "reason": f"{status} for {skill}",
+        "timestamp": stamp}), encoding="utf-8")
+    return path
+
+
+def test_promotion_is_withheld_while_a_failed_gate_stands(workspace,
+                                                          monkeypatch):
+    """A FAIL from an earlier run is not erased by a later, narrower plan.
+
+    Driving a manuscript through the pipeline exposed this: reference-auditor
+    failed on a DOI, and a later `--mode a` run planned only the ingest stage
+    -- then promoted process/ and copied the FAIL gate into results/.
+    """
+    _write_gate(workspace, "reference-auditor", "FAIL", "20260101T000000Z")
+    monkeypatch.setenv("CHELATE_HUMAN", "1")
+    monkeypatch.setattr(router, "load_default_registry",
+                        lambda: _FakeRegistry())
+    monkeypatch.setattr(router, "run_skill",
+                        lambda rec, root, action, extra, timeout=600, debug=False:
+                        _record("PASS", skill=rec.name))
+
+    result = router.run(str(workspace), mode="a", input_kind="pdf",
+                        require_approval=False)
+
+    assert result["promoted"] is False
+    assert result["blocked"] == "gate"
+    assert "reference-auditor" in result["reason"]
+    assert not list((workspace / "results").glob("promoted_*"))
+
+
+def test_promote_refuses_directly_while_a_failed_gate_stands(workspace):
+    _write_gate(workspace, "reference-auditor", "FAIL", "20260101T000000Z")
+    with pytest.raises(router.PromotionLocked):
+        router.promote(str(workspace), "20260101T000000Z")
+
+
+def test_re_running_the_failed_skill_clears_the_lock(workspace):
+    _write_gate(workspace, "reference-auditor", "FAIL", "20260101T000000Z")
+    assert router.failed_gates(str(workspace))
+
+    _write_gate(workspace, "reference-auditor", "PASS", "20260102T000000Z")
+    assert router.failed_gates(str(workspace)) == []
+    assert router.promote(str(workspace), "20260103T000000Z") is not None
 
 
 def test_the_cli_exits_non_zero_for_an_unknown_selected_skill(workspace):

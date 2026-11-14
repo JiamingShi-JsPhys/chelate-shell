@@ -76,6 +76,14 @@ inside the workspace.
   so losing the key cannot quietly downgrade the audit.
 
 ### Fixed
+- **A failed gate from an earlier run could still be promoted.** A manuscript
+  driven end to end exposed it: `reference-auditor` failed on a DOI that does
+  not exist, then a later `--mode a` run — which plans only the ingest stage —
+  promoted `process/` and carried the `FAIL` gate into `results/`, reporting
+  `promoted: true` and a clean audit. `promote()` now reads
+  `process/gates/` and refuses while the newest gate for any skill is a
+  `FAIL`; re-running that skill writes a newer gate and clears the lock, and
+  the approval token is left unspent while the lock stands.
 - **A withheld promotion exited 0.** `cli.py pipeline` printed
   `"blocked": "approval"`, wrote its report and told the caller nothing —
   the exit status said success, while `docs/SAFETY.md` said the process

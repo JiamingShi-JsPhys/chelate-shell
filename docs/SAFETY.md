@@ -48,6 +48,15 @@ A token is bound to:
 | expiry (default 15 min) | a stale approval cannot be replayed later |
 | a random nonce, signed with HMAC-SHA256 | editing the plan or the expiry breaks the signature |
 
+A `FAIL` is not forgotten between runs: `promote()` reads `process/gates/`
+and refuses while the newest gate for any skill is a `FAIL`. Driving a
+manuscript through the pipeline found why this matters — `reference-auditor`
+failed on a fabricated DOI, and a later `--mode a` run, which plans only the
+ingest stage, promoted `process/` anyway and copied the failed gate into
+`results/` under a clean audit. Re-running the skill writes a newer gate,
+which is how the failure is cleared; the token is not consumed while the lock
+stands, so an approval issued for the plan still works afterwards.
+
 Consumption renames the token with `O_CREAT|O_EXCL` before deleting it, so two
 consumers cannot both spend it. When no valid token is present, the promotion
 does not happen, the report records `"blocked": "approval"`, and the process
