@@ -318,9 +318,9 @@ Stated plainly; read them before depending on any output or on this safeguard:
 
 **Ordinary bugs and feature requests**: the repository's [Issues](https://github.com/JiamingShi-JsPhys/chelate-shell/issues) page, with reproduction steps, expected behaviour, actual behaviour and your environment (OS, Python version).
 
-**Security vulnerabilities (this category only)**: do **not** use the public issue tracker — email `jiamingshi_git@outlook.com` instead.
+**Security vulnerabilities (this category only)**: do **not** use the public issue tracker. Use GitHub's private reporting form — the **Security** tab → **Report a vulnerability** — as described in [SECURITY.md](SECURITY.md).
 
-- **Subject**: must start with `report_chelate-shell:` plus the skill name and a short summary.
+- **Title**: must start with `report_chelate-shell:` plus the skill name and a short summary.
   - Example: `report_chelate-shell: path traversal can read outside the task folder`
 - **Body**: must contain detailed reproduction steps and the environment.
 - For serious reports about lost or corrupted files, include the before/after directory tree (`tree` output) and the generated `verification_report.md`.

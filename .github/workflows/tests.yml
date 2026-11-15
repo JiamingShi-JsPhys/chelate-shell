@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# The suite only reads the checkout. Declaring that here keeps the default
+# token read-only whatever the repository or organisation default is.
+permissions:
+  contents: read
+
 jobs:
   # The path a fresh user gets: `pip install` of the plugin installs nothing
   # else, so the suite must survive on pytest alone. Tests that assert a real

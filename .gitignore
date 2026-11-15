@@ -30,6 +30,10 @@ test_workspace/
 
 # Environment / secrets (never commit)
 .env
+.env.*
+*.pem
+*.key
+*.p12
 
 # Test caches
 .pytest_cache/

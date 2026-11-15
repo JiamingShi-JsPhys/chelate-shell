@@ -318,11 +318,11 @@ python -m pytest tests/ -q
 
 **常规 Bug / 功能建议**：首选在仓库的 [Issues](https://github.com/JiamingShi-JsPhys/chelate-shell/issues) 页面提交，并附上复现步骤、预期行为、实际行为与运行环境（操作系统、Python 版本）。
 
-**安全漏洞报告（仅限此类型）**：请**不要**在公开的 Issues 页面提交，改为发送邮件至 `jiamingshi_git@outlook.com`。
+**安全漏洞报告（仅限此类型）**：请**不要**在公开的 Issues 页面提交。请使用 GitHub 的私密报告表单——**Security** 标签页 → **Report a vulnerability**，详见 [SECURITY.md](SECURITY.md)。
 
-- **邮件主题**：必须包含前缀 `report_chelate-shell:` 以及具体技能名与简述。
+- **标题**：必须以 `report_chelate-shell:` 为前缀，后接具体技能名与简述。
   - 示例：`report_chelate-shell: 路径穿越漏洞可读取任务文件夹之外的路径`
-- **邮件正文**：必须包含详细的复现步骤与运行环境。
+- **正文**：必须包含详细的复现步骤与运行环境。
 - 针对“文件丢失或损坏”的严重报告，请附带前后目录树结构（`tree` 输出）与生成的 `verification_report.md`。
 
 *提交清晰、可复现 Issue 或 Pull Request 的贡献者，将被列入下个版本 Release 说明的致谢名单。*
