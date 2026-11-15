@@ -1,9 +1,9 @@
 ---
-description: Chelate Shell orchestrator operating rules (v1.3.4)
+description: Chelate Shell orchestrator operating rules (v1.3.5)
 alwaysApply: true
 ---
 
-# Chelate Shell — agent operating rules (v1.3.4)
+# Chelate Shell — agent operating rules (v1.3.5)
 
 Chelate Shell is a deterministic **orchestrator** for local agent skills. It
 routes work to the right skill through a gated pipeline; it does not generate
@@ -25,7 +25,9 @@ per skill directly under `skills/`).
   no promotion accounts for (exit 1). Never copy a file into `results/`
   yourself: the gate guards `promote()`, not the directory, and the audit
   is how that difference shows up.
-- `.dsh-plugin/index.js` — non-Python harness entry (`apply(ctx)`)
+- `.dsh-plugin/index.js` — non-Python harness entry (`apply(ctx)`); in DSH it
+  registers the tools `chelate_skills`, `chelate_run`, `chelate_pipeline` and
+  `chelate_audit`
 
 ## Pipeline (strict order)
 

@@ -40,7 +40,7 @@ Add an entry to `~/# local configmcp.json` (the file used for custom connectors,
 
 Replace `<python>` with an interpreter that has the requirements installed — on
 Windows use the absolute path, e.g.
-`C:/Users/you/# local configbinaries/python/envs/default/Scripts/python.exe`.
+`C:/Users/<you>/miniconda3/envs/default/python.exe`.
 
 After saving the config, the server does not activate on its own: open the
 custom connectors entry at the top right of the connector management page and

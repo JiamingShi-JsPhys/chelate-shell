@@ -6,7 +6,7 @@ Each skill solves a single problem. The hard part is what runs first, and where 
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.4 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
+**Version:** 1.3.5 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
 
 > Research assistance only. Read [Safety and licensing](#safety-and-licensing) before relying on any output.
 
@@ -66,11 +66,11 @@ Visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell`
 ### Method two: install from a marketplace URL
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.4
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.5
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.4` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
+`#v1.3.5` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
 
 ### Method three: install with commands
 

@@ -19,10 +19,10 @@ the READMEs state in prose:
    catches a doc claiming a dependency the manifest does not declare (the
    `pandoc` / `cleanlab` drift that survived several releases), and a
    manifest dependency no doc mentions;
-7. every contact address in the tree is the one canonical mailbox — the
-   `jiamingshi_physics@` spelling that sat in `capstone-labmate`'s
-   packaging while the rest of the repo used `jiamingshi_git@` survived
-   two releases because nothing compared the two.
+7. every contact address in the tree is the one canonical mailbox — a
+   second spelling of it sat in `capstone-labmate`'s packaging while the
+   rest of the repo used the canonical one, and survived two releases
+   because nothing compared the two.
 
 Run:  python -m pytest tests/test_repo_consistency.py -q
 """
@@ -39,7 +39,7 @@ from conftest import SKILLS_DIR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERSION = "1.3.4"
+EXPECTED_VERSION = "1.3.5"
 CANONICAL_CONTACT_EMAIL = "jiamingshi_git@outlook.com"
 # v1.3.0 extended the four runtime stages (workspace/ingest/gates/processors)
 # with three architectural categories: infrastructure (security-guard),
@@ -496,8 +496,8 @@ _PLACEHOLDER_DOMAINS = ("example.com", "example.invalid")
 def test_contact_email_is_unified():
     """Every real contact address in the tree is CANONICAL_CONTACT_EMAIL.
 
-    The `jiamingshi_physics@` spelling sat in `capstone-labmate`'s
-    packaging while the other twelve surfaces used `jiamingshi_git@`;
+    A second spelling of the maintainer mailbox sat in `capstone-labmate`'s
+    packaging while the other twelve surfaces used the canonical one;
     nothing compared them, so the drift survived two releases. Placeholder
     addresses on reserved domains (`you@example.com` in CONTRIBUTING.md,
     the Crossref politeness mailbox `chelate-shell@example.invalid`) and

@@ -66,11 +66,11 @@
 ### 方法二：从插件市场用 URL 安装
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.4
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.5
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.4` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
+`#v1.3.5` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
 
 ### 方法三：用命令安装
 

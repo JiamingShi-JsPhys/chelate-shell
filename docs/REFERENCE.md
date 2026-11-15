@@ -17,7 +17,7 @@ chelate-shell/
 ├── .codex-plugin/                    # Codex plugin manifest + marketplace
 ├── .continue/rules/                  # Continue rule directory
 ├── .cursor/rules/                    # Cursor rule file (.mdc)
-├── .dsh-plugin/                      # DeepSeek Harness CJS entry (apply(ctx))
+├── .dsh-plugin/                      # DeepSeek Harness descriptor (re-exports index.js)
 ├── .github/                          # GitHub Copilot instruction file
 ├── .gitignore
 ├── .roo/rules/                       # Roo Code rule directory
@@ -46,7 +46,7 @@ chelate-shell/
 │   ├── security_shield.py            # anti-injection text scan + AST dangerous-call scan
 │   └── subagent_manager.py           # sub-agent role registry
 ├── docs/                             # this reference, architecture, testing, install commands, dependencies
-├── index.js                          # CJS plugin entry (dsh ecosystem)
+├── index.js                          # ESM plugin entry (dsh: registers 4 tools)
 ├── install.py                        # one-command rule-file installer (see Installation)
 ├── lib/chelate_core/                 # shared core library (logic lives here)
 │   ├── __init__.py
@@ -61,7 +61,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.4)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.5)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md

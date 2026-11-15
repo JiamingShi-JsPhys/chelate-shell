@@ -2,6 +2,28 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.3.5] — 2026-11-15
+
+### Fixed
+- **The DeepSeek Harness entry now does something.** `index.js` and
+  `.dsh-plugin/index.js` were both ~150-byte stubs whose `apply()` printed one
+  line and returned, so `dsh plugin add` mounted a plugin that registered no
+  tools — the install succeeded, and nothing was reachable from the session.
+  `index.js` is now an ESM adapter that registers four tools against
+  `ctx.tools`: `chelate_skills` (read the registry), `chelate_run` (one skill),
+  `chelate_pipeline` (the gated chain, with `dry_run`) and `chelate_audit`.
+  Each spawns `cli.py` with an explicit argument vector — never a shell string
+  — forwards the session's abort signal, and returns the process's own exit
+  code and output unchanged. `.dsh-plugin/index.js` re-exports the same
+  implementation instead of carrying a second stub, and `package.json` now
+  declares `"type": "module"`.
+- **`.cursor/rules/chelate-shell.mdc` was missing the `cli.py audit` entry
+  point** that the other four rule files already carried, so a Cursor session
+  could not learn that the audit exists.
+
+### Changed
+- Version declarations bumped to 1.3.5 across the repository.
+
 ## [1.3.4] — 2026-11-14
 
 The second half of the 1.3.3 safety release. The tag was cut before the
@@ -552,10 +574,10 @@ A release about the test suite being trustworthy, not about the skills.
 - **Audit follow-up (2026-10-25, third pass): contact mailbox.** The repo
   carried two spellings of the maintainer address:
   `jiamingshi_git@outlook.com` in both READMEs and nine `AUTHORS.md` files,
-  and `jiamingshi_physics@outlook.com` in `capstone-labmate/pyproject.toml`
-  (the stale spelling had been there since the v1.0.0 source and was
-  faithfully migrated, so the capability guard saw matching bytes on both
-  sides). All twelve contact surfaces now read `jiamingshi_git@outlook.com`.
+  and a stale second spelling in `capstone-labmate/pyproject.toml` (it had
+  been there since the v1.0.0 source and was faithfully migrated, so the
+  capability guard saw matching bytes on both sides). All twelve contact
+  surfaces now read `jiamingshi_git@outlook.com`.
   The capability guard's metadata mask learned a contact-declaration rule (an
   `email` key in a packaging file is metadata, not capability), and
   `test_repo_consistency.py::test_contact_email_is_unified` walks every

@@ -15,7 +15,7 @@ chelate-shell/
 ├── .codex-plugin/                    # Codex 插件清单 + marketplace
 ├── .continue/rules/                  # Continue 规则目录
 ├── .cursor/rules/                    # Cursor 规则文件（.mdc）
-├── .dsh-plugin/                      # DeepSeek Harness CJS 入口（apply(ctx)）
+├── .dsh-plugin/                      # DeepSeek Harness 描述文件（转出 index.js）
 ├── .github/                          # GitHub Copilot 指令文件
 ├── .gitignore
 ├── .roo/rules/                       # Roo Code 规则目录
@@ -44,7 +44,7 @@ chelate-shell/
 │   ├── security_shield.py            # 提示注入文本扫描 + AST 危险调用扫描
 │   └── subagent_manager.py           # 子 Agent 角色注册表
 ├── docs/                             # 本页、架构、测试、安装命令、依赖矩阵
-├── index.js                          # CJS 插件入口（dsh 生态）
+├── index.js                          # ESM 插件入口（dsh：注册 4 个工具）
 ├── install.py                        # 一条命令装好所有规则文件的安装器（见安装章节）
 ├── lib/chelate_core/                 # 共享底层逻辑库（逻辑住在这里）
 │   ├── __init__.py
@@ -59,7 +59,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.4）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.5）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md
