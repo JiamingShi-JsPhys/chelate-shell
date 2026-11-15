@@ -333,7 +333,7 @@ Stated plainly; read them before depending on any output or on this safeguard:
 
 **DeepSec** — the code-security auditor this repository is scanned with. It found the two command-injection paths closed in 1.3.2, and in 1.3.4 it turned the update check from "carries a URL argument" into "can only request two fixed addresses".
 
-**Claude** (Anthropic) — a coding assistant on this project: drafting and revising code, tests, documentation and release notes. Every change it produced was read, run and verified here before it landed; the stage contract, the approval model and the threat model are the author's.
+**Claude** (Anthropic) — parts of the code, tests, documentation and release notes were written jointly with the author. Every change was reviewed and kept only where a test or a check could confirm it.
 
 Some of my friends — who used this plugin for tests in mathematics, theoretical physics, and experimental physics — helped me improve it from 1.3.3 to 1.3.4 through many real-world scenarios.
 

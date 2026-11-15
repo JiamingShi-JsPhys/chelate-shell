@@ -37,9 +37,7 @@ clean.
 
 ## AI assistance
 
-Claude (Anthropic) is used as a coding assistant on this project: drafting and
-revising code, tests, documentation and the release notes. It does not decide
-the design — the stage contract, the approval model and the threat model were
-chosen and are owned by the author — and every change it produced was read, run
-and verified here before it landed. Each claim in this repository is backed by
-a test or a command a reader can re-run, not by an assistant's assertion.
+Parts of this project's code, tests, documentation and release notes were
+written jointly by the author and Claude (Anthropic). Every change was reviewed
+and kept only where a test or a check could confirm it; many were substantially
+rewritten, and some were not used at all.
