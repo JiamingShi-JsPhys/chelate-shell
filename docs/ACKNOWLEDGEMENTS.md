@@ -34,3 +34,12 @@ Its L1 pattern set and SAST rules found the two command-injection paths that
 named. It is also the scanner behind the "0 findings" line quoted in the
 1.3.2 and 1.3.3 changelog entries, and it has no stake in the result: several rounds of fixes were rejected by it before one came back
 clean.
+
+## AI assistance
+
+Claude (Anthropic) is used as a coding assistant on this project: drafting and
+revising code, tests, documentation and the release notes. It does not decide
+the design — the stage contract, the approval model and the threat model were
+chosen and are owned by the author — and every change it produced was read, run
+and verified here before it landed. Each claim in this repository is backed by
+a test or a command a reader can re-run, not by an assistant's assertion.

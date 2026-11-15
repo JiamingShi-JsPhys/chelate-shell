@@ -1,6 +1,6 @@
 # Chelate Shell
 
-**Nineteen research skills routed as one deterministic pipeline — and it stops before the one step that cannot be undone.**
+**Nineteen research and engineering skills routed as one deterministic pipeline — and it stops before the one step that cannot be undone.**
 
 Each skill solves a single problem. The hard part is what runs first, and where the output lands — Chelate Shell puts the skills, the stage order and the gates in one repository.
 
@@ -8,7 +8,7 @@ Each skill solves a single problem. The hard part is what runs first, and where 
 
 **Version:** 1.3.5 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
 
-> Research assistance only. Read [Safety and licensing](#safety-and-licensing) before relying on any output.
+> Research and engineering assistance only. Read [Safety and licensing](#safety-and-licensing) before relying on any output.
 
 ---
 
@@ -332,6 +332,8 @@ Stated plainly; read them before depending on any output or on this safeguard:
 **NotFatJustRound** — [issue #1](https://github.com/JiamingShi-JsPhys/chelate-shell/issues/1) asked for CI and found that the npm `files` list was dropping core code.
 
 **DeepSec** — the code-security auditor this repository is scanned with. It found the two command-injection paths closed in 1.3.2, and in 1.3.4 it turned the update check from "carries a URL argument" into "can only request two fixed addresses".
+
+**Claude** (Anthropic) — a coding assistant on this project: drafting and revising code, tests, documentation and release notes. Every change it produced was read, run and verified here before it landed; the stage contract, the approval model and the threat model are the author's.
 
 Some of my friends — who used this plugin for tests in mathematics, theoretical physics, and experimental physics — helped me improve it from 1.3.3 to 1.3.4 through many real-world scenarios.
 
