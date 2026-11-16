@@ -76,6 +76,15 @@ Visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell`
 
 Claude Code, Codex, dsh and CodeBuddy install with a one-line plugin command; Cursor, Windsurf, Cline, Continue, Roo Code, GitHub Copilot and opencode read rule files, and one script writes all of them. Every command, every flag and the optional dependencies are on one page: **[docs/INSTALL_COMMANDS.md](docs/INSTALL_COMMANDS.md)**.
 
+The npm registry is covered there too. The published tarball is the same tree the release zip is — `index.js`, the DSH patch, `core/`, `lib/`, `contracts/`, `commands/`, `agents/` and all 19 folders under `skills/` — so it suits a project dependency or a DSH profile:
+
+```bash
+npm install chelate-shell                        # as a dependency in a project
+dsh plugin --profile <profile> add chelate-shell # into a DSH profile
+```
+
+An npm install places the files; it does not register the plugin with a host, so Claude Code, Codex, CodeBuddy and the rule-file hosts still need the commands above for that step. Optional skill dependencies (`pandas`, `sympy`, `rdkit`, …) are never installed by this package — see [Requirements](#requirements).
+
 ### Keeping an installed copy current
 
 A host installs the plugin into a cache of its own, so the copy that actually runs is frozen at the moment of installation — a fixed bug keeps running until that cache is refreshed. Two commands close the gap:

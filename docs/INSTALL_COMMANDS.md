@@ -99,3 +99,12 @@ Keep the cloned repository somewhere the agent can reach: every rule file names 
 ```text
 <clone>/AGENTS.md  →  <project>/AGENTS.md
 ```
+
+**npm registry** — the published tarball is the same tree as the release zip; it places files and does not register the plugin with a host:
+
+```bash
+npm install chelate-shell                         # as a project dependency
+dsh plugin --profile <profile> add chelate-shell  # into a DSH profile
+```
+
+Optional skill dependencies are not installed by this package — `python cli.py run <skill>` reports `UNVERIFIED` for a gate whose dependency is missing rather than failing.

@@ -99,3 +99,12 @@ python chelate-shell/install.py --project <项目> --only cursor,windsurf
 ```text
 <克隆目录>/AGENTS.md  →  <项目>/AGENTS.md
 ```
+
+**npm registry** —— 包与 Release zip 是同一棵树；它只负责放文件，不替宿主注册插件：
+
+```bash
+npm install chelate-shell                         # 作为项目依赖
+dsh plugin --profile <配置档> add chelate-shell   # 装进某个 DSH 配置档
+```
+
+可选技能依赖不会被这个包安装——某个门所需的依赖缺失时，`python cli.py run <skill>` 会给出 `UNVERIFIED`，而不是失败。

@@ -76,6 +76,15 @@
 
 Claude Code、Codex、dsh、CodeBuddy 用一行插件命令安装；Cursor、Windsurf、Cline、Continue、Roo Code、GitHub Copilot 与 opencode 读规则文件，一个脚本把这些文件一次写好。全部命令、全部参数与可选依赖集中在一页：**[docs/INSTALL_COMMANDS_zh.md](docs/INSTALL_COMMANDS_zh.md)**。
 
+npm 也在那一页：registry 上的包与 Release zip 是同一棵树——`index.js`、DSH 补丁、`core/`、`lib/`、`contracts/`、`commands/`、`agents/`，以及 `skills/` 下全部 19 个目录——适合作为项目依赖，或装进某个 DSH 配置档：
+
+```bash
+npm install chelate-shell                        # 作为项目依赖
+dsh plugin --profile <配置档> add chelate-shell   # 装进某个 DSH 配置档
+```
+
+npm 只负责把文件放下来，不会替宿主做插件注册；Claude Code、Codex、CodeBuddy 以及读规则文件的宿主，注册这一步仍要用上面的命令。可选技能依赖（`pandas`、`sympy`、`rdkit` 等）不会被这个包安装，见[环境要求](#环境要求)。
+
 ### 保持已安装副本是最新的
 
 宿主会把插件装进自己的缓存，所以真正运行的那份副本冻结在安装那一刻——修好的 bug 要等缓存刷新才停止运行。两条命令补上这个缺口：
