@@ -51,5 +51,8 @@
     "@deepseek-ai/dsh-tools": {
       "optional": true
     }
+  },
+  "scripts": {
+    "prepublishOnly": "node scripts/clean-pycache.mjs"
   }
 }
