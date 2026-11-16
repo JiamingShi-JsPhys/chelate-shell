@@ -288,6 +288,8 @@ This pipeline writes files and runs external commands, so the boundaries are in 
 
 Threat model, the 26 adversarial cases (including how three self-approval routes were closed and why two probes are reported as passing), and the known boundary: **[docs/SAFETY.md](docs/SAFETY.md)**.
 
+**Evidence.** The adversarial matrix is `tests/test_irreversible_actions.py` — 26 cases, each written as "the agent tries X, the shell must not do it"; two scripts that attempt self-approval live in `tests/attacks/`. The end-to-end demonstration and its measured output are in [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration), and the static-analysis result (0 findings on shipped code) is [here](docs/SAFETY.md#static-analysis).
+
 ---
 
 ## Requirements
@@ -297,7 +299,8 @@ Python 3.10+ and nothing else up front: the microkernel and most skills use the 
 ## Tests
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests/ -q                                 # the full suite
+python -m pytest tests/test_irreversible_actions.py -q    # the 26 adversarial cases
 ```
 
 413 tests: 402 pass and 11 skip with the optional dependencies installed; in a pytest-only environment the dependency-gated cases skip instead, and what runs is the `UNVERIFIED` path a fresh user actually meets. Seven skills also keep their own upstream suites under `skills/<skill>/tests/`, each run in its own process. Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.

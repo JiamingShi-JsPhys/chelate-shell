@@ -288,6 +288,8 @@ chelate-shell/
 
 威胁模型、26 条对抗用例（含三条自审批路径如何被堵、两条探针为何如实标为“通过”）与已知边界：**[docs/SAFETY.md](docs/SAFETY.md)**。
 
+**证据。** 对抗矩阵在 `tests/test_irreversible_actions.py`——26 条用例，每条都写成“agent 尝试 X，调度器必须不照做”；两个尝试自审批的攻击脚本在 `tests/attacks/`。端到端演示与实测输出见 [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration)，静态扫描结果（交付代码 0 处发现）见[此处](docs/SAFETY.md#static-analysis)。
+
 ---
 
 ## 环境要求
@@ -297,7 +299,8 @@ chelate-shell/
 ## 测试
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests/ -q                                 # 全量套件
+python -m pytest tests/test_irreversible_actions.py -q    # 26 条对抗用例
 ```
 
 413 个测试：装齐可选依赖时 402 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于 `skills/<skill>/tests/`，每个目录单独一个进程运行。两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
