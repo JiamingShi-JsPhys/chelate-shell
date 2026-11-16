@@ -1,9 +1,37 @@
 {
   "name": "chelate-shell",
   "version": "1.3.5",
-  "license": "MIT",
+  "description": "Nineteen research and engineering skills run as one gated pipeline for DeepSeek Harness and other agent hosts: falsifiable gates (atom conservation, CAS and units, Crossref DOI, ML leakage, OBJ mesh) block the stages downstream of a failure instead of passing it along.",
   "main": "index.js",
   "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-skills",
+    "orchestration",
+    "pipeline",
+    "gates",
+    "research",
+    "python"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JiamingShi-JsPhys/chelate-shell.git"
+  },
+  "homepage": "https://github.com/JiamingShi-JsPhys/chelate-shell#readme",
+  "bugs": {
+    "url": "https://github.com/JiamingShi-JsPhys/chelate-shell/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "files": [
     "index.js",
     "cordis.patch.yml",
@@ -15,10 +43,5 @@
     "skills/",
     "commands/",
     "agents/"
-  ],
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
-  }
+  ]
 }
