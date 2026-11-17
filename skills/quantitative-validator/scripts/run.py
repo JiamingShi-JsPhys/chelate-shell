@@ -25,7 +25,14 @@ import os
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath(os.path.join(_HERE, "..", "..", "..")))
+_repo = _HERE
+for _ in range(4):
+    if os.path.isdir(os.path.join(_repo, "lib", "chelate_core")):
+        break
+    _repo = os.path.dirname(_repo)
+else:
+    _repo = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
+sys.path.insert(0, _repo)
 sys.path.insert(0, _HERE)
 
 from lib.chelate_core import adapter  # noqa: E402

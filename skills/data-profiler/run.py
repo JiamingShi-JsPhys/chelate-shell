@@ -23,8 +23,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                "..", "..")))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, next(
+    (p for p in (_HERE, os.path.dirname(_HERE),
+                 os.path.dirname(os.path.dirname(_HERE)),
+                 os.path.dirname(os.path.dirname(os.path.dirname(_HERE))))
+     if os.path.isdir(os.path.join(p, "lib", "chelate_core"))),
+    os.path.abspath(os.path.join(_HERE, "..", ".."))))
 
 from lib.chelate_core import adapter, csv_profile, paths  # noqa: E402
 
