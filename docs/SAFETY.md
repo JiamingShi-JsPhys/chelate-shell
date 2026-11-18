@@ -87,10 +87,19 @@ true and `input()` genuinely blocks — not against a mocked `sys.stdin`:
 typing the phrase issues a token and the pipeline then promotes; typing
 anything else exits 2 and creates no key.
 
-`CHELATE_HUMAN=1` is the declared escape hatch for CI, where a human
-supervises the run but nothing is attached to stdin. It is deliberately an
-environment variable rather than a flag, so it appears in the job definition
-and in the process environment instead of on a command line an agent builds.
+### The scripted hatch, named as what it is
+
+`CHELATE_UNSAFE_AUTO_APPROVE=1` (before 1.3.6: `CHELATE_HUMAN=1`, still
+accepted, warns on stderr) is the escape hatch for CI, where a human
+supervises the run but nothing is attached to stdin.
+
+The variable is named after its actual strength. It is read from the process
+environment, and anything that can set an environment variable on a process
+it spawns — an agent included — can set this one. It records a *declaration*
+made by whoever wrote the job; it is not evidence that a person was watching,
+and no part of this code treats it as such. A run authorised this way is
+recorded in the promotion log as `"source": "scripted-run", "unsafe_auto":
+true` rather than as a human approval.
 
 ### Key layout
 
@@ -185,9 +194,126 @@ same user can write. It makes the bypass **visible**: "no delivery without an
 approval" becomes an auditable claim about a workspace, not an assumption
 about how the agent chose to behave.
 
+## Control 5 — a PASS describes specific bytes, and expires when they change
+
+A gate is an answer to a question about particular files. Until 1.3.6 it did
+not say *which* files: `{"status": "PASS"}` was true forever, including after
+the model it judged had been rewritten. An agent could let a check pass,
+change the input, and promote the result the check never saw.
+
+Every gate now carries two things, attached where they are serialized
+(`bootstrap.write_gate`, the one choke point all 19 skills write through, so
+a new adapter cannot forget them):
+
+- `inputs` — the SHA-256 of each file named on the adapter's command line,
+  keyed by its workspace-relative path;
+- `provenance` — the skill's version and a digest of its own code and
+  manifest.
+
+`promote()` compares both against the workspace before it copies anything. A
+mismatch — the file edited, deleted, or the skill's code replaced — makes the
+gate **expired**, and the promotion is refused with the file named:
+
+```text
+process/ holds an expired gate (formula-validator): its input or skill code
+changed after it ran; re-run that skill so the PASS describes the files on
+disk
+```
+
+The repair is the natural one: re-run the skill, which writes a newer gate
+describing what is there now. `result["gate_freshness"]` in every pipeline
+report says how many of the newest PASS gates are bound, how many are
+`unbound` (written before 1.3.6, and therefore verify nothing), and which
+expired.
+
+### UNVERIFIED no longer carries a result into `results/`
+
+`UNVERIFIED` means the check could not be made — a missing dependency, a
+timeout, an unreadable format. It was already excluded from being reported as
+a PASS; since 1.3.6 it also does not open the gate to `results/`. Promotion
+is refused, naming the skill, with one way through: `--allow-unverified`,
+which a person must also use when issuing the token
+(`cli.py approve --allow-unverified`). The choice is **bound into the token's
+parameters**, so an approval issued for the strict path cannot be spent on a
+run that accepts an unchecked result, and the override is recorded in the
+promotion log.
+
+### Publication is one rename
+
+`promote()` copies into `.chelate/staging/` first and then renames the tree
+onto `results/`. A crash mid-copy leaves a partial tree that no reader can
+see, which the next run deletes; `results/` only ever contains complete sets.
+Before 1.3.6 the copy went straight to its destination, so an interrupted
+promotion left a half-published directory that the pipeline report still
+called successful.
+
+## Control 6 — the run reads frozen inputs, not live paths
+
+Control 5 binds a gate to the bytes it judged. That still leaves a window
+*inside* the run: the router hashes a path, then the skill opens that same
+path a moment later, and a write in between changes what the skill read. The
+check and the use were two reads of a mutable name.
+
+Before dispatch, `core/snapshot.py` copies each declared input into
+`.chelate/snapshots/<id>/files/` — `<id>` derived from the set of
+(path, digest) pairs — and the adapters are handed those paths. What a skill
+reads is then addressed by content, and a snapshot is never written after it
+is created. The snapshot's manifest names every original path and its digest,
+which is what lets promotion still answer the question that matters: has the
+user's file changed since this run used it?
+
+Two consequences worth stating plainly:
+
+- **Re-running the same inputs reuses the directory.** The id is the content,
+  so a second run of an unchanged workspace does not accumulate copies.
+- **A file wired with `--skill-arg x:--input f` is frozen as well.** That flag
+  overrides the manifest-based wiring, so leaving it out would have put an
+  unfrozen path beside the frozen ones.
+- **Inputs above 256 MiB are not frozen.** Copying a multi-gigabyte video for
+  every run costs more than the protection is worth there; they are
+  dispatched from their original path and listed under `snapshot.direct` in
+  the pipeline report, so the weaker guarantee is visible rather than assumed.
+
+## Control 7 — the promotion boundary refuses links
+
+`promote()` copies `process/` into `results/`. Two shapes of link turn that
+copy into a way to move bytes the workspace never held:
+
+- **a symlink resolving outside the workspace** — `copytree` follows it, so an
+  agent can point one at any file the user can read and promote the copy;
+- **a hardlink** — there is no target to resolve; the same inode is simply
+  reachable under a second, ordinary-looking name.
+
+Both are refused by name before anything is copied. A symlink that stays
+inside the workspace is kept as a symlink and is harmless.
+
+## Tokens can be revoked and the key rotated
+
+`python cli.py revoke --root <ws>` deletes approvals that have not been spent —
+a token pasted into a chat or caught in a log stops being usable now rather
+than when its 15 minutes run out. `python cli.py rotate-key --root <ws>`
+replaces the workspace's signing key, which invalidates every token issued
+under the old one; the old key is *retired*, not deleted, so promotion records
+written before the rotation still verify. A rotation that turned yesterday's
+audit into `tampered` would be worse than no rotation.
+
+## The injection screen reads Chinese now
+
+`core/security_shield.py` shipped six English patterns. For a repository whose
+users write Chinese, that meant the pre-dispatch screen matched nothing they
+would ever type. It now normalises before matching — NFKC for full-width
+forms, zero-width and bidi characters removed, Cyrillic and Greek homoglyphs
+folded — and adds Chinese patterns (`忽略之前的所有指令`, `无视上面的设定`, …),
+further English ones, an HTML-comment rule and a one-level base64 decode.
+
+The patterns still require the object of the verb to be a prompt artefact
+(`指令`, `提示词`, `设定`), so ordinary prose such as `忽略不计二阶项` passes. It
+remains a screen, not a parser: a phrasing nobody wrote a pattern for gets
+through, which is the same limitation `security-guard` states about itself.
+
 ## The adversarial test matrix
 
-`tests/test_irreversible_actions.py` — 25 cases, each written as "the agent
+`tests/test_irreversible_actions.py` — 26 cases, each written as "the agent
 tries X, the shell must not do it":
 
 | Attack | Expected result |
@@ -215,10 +341,47 @@ believed, a corrupt line is reported instead of raised, a deliverable renamed
 to look like a report is still named, a signed log with no reachable
 key fails closed instead of trusting the lines, and `cli.py audit` exits 1.
 
+`tests/test_promotion_integrity.py` — 17 cases for what a promotion rests on:
+a bound gate is not stale while its input is unchanged, editing or deleting
+that input expires it, re-running the skill clears the expiry, a PASS whose
+skill code changed is stale, a pre-1.3.6 gate is counted as `unbound` rather
+than trusted, an `UNVERIFIED` gate blocks promotion by default and its
+override is recorded when given, an approval issued without the override
+cannot be spent on a run that uses it, a crash mid-copy publishes nothing, a
+leftover staging tree is cleaned instead of published, the promotion record
+names the gates it rested on, and the scripted hatch answers only to its own
+variable (the old name still works and says so).
+
+`tests/test_snapshots.py` — 7 cases for the frozen-input layer: the id is the
+content so a re-run reuses it, an edit to the original leaves the snapshot
+unchanged, the manifest maps a copy back to its original, a gate over a
+snapshot expires when the original changes, the adapter is handed the frozen
+path, a too-large input is dispatched direct, and pruning keeps the newest.
+
+`tests/test_token_lifecycle.py` — 8 cases: revoke deletes an unspent token,
+leaves consumed ones alone and can target one action; rotation invalidates
+tokens issued before it while a token issued after it works; a rotation does
+not retroactively mark the promotion log tampered; rotation needs a human
+channel; and **20 processes racing one token produce exactly one winner**.
+
+`tests/test_path_hardening.py` — 6 cases: a symlink leaving the workspace is
+refused, one that stays inside is kept, a hardlinked file is refused, a
+pre-existing symlink at the promotion target is refused, a FIFO aborts the
+copy without publishing (POSIX), and two inputs sharing a basename do not
+overwrite each other inside a snapshot.
+
+`tests/test_security_shield.py` — 26 cases, 15 of them added in 1.3.6: Chinese
+markers block, ordinary Chinese prose (`忽略不计`) does not, HTML comments,
+full-width, zero-width, Cyrillic homoglyphs, and base64 in both languages.
+
 Run them with:
 
 ```
 python -m pytest tests/test_irreversible_actions.py -q
+python -m pytest tests/test_promotion_integrity.py -q
+python -m pytest tests/test_snapshots.py -q
+python -m pytest tests/test_token_lifecycle.py -q
+python -m pytest tests/test_path_hardening.py -q
 ```
 
 Plus the existing guards this release builds on: the sandbox executable
@@ -259,11 +422,14 @@ These are stated so the claims above are not read as more than they are.
    will accept it. Measured, not assumed: `probe_key_hunt()` in the
    demonstration script below does exactly this and promotes successfully.
    Likewise, a process with an interactive terminal can read the prompt and
-   type the phrase. What this layer reliably stops is an agent that did not
-   go looking — which is the common case, and the three bypasses measured
-   before this release (`--no-approval`, calling `approval.issue()`, forging
-   a key inside the workspace) all now fail. Real containment needs an OS
-   boundary: a separate user, a container, a syscall filter.
+   type the phrase, and a process that spawns a child can set
+   `CHELATE_UNSAFE_AUTO_APPROVE=1` on it. Together those are a complete
+   forgery in three lines. What this layer reliably stops is an agent that did
+   not go looking — which is the common case, and the three bypasses measured
+   before 1.3.4 (`--no-approval`, calling `approval.issue()`, forging a key
+   inside the workspace) all now fail. Real containment needs an OS boundary:
+   a separate user, a container, a syscall filter. That is the 1.4.0 target,
+   not something this release claims.
 2. **The whitelist is a policy gate.** `python` is whitelisted, and a
    whitelisted interpreter can do whatever the user account can.
 3. **Approval binds `promote()`, not the `results/` directory.** The gate is
@@ -277,9 +443,18 @@ These are stated so the claims above are not read as more than they are.
    still owns its writes inside the workspace; `ensure_within` stops escapes,
    not mistakes within the boundary.
 4. **No network egress control.** A skill that calls out is not stopped here.
-5. **Approval is per plan, not per file.** Changing a file *inside* the
-   workspace that a skill reads is not detected; only the declared `--inputs`
-   are content-bound.
+5. **The token binds the plan; the gate binds the bytes — and only the files
+   an adapter was handed.** Since 1.3.6 a PASS expires when a *declared* input
+   or the skill's own code changes (Control 5). It does not cover a file the
+   adapter opened without being told — a config discovered by convention, an
+   environment variable, a network response. A skill that reads something must
+   name it on the command line to have it bound. Gates written before 1.3.6
+   carry no digests at all and are reported as `unbound`, not as fresh.
+6. **Gate files live in the workspace.** `process/gates/` is agent-writable,
+   so a process that can write files can also write a PASS. Freshness makes
+   that failure visible in the promotion record (a forged gate has no digests;
+   it shows up as `unbound`), but it does not prevent it. The same filesystem
+   boundary as limitation 3 is what would.
 
 ## Reproducing the demonstration
 
@@ -303,7 +478,33 @@ python cli.py audit --root /tmp/ws            # -> names it, exit 1
 ```
 
 For a scripted run with nothing attached to stdin, replace the human at the
-keyboard with a declaration: `CHELATE_HUMAN=1 python cli.py approve ...`.
+keyboard with a declaration: `CHELATE_UNSAFE_AUTO_APPROVE=1 python cli.py
+approve ...` (the pre-1.3.6 name `CHELATE_HUMAN` still works and warns). The
+name is the warning: it declares that nobody is watching, and the promotion
+log records the run as `scripted-run`, not as a human approval.
+
+### A research-shaped run, and five attacks on it
+
+`examples/graphene-tight-binding/run_demo.py` runs the shell against a
+nearest-neighbour tight-binding band structure — write the model, compute the
+bands, gate the inputs, approve, publish — and then has an agent try to defeat
+that run five different ways:
+
+```bash
+python examples/graphene-tight-binding/run_demo.py
+```
+
+| Scenario | Result |
+|---|---|
+| edit a parameter after the check | refused: the gate expired |
+| replace the approved model | refused: the token no longer fits the plan |
+| overwrite a figure after publication | named by `audit` as modified (detected, not prevented) |
+| delete an input after the check | refused: bound input missing |
+| write `results/` without a token | named by `audit` as unapproved (detected, not prevented) |
+
+The first three refusals happen before anything is written. The last two are
+after the fact and say so: that gap is limitation 3, and the demo is honest
+about which side of it each scenario falls on.
 
 ### Self-approval trials
 

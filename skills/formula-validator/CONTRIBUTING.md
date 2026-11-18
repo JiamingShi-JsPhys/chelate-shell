@@ -18,8 +18,8 @@ repository exists to hold.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/JiamingShi-JsPhys/agent-skills.git
-cd agent-skills/skills/formula-validator
+git clone https://github.com/JiamingShi-JsPhys/chelate-shell.git
+cd chelate-shell/skills/formula-validator
 
 # 2. Create a virtual environment and install dependencies
 python -m venv .venv

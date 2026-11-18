@@ -8,8 +8,8 @@ the project's standards.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/JiamingShi-JsPhys/agent-skills.git
-cd agent-skills/skills/task-organizer
+git clone https://github.com/JiamingShi-JsPhys/chelate-shell.git
+cd chelate-shell/skills/task-organizer
 
 # 2. Create a virtual environment and install dependencies
 python -m venv .venv

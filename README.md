@@ -6,7 +6,7 @@ Each skill solves a single problem. The hard part is what runs first, and where 
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.5 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
+**Version:** 1.3.6 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
 
 > Research and engineering assistance only. Read [Safety and licensing](#safety-and-licensing) before relying on any output.
 
@@ -66,11 +66,11 @@ Visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell`
 ### Method two: install from a marketplace URL
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.5
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.6
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.5` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
+`#v1.3.6` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
 
 ### Method three: install with commands
 
@@ -282,13 +282,18 @@ Record shapes, every command and flag, exit codes, per-skill input types and dep
 This pipeline writes files and runs external commands, so the boundaries are in the code rather than left to the caller's memory.
 
 - **The one irreversible step needs a person.** Promotion needs a token bound to the plan: action, workspace, mode/selection, the hash of every input file, a 15-minute expiry, an HMAC-SHA256 signature, spent atomically (`O_CREAT|O_EXCL`) so it cannot be replayed. The key lives in `%LOCALAPPDATA%\chelate\keys\` (or `$XDG_DATA_HOME`), never in the workspace.
-- **The issuing side is out of reach too.** Issuing requires an interactive terminal and a **typed** `approve promote`; EOF, a pipe or any other answer is a refusal. `CHELATE_HUMAN=1` is the declared CI hatch, and it lives in the job definition rather than on a command line an agent assembles.
+- **The issuing side is out of reach too.** Issuing requires an interactive terminal and a **typed** `approve promote`; EOF, a pipe or any other answer is a refusal. `CHELATE_UNSAFE_AUTO_APPROVE=1` is the CI hatch, named after its actual strength: it is an environment variable, so anything that can set one — an agent included — can set it. It records a declaration that nobody is watching, not a human approval, and the promotion log says `scripted-run`.
+- **A check expires when what it checked changes.** Every gate records the SHA-256 of the files it was handed and a digest of the skill's own code. Edit or delete one of them afterwards and the gate is stale: promotion is refused, naming the file, until that skill is re-run. An `UNVERIFIED` gate — a check that could not be made — no longer carries anything into `results/` unless a person bound `--allow-unverified` into the token.
+- **Publication is one rename.** The copy is staged and renamed onto `results/`, so an interrupted promotion leaves nothing half-published. A symlink pointing out of the workspace, or a hardlink, is refused at that boundary instead of being copied.
+- **The run reads frozen inputs.** Declared inputs are copied into `.chelate/snapshots/<content-id>/` before dispatch and the skills are handed those paths, so a file edited mid-run cannot change what a check saw. Inputs above 256 MiB are dispatched from their original path and reported as such.
+- **What was issued can be withdrawn.** `cli.py revoke` deletes unspent approvals; `cli.py rotate-key` replaces the signing key and invalidates every token issued under it, while old promotion records keep verifying.
+- **The injection screen reads Chinese.** It normalises full-width forms, zero-width characters and Cyrillic/Greek homoglyphs before matching, inspects HTML comments, decodes base64 once, and requires the object of the verb to be a prompt artefact so ordinary prose (`忽略不计`) passes.
 - **Containment and the sandbox.** `ensure_within()` resolves both paths with `realpath` before comparing, so `--output ../../x`, `workspace(root, "..")` and outward-pointing symlinks are refused before any write happens. The sandbox checks the child's `cmd[0]` against a whitelist before the process exists, and again inside the child.
 - **Auditable afterwards.** Every promotion is recorded in `results/.promotions.jsonl`, and `cli.py audit` names what no promotion accounts for, exiting 1.
 
-Threat model, the 26 adversarial cases (including how three self-approval routes were closed and why two probes are reported as passing), and the known boundary: **[docs/SAFETY.md](docs/SAFETY.md)**.
+Threat model, the 26 adversarial cases (including how three self-approval routes were closed and why two probes are reported as passing), the 17 promotion-integrity cases, and the known boundary: **[docs/SAFETY.md](docs/SAFETY.md)**.
 
-**Evidence.** The adversarial matrix is `tests/test_irreversible_actions.py` — 26 cases, each written as "the agent tries X, the shell must not do it"; two scripts that attempt self-approval live in `tests/attacks/`. The end-to-end demonstration and its measured output are in [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration), and the static-analysis result (0 findings on shipped code) is [here](docs/SAFETY.md#static-analysis).
+**Evidence.** The adversarial matrix is `tests/test_irreversible_actions.py` — 26 cases, each written as "the agent tries X, the shell must not do it"; `tests/test_promotion_integrity.py` adds 17 cases for gate freshness, the unverified block and atomic publication; two scripts that attempt self-approval live in `tests/attacks/`. A runnable end-to-end example — a tight-binding band structure with five attacks on it — is `examples/graphene-tight-binding/run_demo.py`, and the measured output is in [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration). The static-analysis result (0 findings on shipped code) is [here](docs/SAFETY.md#static-analysis). What each layer measured, which adversary it covers, and the three rates with their scope: **[docs/SECURITY_REPORT.md](docs/SECURITY_REPORT.md)**.
 
 ---
 
@@ -303,7 +308,7 @@ python -m pytest tests/ -q                                 # the full suite
 python -m pytest tests/test_irreversible_actions.py -q    # the 26 adversarial cases
 ```
 
-413 tests: 402 pass and 11 skip with the optional dependencies installed; in a pytest-only environment the dependency-gated cases skip instead, and what runs is the `UNVERIFIED` path a fresh user actually meets. Seven skills also keep their own upstream suites under `skills/<skill>/tests/`, each run in its own process. Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.
+471 tests: 459 pass and 12 skip with the optional dependencies installed; in a pytest-only environment the dependency-gated cases skip instead, and what runs is the `UNVERIFIED` path a fresh user actually meets. Seven skills also keep their own upstream suites under `skills/<skill>/tests/`, each run in its own process. Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## Safety and licensing
 

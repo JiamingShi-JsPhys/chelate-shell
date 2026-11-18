@@ -50,7 +50,7 @@ Runtime dependencies
   pypdf                            BSD-3-Clause   fulltext-extractor (fallback backend)
   pdfminer.six                     MIT            fulltext-extractor (primary backend)
   opencv-contrib-python-headless   Apache-2.0     video-tracker
-  matplotlib                       Matplotlib     capstone-labmate, sci-visualizer, video-tracker
+  matplotlib                       Matplotlib     sci-visualizer, video-tracker
   seaborn                          BSD-3-Clause   sci-visualizer
   scikit-learn                     BSD-3-Clause   ml-auditor
   cleanlab                         Apache-2.0     ml-auditor (optional second opinion)

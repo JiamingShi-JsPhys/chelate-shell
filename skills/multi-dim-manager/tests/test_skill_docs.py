@@ -1,6 +1,6 @@
 """Documentation contract tests for multi-dim-manager.
 
-These guard the conventions the agent-skills repository enforces: bilingual
+These guard the conventions the chelate-shell repository enforces: bilingual
 READMEs, zero-CJK English README, version tri-consistency, CRLF changelog, and
 self-containment (no references to sibling skills).
 """

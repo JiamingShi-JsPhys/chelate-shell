@@ -39,7 +39,7 @@ import os
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class GateStatus(str, Enum):
@@ -106,6 +106,15 @@ class GateResult:
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     )
+    # Provenance since v1.3.6.  `inputs` maps each file the adapter was told
+    # to read (relative posix path when inside the workspace) to its SHA-256
+    # at the moment the gate ran; `provenance` carries the skill version and a
+    # digest of the skill's own code.  Both are what makes a PASS *stale* when
+    # the input or the skill changes afterwards -- see core/router.promote().
+    # Gates written before 1.3.6 leave them empty, and the router reports
+    # those as unbound rather than pretending they verify anything.
+    inputs: Dict[str, str] = field(default_factory=dict)
+    provenance: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -122,6 +131,9 @@ class GateResult:
             reason=str(d.get("reason", "")),
             artifacts=list(d.get("artifacts", []) or []),
             timestamp=str(d.get("timestamp", "")),
+            inputs={str(k): str(v) for k, v in
+                    (d.get("inputs") or {}).items()},
+            provenance=dict(d.get("provenance") or {}),
         )
 
     def to_json(self, path: Optional[str] = None) -> str:

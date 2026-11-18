@@ -33,7 +33,8 @@ chelate-shell/
 │   └── model3d.md                    # /model3d —— OBJ 网格生成 / 合并 / 审计
 ├── contracts/                        # 全局通信契约
 │   ├── __init__.py
-│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts}
+│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts,
+│   │                                 #  inputs, provenance}  (last two bind a PASS to bytes)
 │   └── schema.json                   # manifest.json 的强校验规范
 ├── cordis.patch.yml                  # cordis bundle 补丁
 ├── core/                             # 微内核
@@ -59,7 +60,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.5）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.6）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md

@@ -24,8 +24,8 @@ summary costs a few hundred tokens.
 
 ## Mounting
 
-Add an entry to `~/# local configmcp.json` (the file used for custom connectors,
-**not** `.mcp.json`):
+Add an entry to `~/.claude.json`, under `mcpServers` (the user-level file Claude
+Code reads for custom MCP servers, **not** the project's `.mcp.json`):
 
 ```json
 {
@@ -42,9 +42,9 @@ Replace `<python>` with an interpreter that has the requirements installed — o
 Windows use the absolute path, e.g.
 `C:/Users/<you>/miniconda3/envs/default/python.exe`.
 
-After saving the config, the server does not activate on its own: open the
-custom connectors entry at the top right of the connector management page and
-click **Trust** on the new server.
+After saving, the server does not activate on its own: restart Claude Code and
+check `claude mcp list`. In the desktop app it appears under connectors, where
+it has to be trusted before first use.
 
 A ready-to-edit copy is in `mcp_config.example.json`.
 

@@ -30,9 +30,11 @@ Design (v1.3.0, task #127):
 from __future__ import annotations
 
 import ast
+import base64
 import os
 import pathlib
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -56,9 +58,75 @@ INJECTION_PATTERNS: List[Dict[str, str]] = [
      "re": r"(you\s+are\s+now|act\s+as|pretend\s+to\s+be)\s+(a|an|the)?\s*(evil|unfiltered|uncensored|dm|god)"},
     {"id": "new-instructions",
      "re": r"new\s+instructions\s*[:\-]"},
+    # -- v1.3.6: the English set above matched nothing in Chinese prose, and
+    # -- this repository's users write Chinese.  Each pattern requires the
+    # -- object of the verb to be a prompt artefact (指令/提示词/设定), so
+    # -- ordinary prose such as 忽略不计 does not match.
+    {"id": "zh-ignore-instructions",
+     "re": r"(忽略|忽视|无视|忘记|忘掉|不要理会|别再管|抛开)\s*(掉)?\s*((之前|以上|上面|上述|前面|先前|原先|所有|全部|一切|系统|安全)\s*(的)?\s*){0,3}((说过|提到|讲到|给出|写下)\s*的?\s*)?(指令|指示|提示词|提示语|设定|要求|规则|限制)"},
+    {"id": "zh-override-role",
+     "re": r"(你现在是|从现在(开始|起)|接下来你是)[^。]{0,16}(不受|不必|无需|没有)\s*(任何)?\s*(限制|约束|审查)"},
+    {"id": "zh-jailbreak",
+     "re": r"(开发者模式|越狱模式|无限制模式|DAN\s*模式|绕过\s*(安全|内容)?\s*(限制|审核|过滤))"},
+    {"id": "zh-reveal-prompt",
+     "re": r"(输出|打印|显示|复述|告诉我)\s*(你的)?\s*(系统)?\s*(提示词|系统提示|初始指令)"},
+    # -- English patterns the first set missed.
+    {"id": "bypass-safety",
+     "re": r"(ignore|disregard|bypass|override)\s+(the\s+)?(safety|security|content)\s+(rules|policy|policies|guidelines|filter)"},
+    {"id": "reveal-system-prompt",
+     "re": r"(reveal|print|show|repeat|leak)\s+(me\s+)?(your\s+)?(system\s+prompt|initial\s+instructions|hidden\s+prompt)"},
+    {"id": "html-comment-instruction",
+     "re": r"<!--[^>]{0,400}(ignore|disregard|bypass|忽略|无视|system\s*prompt)"},
 ]
 
-_COMPILED = [(p["id"], re.compile(p["re"], re.IGNORECASE)) for p in INJECTION_PATTERNS]
+_COMPILED = [(p["id"], re.compile(p["re"], re.IGNORECASE | re.UNICODE))
+             for p in INJECTION_PATTERNS]
+
+# Zero-width and bidi-control characters: invisible in a rendered document,
+# decisive for a regex. Removed before matching, not after.
+_INVISIBLE = dict.fromkeys(
+    [0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x180E,
+     0x202A, 0x202B, 0x202C, 0x202D, 0x202E])
+
+# Letters that look Latin but are not. NFKC folds full-width forms; these
+# fold the Cyrillic and Greek lookalikes people use to slip past a keyword.
+_CONFUSABLES = str.maketrans({
+    "а": "a", "е": "e", "о": "o", "р": "p",
+    "с": "c", "у": "y", "х": "x", "і": "i",
+    "ѕ": "s", "ԁ": "d", "һ": "h", "т": "t",
+    "α": "a", "ε": "e", "ι": "i", "ο": "o",
+    "ρ": "p", "τ": "t", "ν": "v", "κ": "k",
+})
+
+# A base64 blob long enough to carry a sentence. Decoded once, scanned once:
+# nobody hides an instruction in eight bytes.
+_B64_BLOB = re.compile(r"[A-Za-z0-9+/]{32,}={0,2}")
+_B64_LIMIT = 8
+_WHITESPACE = chr(13) + chr(10) + chr(9)
+
+
+def _normalise(text: str) -> str:
+    """Fold away the ways a keyword can be written without looking like it."""
+    folded = unicodedata.normalize("NFKC", text).translate(_INVISIBLE)
+    return folded.translate(_CONFUSABLES)
+
+
+def _decoded_payloads(text: str):
+    """Yield the readable text hidden in base64 blobs, most blobs first."""
+    for index, match in enumerate(_B64_BLOB.finditer(text)):
+        if index >= _B64_LIMIT:
+            return
+        blob = match.group(0)
+        try:
+            raw = base64.b64decode(blob + "=" * (-len(blob) % 4),
+                                   validate=True)
+            decoded = raw.decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            continue
+        printable = sum(1 for ch in decoded
+                        if ch.isprintable() or ch in _WHITESPACE)
+        if len(decoded) >= 8 and printable > len(decoded) * 0.9:
+            yield decoded
 
 
 def scan_text(text: str) -> Dict[str, object]:
@@ -68,9 +136,21 @@ def scan_text(text: str) -> Dict[str, object]:
     """
     hits: List[str] = []
     if text:
+        normalised = _normalise(str(text))
         for pid, rx in _COMPILED:
-            if rx.search(text):
+            if rx.search(normalised):
                 hits.append(pid)
+        if not hits:
+            # Encoded instructions: an ASCII-safe wrapper changes nothing
+            # about what the model would eventually read.
+            for decoded in _decoded_payloads(normalised):
+                decoded = _normalise(decoded)
+                for pid, rx in _COMPILED:
+                    if rx.search(decoded):
+                        hits.append(pid + "@base64")
+                        break
+                if hits:
+                    break
     return {
         "blocked": bool(hits),
         "reason": ("injection markers: " + ", ".join(hits)) if hits else "",

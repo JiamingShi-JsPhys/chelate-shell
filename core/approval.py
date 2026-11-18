@@ -24,15 +24,22 @@ so two things were moved out of its reach:
 
 * the signing key no longer lives in the workspace (see *Key layout* below);
 * issuing a token requires a **human channel** — an interactive terminal, or
-  an explicit ``CHELATE_HUMAN=1`` for a supervised scripted run.  An agent
-  subprocess has neither, so it cannot call ``issue()``, ``cli.py approve``,
-  or ``--no-approval`` at all.
+  an explicit ``CHELATE_UNSAFE_AUTO_APPROVE=1`` for a supervised scripted run.
+  An agent subprocess has neither, so it cannot call ``issue()``, ``cli.py
+  approve``, or ``--no-approval`` at all.
 
-What is left is the disclosed boundary: a process running as the same OS user
-that goes looking for the key file *and* sets ``CHELATE_HUMAN=1`` can still
-forge approval.  That is a process that has decided to defeat the control,
-and no in-process policy layer can stop it.  Real containment needs an OS
-boundary: a separate user, a container, a syscall filter.
+The second half of that sentence is policy, not enforcement, and 1.3.6 names
+it that way instead of hiding behind a friendlier variable name.  An agent
+that can set an environment variable on the process it spawns can set
+``CHELATE_UNSAFE_AUTO_APPROVE=1``; a process running as the same OS user can
+read the key file.  Together that is a complete forgery, in three lines, and
+no in-process policy layer can prevent it.  What the control buys is the
+distinction between a workflow that stayed inside the shell and one that
+went around it — plus an audit trail that says which happened.
+
+Real containment needs an OS boundary: a separate user for the worker, keys
+the worker cannot read, a protected results directory only the issuer can
+write.  That is planned for 1.4.0, not claimed here.
 
 Key layout
 ----------
@@ -71,7 +78,9 @@ DEFAULT_TTL_SECONDS = 900  # 15 minutes: long enough for a pipeline, short
 _TOKEN_VERSION = 1
 _STATE_DIR = ".chelate"
 _APPROVALS_DIR = "approvals"
-_HUMAN_ENV = "CHELATE_HUMAN"
+_HUMAN_ENV = "CHELATE_UNSAFE_AUTO_APPROVE"
+UNSAFE_AUTO_ENV = _HUMAN_ENV
+_LEGACY_UNSAFE_ENV = "CHELATE_HUMAN"
 
 
 class ApprovalRequired(RuntimeError):
@@ -98,15 +107,21 @@ def _human_channel(action: str = "promote") -> bool:
     the terminal, so ``isatty()`` says nothing about who is reading.  What an
     agent does not normally do is *type an answer*: this asks the person to
     type ``approve promote``, and treats EOF (a pipe or a closed stdin) as a
-    refusal.  ``CHELATE_HUMAN=1`` is the declared escape hatch for CI, where
-    a human supervises the run but nothing is attached.
+    refusal.
+
+    ``CHELATE_UNSAFE_AUTO_APPROVE=1`` is the scripted hatch, and its name is
+    the warning: it is an environment variable, and anything that can set an
+    environment variable on a process it spawns — an agent included — can set
+    this one.  Treat it as a declaration made by whoever wrote the job, not
+    as proof that a person was watching.  It is kept for CI because the
+    alternative there is a broken job, not a safer one.
 
     This raises the cost of the bypass; it does not make it impossible.  A
-    process running as the same user with a terminal *can* read the prompt
-    and type the answer.  That is the disclosed boundary — see the module
-    docstring and docs/SAFETY.md.
+    process running as the same user can read the prompt and type the answer,
+    and can set the variable above.  That is the disclosed boundary — see the
+    module docstring and docs/SAFETY.md.
     """
-    if os.environ.get(_HUMAN_ENV) == "1":
+    if unsafe_auto_declared():
         return True
     try:
         interactive = sys.stdin.isatty()
@@ -125,14 +140,32 @@ def _human_channel(action: str = "promote") -> bool:
     return answer.strip() == _CONFIRM_PHRASE
 
 
+def unsafe_auto_declared() -> bool:
+    """True when the scripted hatch was declared in this process's environment.
+
+    Read from the environment on purpose: it is a *declaration*, and a
+    declaration is exactly what an agent can also make.  Nothing downstream
+    may describe a run authorised this way as "human-approved".
+    """
+    if os.environ.get(UNSAFE_AUTO_ENV) == "1":
+        return True
+    if os.environ.get(_LEGACY_UNSAFE_ENV) == "1":
+        print(f"warning: {_LEGACY_UNSAFE_ENV} is the pre-1.3.6 name of "
+              f"{UNSAFE_AUTO_ENV}; it still works and means the same thing — "
+              f"no person is verifying this run at the keyboard",
+              file=sys.stderr)
+        return True
+    return False
+
+
 def require_human(what: str, action: str = "promote") -> None:
     """Raise ``HumanRequired`` unless an approval may be issued right now."""
     if _human_channel(action):
         return
     raise HumanRequired(
         f"{what} needs a human at the keyboard: run it from an interactive "
-        f"terminal and type the confirmation, or set {_HUMAN_ENV}=1 for a "
-        f"supervised scripted run")
+        f"terminal and type the confirmation, or set {UNSAFE_AUTO_ENV}=1 for "
+        f"a supervised scripted run")
 
 
 # --------------------------------------------------------------- key handling
@@ -207,6 +240,85 @@ def has_key(workspace: str) -> bool:
     return _key_path(workspace).is_file()
 
 
+def _retired_keys(workspace: str) -> List[Path]:
+    """Keys this workspace used before the last rotation, newest first.
+
+    They stay readable so signatures written before a rotation still verify:
+    rotating a key must not turn yesterday's promotion log into "tampered".
+    They are never used to *sign* anything new.
+    """
+    current = _key_path(workspace)
+    prefix = current.name[: -len(".key")] + ".retired-"
+    try:
+        found = sorted(current.parent.glob(prefix + "*.key"), reverse=True)
+    except OSError:
+        return []
+    return found
+
+
+def _read_key(path: Path) -> Optional[bytes]:
+    try:
+        return bytes.fromhex(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def rotate(workspace: str) -> Dict[str, Any]:
+    """Replace this workspace's signing key; retire the old one.
+
+    Every token issued before the rotation stops verifying, which is the
+    point: a key that may have been read by someone else cannot be trusted
+    again, and the only remedy is a key they never saw. Promotion log entries
+    written under the old key keep verifying, because the old key is retired
+    rather than deleted.
+
+    Returns ``{"rotated": True, "key": <path>, "retired": <path or "">,
+    "tokens_invalidated": <count>}``.
+    """
+    require_human("rotating the approval key", "promote")
+    path = _key_path(workspace)
+    retired_name = ""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(path.parent, 0o700)
+    except OSError:
+        pass
+    if path.is_file():
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        retired = path.parent / f"{path.name[:-len('.key')]}.retired-{stamp}.key"
+        os.replace(path, retired)
+        retired_name = str(retired)
+    key = secrets.token_bytes(32)
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(key.hex())
+    return {"rotated": True, "key": str(path), "retired": retired_name,
+            "tokens_invalidated": revoke(workspace)}
+
+
+def revoke(workspace: str, action: str = "promote") -> int:
+    """Delete unused approvals for this workspace; return how many went.
+
+    An issued token is a bearer instrument with a 15-minute life. Revoking
+    removes the ones not yet spent, so a token that leaked — pasted into a
+    chat, caught in a log, left in a shared folder — stops being spendable
+    now rather than when it expires. Tokens already consumed cannot be
+    revoked and do not need to be: consumption is one-way.
+    """
+    folder = Path(workspace).resolve() / _STATE_DIR / _APPROVALS_DIR
+    if not folder.is_dir():
+        return 0
+    pattern = f"{action}-*.json" if action else "*.json"
+    removed = 0
+    for path in folder.glob(pattern):
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def sign(workspace: str, payload: Dict[str, Any],
          create: bool = False) -> Optional[str]:
     """HMAC-SHA256 of a canonical payload with this workspace's key.
@@ -222,13 +334,21 @@ def sign(workspace: str, payload: Dict[str, Any],
 
 
 def verify(workspace: str, payload: Dict[str, Any], mac: str) -> bool:
-    """Constant-time check of a ``sign()`` result; False if the key is gone."""
-    try:
-        key = _load_key(workspace)
-    except (ApprovalRequired, ApprovalInvalid):
-        return False
-    expected = hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, str(mac))
+    """Constant-time check of a ``sign()`` result; False if no key fits.
+
+    Tries the current key first, then every retired one: a rotation must
+    invalidate *tokens* (they are checked against the current key only), not
+    the promotion log written before it.
+    """
+    candidates: List[Path] = [_key_path(workspace)] + _retired_keys(workspace)
+    for candidate in candidates:
+        key = _read_key(candidate)
+        if not key:
+            continue
+        expected = hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(expected, str(mac)):
+            return True
+    return False
 
 
 # ------------------------------------------------------------------ canonical
@@ -245,12 +365,18 @@ def params_digest(params: Dict[str, Any]) -> str:
 
 def pipeline_params(mode: str, input_kind: str,
                     inputs: Optional[Iterable[str]],
-                    selected: Optional[Iterable[str]]) -> Dict[str, Any]:
+                    selected: Optional[Iterable[str]],
+                    allow_unverified: bool = False) -> Dict[str, Any]:
     """Parameters a ``promote`` approval is bound to.
 
     Deliberately includes the content hash of every input: an approval issued
     for a draft cannot be spent on a different file that happens to have the
     same name.
+
+    ``allow_unverified`` is part of the binding on purpose.  Accepting an
+    unverified gate is a decision a person makes, not a switch a caller flips
+    after the token was issued: a token minted for the strict path cannot be
+    spent on a run that would carry an unchecked result into ``results/``.
     """
     files = []
     for path in sorted(str(p) for p in (inputs or [])):
@@ -264,6 +390,7 @@ def pipeline_params(mode: str, input_kind: str,
         "input_kind": input_kind,
         "selected": sorted(str(s) for s in (selected or [])),
         "inputs": files,
+        "allow_unverified": bool(allow_unverified),
     }
 
 

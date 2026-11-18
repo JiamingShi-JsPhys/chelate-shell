@@ -106,7 +106,8 @@ def cmd_approve(args) -> int:
     selected = [s.strip() for s in args.selected.split(",") if s.strip()] \
         if args.selected else []
     params = approval.pipeline_params(args.mode, args.input_kind,
-                                      inputs, selected)
+                                      inputs, selected,
+                                      allow_unverified=args.allow_unverified)
     try:
         token = approval.issue(root, "promote", params, ttl=args.ttl)
     except approval.HumanRequired as exc:
@@ -147,6 +148,7 @@ def cmd_pipeline(args) -> int:
         timeout=args.timeout,
         debug=args.debug,
         require_approval=not args.no_approval,
+        allow_unverified=args.allow_unverified,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     # A withheld promotion is a refusal, not a success: a caller that
@@ -154,6 +156,27 @@ def cmd_pipeline(args) -> int:
     withheld = bool(result.get("blocked"))
     return 1 if (result.get("terminated_by") or result.get("error")
                   or withheld) else 0
+
+
+def cmd_revoke(args) -> int:
+    """Delete unused approval tokens for this workspace."""
+    root = os.path.abspath(args.root)
+    removed = approval.revoke(root, args.action or "")
+    print(json.dumps({"root": root, "action": args.action or "*",
+                      "revoked": removed}, indent=2))
+    return 0
+
+
+def cmd_rotate_key(args) -> int:
+    """Replace the signing key; tokens issued before it stop verifying."""
+    root = os.path.abspath(args.root)
+    try:
+        report = approval.rotate(root)
+    except approval.HumanRequired as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps({"root": root, **report}, indent=2))
+    return 0
 
 
 def cmd_audit(args) -> int:
@@ -232,15 +255,23 @@ def build_parser() -> argparse.ArgumentParser:
                     help="verbose stderr diagnostics (same as CHELATE_DEBUG=1)")
     pp.add_argument("--no-approval", action="store_true",
                     help="skip the token and promote directly. Still needs a "
-                         "human channel (a terminal, or CHELATE_HUMAN=1), so "
-                         "an agent subprocess cannot use it; for scripted runs "
-                         "a human already supervises")
+                         "human channel (a terminal, or "
+                         f"{approval.UNSAFE_AUTO_ENV}=1), so an agent "
+                         "subprocess cannot use it; for scripted runs a human "
+                         "already supervises")
+    pp.add_argument("--allow-unverified", action="store_true",
+                    help="accept gates that ended UNVERIFIED (a check that "
+                         "could not be made) and promote anyway. Bound into "
+                         "the approval token: `approve --allow-unverified` "
+                         "must have been used for the token to be spendable "
+                         "here")
     pp.set_defaults(fn=cmd_pipeline)
 
     pa = sub.add_parser(
         "approve",
         help="issue a one-time approval token for an irreversible action "
-             "(needs a terminal, or CHELATE_HUMAN=1)")
+             "(needs a terminal, or "
+             "CHELATE_UNSAFE_AUTO_APPROVE=1)")
     pa.add_argument("--root", default=".")
     pa.add_argument("--action", default="promote",
                     choices=list(approval.IRREVERSIBLE_ACTIONS),
@@ -253,7 +284,29 @@ def build_parser() -> argparse.ArgumentParser:
     pa.add_argument("--selected", default="")
     pa.add_argument("--ttl", type=int, default=approval.DEFAULT_TTL_SECONDS,
                     help="seconds the token stays valid (default 900)")
+    pa.add_argument("--allow-unverified", action="store_true",
+                    help="bind this approval to a run that may promote past "
+                         "an UNVERIFIED gate; without it, such a run is "
+                         "refused even if the token is otherwise valid")
     pa.set_defaults(fn=cmd_approve)
+
+    pr_ = sub.add_parser(
+        "revoke",
+        help="delete unused approval tokens so they cannot be spent "
+             "(tokens already consumed cannot be revoked)")
+    pr_.add_argument("--root", default=".")
+    pr_.add_argument("--action", default="promote",
+                     help="which action's tokens to revoke (default: promote; "
+                          "an empty string revokes all)")
+    pr_.set_defaults(fn=cmd_revoke)
+
+    pk = sub.add_parser(
+        "rotate-key",
+        help="replace this workspace's signing key. Tokens issued before the "
+             "rotation stop working; promotion records written under the old "
+             "key keep verifying. Needs a terminal")
+    pk.add_argument("--root", default=".")
+    pk.set_defaults(fn=cmd_rotate_key)
 
     pu = sub.add_parser(
         "audit",

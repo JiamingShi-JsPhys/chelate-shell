@@ -112,7 +112,7 @@ def test_gate_fail_terminates_pipeline_and_locks_process(workspace,
 
 
 def test_full_pass_promotes_process_to_results(workspace, monkeypatch):
-    monkeypatch.setenv("CHELATE_HUMAN", "1")  # supervised scripted run
+    monkeypatch.setenv("CHELATE_UNSAFE_AUTO_APPROVE", "1")  # scripted
     monkeypatch.setattr(router, "load_default_registry",
                         lambda: _FakeRegistry())
     monkeypatch.setattr(router, "run_skill",
@@ -233,14 +233,18 @@ def test_dry_run_shows_auto_wired_inputs(workspace, capsys):
                         inputs=[str(csv)])
     entry = result["planned"][0]
     assert entry["skill"] == "data-profiler"
-    assert entry["input"] == str(csv)
+    # The adapter is handed a snapshot of the input, not the input itself:
+    # the file it reads cannot be edited out from under it mid-run.
+    assert os.path.basename(entry["input"]) == "data.csv"
+    assert ".chelate" in entry["input"] and "snapshots" in entry["input"]
+    assert result["snapshot"]["files"]["data.csv"] ==         os.path.relpath(entry["input"], workspace).replace(os.sep, "/")
     assert "--input" in capsys.readouterr().out
 
 
 @_needs_pandas
 def test_inputs_auto_wired_end_to_end(workspace, tmp_path, monkeypatch):
     """--inputs data.csv must reach data-profiler without --skill-arg."""
-    monkeypatch.setenv("CHELATE_HUMAN", "1")  # supervised scripted run
+    monkeypatch.setenv("CHELATE_UNSAFE_AUTO_APPROVE", "1")  # scripted
     csv = tmp_path / "data.csv"
     csv.write_text("x,y\n1,2\n3,4\n5,6\n", encoding="utf-8")
     result = router.run(str(workspace), mode="c",
@@ -248,11 +252,13 @@ def test_inputs_auto_wired_end_to_end(workspace, tmp_path, monkeypatch):
                         require_approval=False)
     assert result["terminated_by"] is None
     assert result["promoted"] is True
-    assert result["auto_inputs"] == {"data-profiler": str(csv)}
+    wired = result["auto_inputs"]["data-profiler"]
+    assert os.path.basename(wired) == "data.csv"
+    assert "snapshots" in wired           # a frozen copy, not the live file
     decision = result["decisions"][0]
     assert decision["status"] == "PASS"
     assert "--input" in decision["command"]
-    assert str(csv) in decision["command"]
+    assert wired in decision["command"]
 
 
 def test_run_skill_routes_sandbox_required_to_multiprocessing(tmp_path):
@@ -341,7 +347,8 @@ def test_inputs_narrow_the_plan_to_matching_skills(workspace, capsys):
     assert set(names) == {"conflict-detector", "data-profiler",
                           "longitudinal-analysis", "ml-auditor"}
     entry = next(p for p in result["planned"] if p["skill"] == "data-profiler")
-    assert entry["input"] == str(csv)
+    assert os.path.basename(entry["input"]) == "data.csv"
+    assert "snapshots" in entry["input"]
 
 
 def test_selected_skills_are_not_filtered_by_inputs(workspace, monkeypatch):

@@ -70,7 +70,7 @@ holds deliverables.
 - `results/` is written only by `python cli.py pipeline` after a human
   approved that exact plan. Do not write into it with your own file tools,
   even when asked to skip the process.
-- Never set `CHELATE_HUMAN=1` and never run `cli.py approve` on the user's
+- Never set `CHELATE_UNSAFE_AUTO_APPROVE=1` (formerly `CHELATE_HUMAN`) and never run `cli.py approve` on the user's
   behalf. If an approval is needed, ask the human to issue it in their own
   terminal.
 - After any write under `results/`, run `python cli.py audit --root .` and

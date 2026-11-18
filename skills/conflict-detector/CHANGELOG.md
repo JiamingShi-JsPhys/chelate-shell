@@ -4,6 +4,16 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.6] - 2026-11-18
+
+### Changed
+
+- No changes to this skill's code. The 1.3.6 release changes the shell around
+  it: gates record the bytes they judged and expire when those bytes change,
+  promotion is atomic, and the adapter is handed a content-addressed snapshot
+  of its declared inputs instead of the live file. See the repository
+  `CHANGELOG.md`.
+
 ## [1.3.5] - 2026-11-15
 
 ### Changed

@@ -4,7 +4,7 @@ Chelate Shell is the core router of the ecosystem. It does not generate low-leve
 Python itself; it routes every request to the right local skill, enforces a
 standard workspace layout, and respects the platform / security constraints below.
 
-- Version: **v1.3.5**
+- Version: **v1.3.6**
 - Skills: **19**, all flat under `./skills` — one folder per skill (all fully implemented)
 - Stages: **7** (4 runtime: workspace / ingest / gates / processors; 3 architectural layers: infrastructure / generation / domain_extensions)
 - Entry point (DeepSeek Harness): `index.js` (`apply(ctx)`, registers `chelate_skills` / `chelate_run` / `chelate_pipeline` / `chelate_audit`; `.dsh-plugin/index.js` re-exports it)
@@ -256,9 +256,22 @@ keeping the stdout contract clean.
    for), then `cli.py pipeline`. Without the token the run still completes and
    the report records `"blocked": "approval"`, but nothing is copied to
    `results/promoted_<ts>/`. `--no-approval` skips the token, not the human.
-5. **Degrade honestly.** A missing dependency yields `UNVERIFIED` with the
-   missing package named — never a crash, never a silent pass.
-6. **Debug with one switch.** `--debug` (or `CHELATE_DEBUG=1`, inherited by
+5. **A passing gate has a shelf life.** Each gate records the SHA-256 of the
+   files it was handed and a digest of the skill's code; change either and the
+   gate is *expired*, and promotion is refused with the file named until that
+   skill is re-run. The repair is the same command that produced the gate.
+6. **Inputs are frozen before use.** Declared inputs are copied into
+   `.chelate/snapshots/<content-id>/` before dispatch; adapters are handed
+   those paths, so a file edited mid-run cannot change what a gate judged.
+   Snapshots above 256 MiB are skipped and listed under `snapshot.direct`.
+7. **Degrade honestly — and do not deliver what was not checked.** A missing
+   dependency yields `UNVERIFIED` with the missing package named: never a
+   crash, never a silent pass, and no longer a route into `results/`. To accept
+   an unverified gate deliberately, a person passes `--allow-unverified` to
+   *both* `cli.py approve` and `cli.py pipeline`; the choice is bound into the
+   token so it cannot be added after the fact, and the override is recorded in
+   `results/.promotions.jsonl`.
+8. **Debug with one switch.** `--debug` (or `CHELATE_DEBUG=1`, inherited by
    every skill subprocess) prints the resolved command, return code and the
    adapter's stderr tail.
 
@@ -272,7 +285,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.5).
+marketplace. Keep `version` in sync across all manifests (currently 1.3.6).
 
 ## 7. Hard constraints
 

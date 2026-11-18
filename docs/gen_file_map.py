@@ -1,89 +1,159 @@
-import os, re, io
+"""Regenerate docs/FILE_FUNCTION_MAP.md from the tree that is actually here.
 
-BASE = os.path.dirname(os.path.abspath(__file__))
-SKILLS_SRC = os.path.join(BASE, '..', '..', 'chelate-shell-main', 'skills')
-OUT = os.path.join(BASE, 'FILE_FUNCTION_MAP.md')
+Caller: a maintainer, by hand:
 
-skills = ['task-organizer', 'multi-dim-manager', 'document-evolution-tracker',
-          'capstone-labmate', 'video-tracker', 'longitudinal-analysis',
-          'formula-validator', 'ai-trace-remover', 'conflict-detector']
+    python docs/gen_file_map.py
 
-def defs_of(path):
+The previous version of this script read a separate ``chelate-shell-main``
+checkout and a hard-coded list of nine skills — one of which
+(``capstone-labmate``) was removed in v1.3.3. The map it produced therefore
+described a tree nobody could inspect and named a skill that no longer exists.
+This version discovers the skills from ``skills/*/manifest.json`` and reads
+nothing outside this repository, so the document cannot drift from the code
+without the next run saying so.
+
+Output is deterministic: skills and files are sorted, and nothing is read from
+the clock — a regenerated file that differs from the committed one means the
+code changed, not that the run was later.
+"""
+from __future__ import annotations
+
+import io
+import json
+import os
+import pathlib
+import re
+
+HERE = pathlib.Path(__file__).resolve().parent
+REPO = HERE.parent
+SKILLS_SRC = REPO / "skills"
+OUT = HERE / "FILE_FUNCTION_MAP.md"
+
+SKIP_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", "_reports",
+             ".ruff_cache"}
+
+
+def defs_of(path: pathlib.Path):
+    """Top-level ``def``/``class`` names, with their line numbers."""
     items = []
     try:
-        with open(path, encoding='utf-8') as f:
-            for i, line in enumerate(f, 1):
-                m = re.match(r'^(def|class)\s+([A-Za-z_]\w*)', line)
-                if m:
-                    items.append((i, 'def' if m.group(1) == 'def' else 'class', m.group(2)))
-    except Exception:
+        with io.open(path, encoding="utf-8") as fh:
+            for number, line in enumerate(fh, 1):
+                match = re.match(r"^(def|class)\s+([A-Za-z_]\w*)", line)
+                if match:
+                    items.append((number, match.group(1), match.group(2)))
+    except (OSError, UnicodeDecodeError):
         pass
     return items
 
-def count_loc(path):
+
+def count_loc(path: pathlib.Path) -> int:
     try:
-        with open(path, encoding='utf-8') as f:
-            return sum(1 for _ in f)
-    except Exception:
+        with io.open(path, encoding="utf-8") as fh:
+            return sum(1 for _ in fh)
+    except (OSError, UnicodeDecodeError):
         return 0
 
-buf = io.StringIO()
-grand_files = 0
-grand_loc = 0
-for s in skills:
+
+def project_version() -> str:
+    try:
+        with io.open(REPO / "package.json", encoding="utf-8") as fh:
+            return str(json.load(fh).get("version", ""))
+    except (OSError, ValueError):
+        return ""
+
+
+def skills() -> list:
+    """[(name, manifest)] for every skill directory that declares itself."""
+    found = []
+    for entry in sorted(SKILLS_SRC.iterdir()):
+        manifest = entry / "manifest.json"
+        if not entry.is_dir() or not manifest.is_file():
+            continue
+        try:
+            with io.open(manifest, encoding="utf-8") as fh:
+                found.append((entry.name, json.load(fh)))
+        except (OSError, ValueError):
+            found.append((entry.name, {}))
+    return found
+
+
+def python_files(skill_dir: pathlib.Path) -> list:
     files = []
-    for root, dirs, fs in os.walk(os.path.join(SKILLS_SRC, s)):
-        dirs[:] = [d for d in dirs if d not in ('__pycache__', '.pytest_cache')]
-        for f in fs:
-            if f.endswith('.py'):
-                files.append(os.path.relpath(os.path.join(root, f), SKILLS_SRC))
-    files.sort()
-    loc = sum(count_loc(os.path.join(SKILLS_SRC, p)) for p in files)
-    grand_files += len(files)
-    grand_loc += loc
-    buf.write('\n## {} — {} py files / {} LOC\n\n'.format(s, len(files), loc))
-    buf.write('| # | File | LOC | Top-level definitions (line:kind name) |\n')
-    buf.write('|---|------|-----|----------------------------------------|\n')
-    for idx, rel in enumerate(files, 1):
-        p = os.path.join(SKILLS_SRC, rel)
-        n = count_loc(p)
-        ds = defs_of(p)
-        if not ds:
-            txt = '(module / no top-level defs)'
-        elif len(ds) > 14:
-            txt = '; '.join('{}:{} {}'.format(l, k, nm) for l, k, nm in ds[:14])
-            txt += '; ... (+{} more)'.format(len(ds) - 14)
-        else:
-            txt = '; '.join('{}:{} {}'.format(l, k, nm) for l, k, nm in ds)
-        buf.write('| {} | `{}` | {} | {} |\n'.format(idx, rel, n, txt))
+    for dirpath, dirnames, filenames in os.walk(skill_dir):
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+        for name in sorted(filenames):
+            if not name.endswith(".py"):
+                continue
+            full = pathlib.Path(dirpath) / name
+            files.append(full.relative_to(skill_dir).as_posix())
+    return sorted(files)
 
-header = []
-header.append('# Chelate v1.1.0 — Legacy File & Function Map (Adapter Wiring Reference)')
-header.append('')
-header.append('Source of truth: `chelate-shell-main/skills/` (clean tree, verified UTF-8).')
-header.append('Every legacy Python file, its line count, and its top-level definitions.')
-header.append('The new root-level `run.py` adapters import these modules in-process;')
-header.append('no legacy code is rewritten (red line: 100% capability migration).')
-header.append('')
-header.append('Grand total: **{} Python files, {} LOC**.'.format(grand_files, grand_loc))
-header.append('')
-header.append('Adapter wiring summary (how each new root `run.py` reaches the legacy code):')
-header.append('')
-header.append('| Skill | Legacy entry | Adapter import | Dispatch |')
-header.append('|-------|--------------|----------------|----------|')
-header.append('| task-organizer | `python -m scripts.run` | `from scripts import run as legacy` | `legacy.run_from_cli(argv)` |')
-header.append('| multi-dim-manager | `python -m scripts.run` | `from scripts import run as legacy` | `legacy.main(argv)` |')
-header.append('| document-evolution-tracker | `python -m src.cli` | `from src import cli as legacy` | `legacy.main(argv)` |')
-header.append('| capstone-labmate | `python scripts/<stage>.py` | `import preconfigure_cap / process_cap / draft_report` (scripts dir on sys.path) | `mod.main(argv)` |')
-header.append('| video-tracker | `python -m scripts.run` | `from scripts import run as legacy` | `legacy.main(argv)` |')
-header.append('| longitudinal-analysis | `python -m src.cli` | `from src import cli as legacy` | `legacy.main(argv)` |')
-header.append('| formula-validator | `python scripts/cli.py` | `from scripts import cli as legacy` | `legacy.main(argv)` |')
-header.append('| ai-trace-remover | `python -m src.cli` | `from src import cli as legacy` | `legacy.main(argv)` |')
-header.append('| conflict-detector | `python -m src.cli` | `from src import cli as legacy` | `legacy.main(argv)` |')
-header.append('')
 
-with open(OUT, 'w', encoding='utf-8') as f:
-    f.write('\n'.join(header))
-    f.write(buf.getvalue())
+def build() -> str:
+    buf = io.StringIO()
+    version = project_version()
+    entries = skills()
 
-print('written {} files / {} LOC -> {}'.format(grand_files, grand_loc, OUT))
+    total_files = total_loc = 0
+    per_skill = []
+    for name, manifest in entries:
+        rels = python_files(SKILLS_SRC / name)
+        loc = sum(count_loc(SKILLS_SRC / name / rel) for rel in rels)
+        total_files += len(rels)
+        total_loc += loc
+        per_skill.append((name, manifest, rels, loc))
+
+    buf.write(f"# Chelate Shell {version} — file and function map\n\n")
+    buf.write("Generated by `docs/gen_file_map.py` from this checkout. Every\n")
+    buf.write("skill's Python files, their line counts, and their top-level\n")
+    buf.write("`def`/`class` names. Regenerate after moving code:\n\n")
+    buf.write("```bash\npython docs/gen_file_map.py\n```\n\n")
+    buf.write(f"**{len(entries)} skills, {total_files} Python files, "
+              f"{total_loc} lines.**\n\n")
+    buf.write("Test files are listed alongside the code they cover; "
+              "caches are skipped." + chr(10) * 2)
+
+    buf.write("## Skills\n\n")
+    buf.write("| Skill | Stage | Entrypoint | Input types | Files | LOC |\n")
+    buf.write("|---|---|---|---|---|---|\n")
+    for name, manifest, rels, loc in per_skill:
+        types = ", ".join(str(t) for t in manifest.get("input_types", [])) or "—"
+        buf.write(f"| {name} | {manifest.get('stage', '—')} | "
+                  f"`{manifest.get('entrypoint', '—')}` | {types} | "
+                  f"{len(rels)} | {loc} |\n")
+
+    for name, _manifest, rels, loc in per_skill:
+        buf.write(f"\n## {name} — {len(rels)} Python files / {loc} LOC\n\n")
+        if not rels:
+            buf.write("_No Python files; this skill is declarative._\n")
+            continue
+        buf.write("| # | File | LOC | Top-level definitions |\n")
+        buf.write("|---|------|-----|-----------------------|\n")
+        for index, rel in enumerate(rels, 1):
+            path = SKILLS_SRC / name / rel
+            found = defs_of(path)
+            if not found:
+                text = "(module / no top-level defs)"
+            elif len(found) > 14:
+                text = "; ".join(f"{line}:{kind} {nm}"
+                                 for line, kind, nm in found[:14])
+                text += f"; … (+{len(found) - 14} more)"
+            else:
+                text = "; ".join(f"{line}:{kind} {nm}"
+                                 for line, kind, nm in found)
+            buf.write(f"| {index} | `{rel}` | {count_loc(path)} | {text} |\n")
+
+    return buf.getvalue()
+
+
+def main() -> int:
+    text = build()
+    with io.open(OUT, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(text)
+    print(f"wrote {OUT.relative_to(REPO)} ({len(text.splitlines())} lines)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

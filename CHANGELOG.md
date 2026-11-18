@@ -2,6 +2,107 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.3.6] — 2026-11-18
+
+Everything here stays inside the existing trust model: the approval key is
+still readable by any process running as the same user, and `results/` is
+still an ordinary directory. What changes is that a run now reads frozen
+inputs, a gate expires when its bytes change, an unverified check cannot
+carry a result into `results/` by default, publication is atomic, tokens can
+be revoked and the key rotated, and the injection screen understands Chinese.
+
+The OS-level boundary — a worker under a separate identity, a broker holding
+the key, a `results/` only the broker can write — is **not** in this release.
+It is the 1.4.0 target, and `docs/SECURITY_REPORT.md` says so in the section
+where a reader would look for a containment claim.
+
+### Added
+- **A gate now records the bytes it judged.** `bootstrap.write_gate` — the
+  one choke point every skill writes its gate through — attaches `inputs`
+  (workspace-relative path → SHA-256 for each file named on the adapter's
+  command line) and `provenance` (skill version, digest of the skill's own
+  code and manifest). A new adapter cannot forget them, and a gate written
+  by a skill that never names its inputs says so by being empty.
+- **A PASS expires.** `core/router.stale_gates()` compares those digests with
+  the workspace before promotion. Edit or delete a bound input, or change the
+  skill's code, and the promotion is refused with the file named
+  (`process/ holds an expired gate (…)`). Re-running the skill writes a newer
+  gate and clears it. Every pipeline report carries `gate_freshness` — bound,
+  unbound, and which gates expired.
+- **`--allow-unverified`**, on both `cli.py approve` and `cli.py pipeline`.
+  The flag is part of the token's parameters, so an approval issued without it
+  cannot be spent on a run that uses it, and the override is recorded in
+  `results/.promotions.jsonl`.
+- **`examples/graphene-tight-binding/`** — a runnable end-to-end run (honeycomb
+  nearest-neighbour tight-binding bands, standard library only) plus five
+  attacks on it: edit a parameter, replace the approved model, overwrite a
+  published figure, delete an input, write `results/` by hand. Three are
+  refused before any write; two are surfaced by name in the audit, and the
+  README says so rather than implying prevention.
+- **Content-addressed input snapshots (`core/snapshot.py`).** A gate records
+  what it judged, but a skill still opened its input by path — an edit between
+  the hash and the skill's own `open()` was invisible. Declared inputs are now
+  copied into `.chelate/snapshots/<id>/files/` before dispatch and the skills
+  are handed those paths, so the check and the use read the same immutable
+  bytes. The snapshot's manifest maps every copy back to its original, which
+  is what keeps "has the user's file changed since?" answerable. Inputs above
+  256 MiB are dispatched from their original path and reported as `direct`.
+- **`cli.py revoke` and `cli.py rotate-key`.** A token that leaked can be
+  deleted before it is spent; a key that may have been read can be replaced,
+  which stops every token issued under it. Rotation retires rather than
+  deletes the old key, so promotion records written before it still verify —
+  a rotation must not turn yesterday's audit into `tampered`.
+- **A multilingual injection screen.** `core/security_shield.py` matched six
+  English patterns and nothing in Chinese, which meant this repository's
+  Chinese users had no screen at all. It now folds full-width forms,
+  zero-width characters and Cyrillic/Greek homoglyphs before matching, adds
+  Chinese and further English patterns (each requiring the object of the verb
+  to be a prompt artefact, so `忽略不计` still passes), inspects HTML comments,
+  and decodes base64 blobs once.
+- **Promotion refuses links that cross the boundary.** A symlink in
+  `process/` pointing outside the workspace was followed by `copytree`, so an
+  agent could copy any file the user can read into `results/`; a hardlink has
+  no target to resolve and looked ordinary. Both are now refused by name.
+- **Snapshots are pruned, and an input outside the workspace is bound by its
+  full path.** A snapshot is a copy of the user's data; keeping every one
+  forever would build a shadow archive of everything a workspace ever read, so
+  a run keeps the newest twenty — plus any id a current gate still names, since
+  deleting those would turn a passing gate into "input missing". And an input
+  outside the workspace used to be keyed by its bare filename, which collided
+  across folders and made every such gate look stale; it is now keyed
+  `external:<absolute path>`.
+- **`docs/SECURITY_REPORT.md`** — per-layer results, the three rates
+  (unauthorized execution, valid authorization success, partial publication)
+  measured inside the declared threat model, and the gaps stated in the same
+  document rather than left to be discovered.
+
+### Changed
+- Version declarations bumped to 1.3.6 across the repository.
+- **Promotion is atomic.** `promote()` copies into `.chelate/staging/` and
+  renames the tree onto `results/`, so an interrupted promotion leaves a
+  partial tree that no reader can see and the next run deletes. Previously
+  `shutil.copytree` wrote straight to the destination and a crash left a
+  half-published directory that the report still called successful.
+- **`UNVERIFIED` no longer carries a result into `results/`.** A check that
+  could not be made still does not stop the pipeline and still degrades only
+  its own skill, but promotion is refused until the dependency is installed or
+  a person accepts it with `--allow-unverified`.
+- **The scripted approval hatch is renamed to `CHELATE_UNSAFE_AUTO_APPROVE`.**
+  It is read from the environment, so anything that can set an environment
+  variable on a spawned process — an agent included — can set it; the old name
+  suggested otherwise. `CHELATE_HUMAN` still works and prints a deprecation
+  warning. A run authorised this way is logged as
+  `"source": "scripted-run", "unsafe_auto": true`, never as a human approval.
+- `tests/conftest.py` and the router tests follow the new name.
+
+### Fixed
+- `docs/SAFETY.md` said the adversarial matrix had 25 cases; it has 26 (and
+  `pytest --collect-only` says so).
+- `docs/SAFETY.md`, `README.md`, `ORCHESTRATOR.md` and the 19 `SKILL.md` files
+  still told readers to set `CHELATE_HUMAN`.
+- Five `CITATION.cff` files and two `CONTRIBUTING.md` files pointed at the
+  deleted `agent-skills` repository; they now point at `chelate-shell`.
+
 ## [1.3.5] — 2026-11-15
 
 ### Fixed

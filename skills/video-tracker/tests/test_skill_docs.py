@@ -1,6 +1,6 @@
 """Documentation contract tests for video-tracker.
 
-Guard the conventions the agent-skills repository enforces: bilingual
+Guard the conventions the chelate-shell repository enforces: bilingual
 READMEs, zero-CJK English README, version tri-consistency, CRLF changelog,
 self-containment (no references to sibling skills), and release hygiene.
 """

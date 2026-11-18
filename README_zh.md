@@ -6,7 +6,7 @@
 
 [English](README.md) · **简体中文**
 
-**版本：** 1.3.5 ｜ **许可：** MIT ｜ **Python：** 3.10+ ｜ **技能数：** 19
+**版本：** 1.3.6 ｜ **许可：** MIT ｜ **Python：** 3.10+ ｜ **技能数：** 19
 
 > 仅作科研与工程辅助。依赖任何输出之前，请先读[安全与开源声明](#安全与开源声明)。
 
@@ -66,11 +66,11 @@
 ### 方法二：从插件市场用 URL 安装
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.5
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.6
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.5` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
+`#v1.3.6` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
 
 ### 方法三：用命令安装
 
@@ -282,13 +282,18 @@ chelate-shell/
 这条流水线会写下文件、会调用外部命令，所以边界写进代码，而不是留给调用方自行记得。
 
 - **唯一不可逆的一步要人点头。** 提升需要一条绑定本次计划的 token：action、工作区、模式/选择、每个输入文件的哈希、15 分钟有效期，HMAC-SHA256 签名，原子消费（`O_CREAT|O_EXCL`），无法重放。密钥在 `%LOCALAPPDATA%\chelate\keys\`（或 `$XDG_DATA_HOME`），不在工作区里。
-- **签发侧同样在 agent 够不到的地方。** 签发要求一个交互终端，且必须**输入** `approve promote`；EOF、管道或任何其他回答都算拒绝。`CHELATE_HUMAN=1` 是 CI 的声明式开口，写在作业定义里而不是 agent 拼出来的命令行上。
+- **签发侧同样在 agent 够不到的地方。** 签发要求一个交互终端，且必须**输入** `approve promote`；EOF、管道或任何其他回答都算拒绝。`CHELATE_UNSAFE_AUTO_APPROVE=1` 是 CI 的开口，名字就是它的实际强度：环境变量，谁给子进程设上谁就拿到了——agent 也能。它记录的是“没人在看”这条声明，不是一次人工审批，提升日志里写的是 `scripted-run`。
+- **检查会随它检查的字节过期。** 每份门禁都记下它被交给的文件的 SHA-256 与技能自身代码的摘要。事后改掉或删掉其中任何一个，门禁即失效：提升被拒绝并点名那个文件，直到该技能重跑一次。`UNVERIFIED`——某项检查做不成——不再能把结果带进 `results/`，除非有人把 `--allow-unverified` 绑进 token。
+- **发布是一次改名。** 拷贝先落在暂存目录再改名到 `results/`，提升被打断不会留下半个已发布目录；指向工作区之外的符号链接与硬链接在这道边界上被拒绝，而不是被复制。
+- **运行读的是冻结的输入。** 声明输入在派发前被复制进 `.chelate/snapshots/<内容id>/`，技能拿到的是那些路径，运行中途改原文件改变不了检查所见的字节。超过 256 MiB 的输入从原路径派发，并在报告里标明。
+- **发出去的东西能收回。** `cli.py revoke` 删除未消费的审批；`cli.py rotate-key` 换掉签名密钥，令其下签发的 token 全部失效，而旧的提升记录仍可验证。
+- **注入筛查看得懂中文。** 匹配前先归一化：全角、零宽字符、西里尔/希腊同形字，并检查 HTML 注释、解一层 base64；同时要求动词的宾语是指令类词，所以“忽略不计”不会被误伤。
 - **路径包含与沙箱。** `ensure_within()` 先用 `realpath` 解析再比较，`--output ../../x`、`workspace(root, "..")` 与指向外面的符号链接在任何写入发生之前就被拒绝。沙箱在子进程创建之前校验 `cmd[0]` 白名单，并在子进程内再校验一次。
 - **事后可审计。** 每次提升记入 `results/.promotions.jsonl`，`cli.py audit` 把没有对应记录的文件点名并以退出码 1 结束。
 
-威胁模型、26 条对抗用例（含三条自审批路径如何被堵、两条探针为何如实标为“通过”）与已知边界：**[docs/SAFETY.md](docs/SAFETY.md)**。
+威胁模型、26 条对抗用例（含三条自审批路径如何被堵、两条探针为何如实标为“通过”）、17 条提升完整性用例与已知边界：**[docs/SAFETY.md](docs/SAFETY.md)**。
 
-**证据。** 对抗矩阵在 `tests/test_irreversible_actions.py`——26 条用例，每条都写成“agent 尝试 X，调度器必须不照做”；两个尝试自审批的攻击脚本在 `tests/attacks/`。端到端演示与实测输出见 [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration)，静态扫描结果（交付代码 0 处发现）见[此处](docs/SAFETY.md#static-analysis)。
+**证据。** 对抗矩阵在 `tests/test_irreversible_actions.py`——26 条用例，每条都写成“agent 尝试 X，调度器必须不照做”；`tests/test_promotion_integrity.py` 另有 17 条，覆盖门禁新鲜度、未验证拦截与原子发布；两个尝试自审批的攻击脚本在 `tests/attacks/`。可运行的端到端示例——一条紧束缚能带，外加五次针对它的攻击——在 `examples/graphene-tight-binding/run_demo.py`，实测输出见 [docs/SAFETY.md](docs/SAFETY.md#reproducing-the-demonstration)。静态扫描结果（交付代码 0 处发现）见[此处](docs/SAFETY.md#static-analysis)。逐层测了什么、覆盖哪类攻击者、三个指标各自在什么范围内成立：**[docs/SECURITY_REPORT.md](docs/SECURITY_REPORT.md)**。
 
 ---
 
@@ -303,7 +308,7 @@ python -m pytest tests/ -q                                 # 全量套件
 python -m pytest tests/test_irreversible_actions.py -q    # 26 条对抗用例
 ```
 
-413 个测试：装齐可选依赖时 402 通过、11 跳过；只有 pytest 的环境里，依赖相关的用例改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于 `skills/<skill>/tests/`，每个目录单独一个进程运行。两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
+471 个测试：装齐可选依赖时 459 通过、12 跳过；只有 pytest 的环境里，依赖相关的用例改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于 `skills/<skill>/tests/`，每个目录单独一个进程运行。两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
 
 ## 安全与开源声明
 

@@ -1,4 +1,4 @@
-# Chelate Shell — agent operating rules (v1.3.5)
+# Chelate Shell — agent operating rules (v1.3.6)
 
 Chelate Shell is a deterministic **orchestrator** for local agent skills. It
 routes work to the right skill through a gated pipeline; it does not generate
@@ -16,8 +16,12 @@ per skill directly under `skills/`).
 - `python cli.py list` — list registered skills
 - `python cli.py run <skill> --root <workspace> [args...]` — run one skill
 - `python cli.py approve --root <workspace> --mode a|b|c` — issue the one-time
-  approval for a promotion (needs a terminal, or `CHELATE_HUMAN=1`)
+  approval for a promotion (needs a terminal, or `CHELATE_UNSAFE_AUTO_APPROVE=1`)
 - `python cli.py pipeline --root <workspace> --mode a|b|c` — run the pipeline
+  (declared inputs are snapshotted before any skill reads them)
+- `python cli.py revoke --root <workspace>` — delete unspent approvals
+- `python cli.py rotate-key --root <workspace>` — replace the signing key;
+  tokens issued before it stop working, old promotion records keep verifying
 - `python cli.py update [--apply]` — check whether this installed copy still
   matches `main`, or refresh the host cache that runs it. A human runs this;
   an agent should not update the code it is being judged by mid-task.
@@ -66,5 +70,10 @@ manifest `stage` field, not in a folder name.
 - Promotion needs a human approval issued for that exact plan. A run without
   one still completes (report says `"blocked": "approval"`) but writes nothing
   to `results/`; `--no-approval` skips the token, not the human.
+- Never edit an input after its gate has run and then promote: the gate is
+  bound to those bytes and the promotion will be refused as expired. The fix
+  is to re-run the skill, never to delete the gate file.
+- `UNVERIFIED` does not open the gate to `results/`. Accepting one is a
+  person's decision, bound into the token with `--allow-unverified`.
 
 Full contract: `ORCHESTRATOR.md`.

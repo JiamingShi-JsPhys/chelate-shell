@@ -60,7 +60,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 _REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[1])
 if _REPO_ROOT not in sys.path:
@@ -69,6 +69,7 @@ if _REPO_ROOT not in sys.path:
 from core import approval  # noqa: E402
 from core.registry import Registry, load_default_registry  # noqa: E402
 from core.sandbox import resolve_environment  # noqa: E402
+from core import snapshot  # noqa: E402
 from lib.chelate_core import debug as debug_mod  # noqa: E402
 from lib.chelate_core import paths  # noqa: E402
 
@@ -389,18 +390,15 @@ class PromotionLocked(RuntimeError):
     """Raised when process/ still holds a gate that failed."""
 
 
-def failed_gates(root: str) -> List[Dict[str, str]]:
-    """The newest gate per skill, where that newest gate is a ``FAIL``.
+def gate_records(root: str) -> Dict[str, Dict[str, Any]]:
+    """The newest gate per skill, with its file name and parsed body.
 
-    The pipeline stops at the first ``FAIL``, but a later run plans only its
-    own stages: a ``FAIL`` left in ``process/gates/`` would otherwise be
-    copied into ``results/`` by the next promotion, and the deliverable would
-    carry a failed check that nobody looked at. Re-running the skill writes a
-    newer gate, which is how a failure is cleared.
+    `{skill: {"gate": "process/gates/x.json", "data": {...}}}`.  Gates that
+    cannot be parsed are skipped rather than guessed at.
     """
     gates_dir = os.path.join(root, "process", "gates")
     if not os.path.isdir(gates_dir):
-        return []
+        return {}
     newest: Dict[str, tuple] = {}
     for name in sorted(os.listdir(gates_dir)):
         if not name.endswith(".json"):
@@ -415,12 +413,142 @@ def failed_gates(root: str) -> List[Dict[str, str]]:
         skill = str(data.get("skill") or name.rsplit("_", 1)[0])
         stamp = str(data.get("timestamp") or "")
         newest[skill] = (stamp, name, data)
+    return {skill: {"gate": f"process/gates/{name}", "data": data}
+            for skill, (_stamp, name, data) in newest.items()}
+
+
+def failed_gates(root: str) -> List[Dict[str, str]]:
+    """The newest gate per skill, where that newest gate is a ``FAIL``.
+
+    The pipeline stops at the first ``FAIL``, but a later run plans only its
+    own stages: a ``FAIL`` left in ``process/gates/`` would otherwise be
+    copied into ``results/`` by the next promotion, and the deliverable would
+    carry a failed check that nobody looked at. Re-running the skill writes a
+    newer gate, which is how a failure is cleared.
+    """
     out: List[Dict[str, str]] = []
-    for skill, (_stamp, name, data) in sorted(newest.items()):
+    for skill, rec in sorted(gate_records(root).items()):
+        data = rec["data"]
         if str(data.get("status") or "").upper() == "FAIL":
-            out.append({"skill": skill, "gate": f"process/gates/{name}",
+            out.append({"skill": skill, "gate": str(rec["gate"]),
                         "reason": str(data.get("reason") or "")})
     return out
+
+
+def unverified_gates(root: str) -> List[Dict[str, str]]:
+    """The newest gate per skill, where that newest gate is ``UNVERIFIED``.
+
+    ``UNVERIFIED`` means the check could not be made — a missing dependency,
+    a timeout, an unreadable format.  It is not evidence of correctness, so
+    it may not by itself carry a result into ``results/``; see promote().
+    """
+    out: List[Dict[str, str]] = []
+    for skill, rec in sorted(gate_records(root).items()):
+        data = rec["data"]
+        if str(data.get("status") or "").upper() == "UNVERIFIED":
+            out.append({"skill": skill, "gate": str(rec["gate"]),
+                        "reason": str(data.get("reason") or "")})
+    return out
+
+
+def _current_skill_digest(skill: str) -> str:
+    """Digest the skill's code the same way bootstrap.skill_provenance does."""
+    import bootstrap  # local import: bootstrap sits at the repository root
+    try:
+        return str(bootstrap.skill_provenance(skill).get("skill_digest", ""))
+    except Exception:
+        return ""
+
+
+def stale_gates(root: str) -> List[Dict[str, str]]:
+    """Gates whose recorded inputs or code no longer match the workspace.
+
+    A gate answers a question about specific bytes.  If an input file changed
+    after the gate ran, or the skill's own code changed, the answer no longer
+    describes what is on disk — so it is not a PASS, it is an expired one.
+    The fix is to re-run the skill, which writes a newer gate.
+
+    Gates written before 1.3.6 carry no digests at all.  They are reported
+    under ``unbound`` by :func:`gate_freshness` rather than silently trusted:
+    they cannot be checked, and this function does not pretend otherwise.
+    """
+    out: List[Dict[str, str]] = []
+    for skill, rec in sorted(gate_records(root).items()):
+        data = rec["data"]
+        if str(data.get("status") or "").upper() != "PASS":
+            continue
+        bound = data.get("inputs") or {}
+        provenance = data.get("provenance") or {}
+        if not isinstance(bound, dict):
+            bound = {}
+        if not isinstance(provenance, dict):
+            provenance = {}
+        if not bound and not provenance:
+            continue  # unbound: reported separately, not called stale
+        changed: List[str] = []
+        for rel, recorded in sorted(bound.items()):
+            recorded = str(recorded)
+            # The adapter was handed a snapshot path; what the promotion has
+            # to answer is whether the user's own file still holds the bytes
+            # that were frozen, so the comparison runs against the original
+            # named in the snapshot's manifest.
+            origin = snapshot.origin_of(root, str(rel))
+            if origin and origin.get("original"):
+                rel = origin["original"]
+                recorded = origin.get("sha256") or recorded
+            if str(rel).startswith("external:"):
+                full = str(rel)[len("external:"):]
+            else:
+                full = os.path.join(root, str(rel).replace("/", os.sep))
+            try:
+                if recorded.startswith("large:"):
+                    # Bound by size, not by digest: large inputs are compared
+                    # the same way they were recorded.
+                    current = f"large:{os.path.getsize(full)}"
+                else:
+                    current = _sha256_file(full)
+            except OSError:
+                changed.append(f"{rel} (missing)")
+                continue
+            if recorded != current:
+                changed.append(str(rel))
+        recorded_digest = str(provenance.get("skill_digest") or "")
+        if recorded_digest:
+            current_digest = _current_skill_digest(skill)
+            if current_digest and current_digest != recorded_digest:
+                changed.append(f"skill code ({skill})")
+        if changed:
+            out.append({"skill": skill, "gate": str(rec["gate"]),
+                        "reason": "changed after the gate ran: "
+                                  + ", ".join(changed)})
+    return out
+
+
+def gate_freshness(root: str) -> Dict[str, object]:
+    """A census of the gates that a promotion would rest on.
+
+    ``bound``   — newest PASS gates carrying input/code digests
+    ``unbound`` — newest PASS gates from before v1.3.6, which verify nothing
+    ``stale``   — bound gates whose inputs or code changed since
+    """
+    records = gate_records(root)
+    bound = unbound = 0
+    for rec in records.values():
+        data = rec["data"]
+        if str(data.get("status") or "").upper() != "PASS":
+            continue
+        if data.get("inputs") or data.get("provenance"):
+            bound += 1
+        else:
+            unbound += 1
+    stale = stale_gates(root)
+    return {"gates": len(records), "bound": bound, "unbound": unbound,
+            "stale": stale,
+            "unbound_skills": sorted(
+                skill for skill, rec in records.items()
+                if str(rec["data"].get("status") or "").upper() == "PASS"
+                and not (rec["data"].get("inputs")
+                         or rec["data"].get("provenance")))}
 
 
 def _sha256_file(path: str) -> str:
@@ -464,7 +592,8 @@ def _record_promotion(root: str, dst: str, stamp: str,
         "files": _digests_under(root, dst),
     }
     # A scripted run has no token, so nothing has created a key yet; it is
-    # still a human-declared run (CHELATE_HUMAN=1), so it may mint one.
+    # still a declared run (CHELATE_UNSAFE_AUTO_APPROVE=1), so it may
+    # mint one — and the record says `unsafe_auto` rather than `human`.
     create = (approval_info or {}).get("source") == "scripted-run"
     mac = approval.sign(root, entry, create=create)
     if mac:
@@ -584,9 +713,90 @@ def audit_results(root: str) -> Dict[str, object]:
     }
 
 
+def _process_tree_problems(root: str, src: str) -> List[str]:
+    """Links inside process/ that would move bytes across the boundary.
+
+    A promotion copies process/ into results/. Two shapes of link turn that
+    copy into a way to move a file the workspace never held:
+
+    * a symlink whose target resolves outside the workspace — ``copytree``
+      follows it and the content lands in results/ (an agent can point one at
+      any file the user can read);
+    * a hardlink, which has no target to resolve: the same bytes are reachable
+      under two names, and the name inside the workspace looks ordinary.
+
+    Both are refused rather than copied. A symlink that stays inside the
+    workspace is kept as a symlink and is harmless.
+    """
+    problems: List[str] = []
+    if not os.path.isdir(src):
+        return problems
+    for dirpath, dirnames, filenames in os.walk(src):
+        for name in list(dirnames) + list(filenames):
+            full = os.path.join(dirpath, name)
+            rel = os.path.relpath(full, root).replace(os.sep, "/")
+            try:
+                info = os.lstat(full)
+            except OSError:
+                continue
+            if os.path.islink(full):
+                try:
+                    paths.ensure_within(root, os.path.realpath(full),
+                                        what="symlink target")
+                except Exception:
+                    problems.append(f"symlink leaves the workspace: {rel}")
+                continue
+            if not os.path.isfile(full):
+                continue
+            # st_nlink counts names for the inode; >1 means another name
+            # exists somewhere — possibly outside the workspace.
+            if getattr(info, "st_nlink", 1) > 1:
+                problems.append(f"hardlinked file: {rel}")
+    return problems
+
+
+def _recover_staging(staging_root: str) -> None:
+    """Delete leftover staging trees from an interrupted promotion.
+
+    A staging tree is never a deliverable: it exists only between the copy
+    and the rename that publishes it.  Anything still there on the next run
+    belongs to a promotion that died half-way, and must not be resumed —
+    ``promote()`` starts from a clean copy every time.
+    """
+    if not os.path.isdir(staging_root):
+        return
+    for name in os.listdir(staging_root):
+        leftover = os.path.join(staging_root, name)
+        try:
+            if os.path.isdir(leftover) and not os.path.islink(leftover):
+                shutil.rmtree(leftover)
+            else:
+                os.remove(leftover)
+        except OSError:
+            pass
+
+
 def promote(root: str, stamp: str,
-            approval_info: Optional[Dict] = None) -> Optional[str]:
-    """Copy process/ into results/promoted_<stamp>/ and log the promotion."""
+            approval_info: Optional[Dict] = None,
+            allow_unverified: bool = False) -> Optional[str]:
+    """Publish process/ into results/promoted_<stamp>/ — atomically.
+
+    Three checks stand between a run and a deliverable, and each of them
+    fails closed:
+
+    * a newest gate that is ``FAIL`` locks the workspace (as in 1.3.6);
+    * a newest gate that is ``UNVERIFIED`` — a check that could not be made —
+      blocks the promotion unless the caller asked for the override, which is
+      recorded (see `allow_unverified`);
+    * a newest gate that is ``PASS`` but whose recorded input digests or
+      skill digest no longer match the workspace has *expired*: it judged
+      bytes that are no longer there.
+
+    The copy itself lands in `.<workspace>/.chelate/staging/` first and is
+    then renamed onto `results/`.  A crash mid-copy leaves a partial tree in
+    staging, which is invisible to every reader and is removed on the next
+    run; `results/` only ever sees a complete set.
+    """
     src = os.path.join(root, "process")
     if not os.path.isdir(src):
         return None
@@ -596,13 +806,43 @@ def promote(root: str, stamp: str,
             "process/ holds a failed gate ("
             + ", ".join(sorted({f["skill"] for f in failed}))
             + "); fix the input and re-run that skill")
+    stale = stale_gates(root)
+    if stale:
+        raise PromotionLocked(
+            "process/ holds an expired gate ("
+            + ", ".join(sorted({s["skill"] for s in stale}))
+            + "): its input or skill code changed after it ran; re-run that "
+              "skill so the PASS describes the files on disk")
+    unverified = unverified_gates(root)
+    if unverified and not allow_unverified:
+        raise PromotionLocked(
+            "process/ holds an unverified gate ("
+            + ", ".join(sorted({u["skill"] for u in unverified}))
+            + "): the check could not be made, so it does not carry a result "
+              "into results/. Re-run it with its dependency installed, or "
+              "pass --allow-unverified to accept it deliberately")
+    problems = _process_tree_problems(root, src)
+    if problems:
+        raise PromotionLocked(
+            "process/ holds a link that would move bytes across the boundary ("
+            + "; ".join(problems)
+            + "); remove it, or replace it with the file itself if it belongs "
+              "in the deliverable")
     dst = os.path.join(root, "results", f"promoted_{stamp}")
     # The promotion target is derived from a timestamp, but it is still a
     # write: prove it lands inside the workspace before copying anything.
     paths.ensure_within(root, dst, what="promotion target")
     os.makedirs(os.path.join(root, "results"), exist_ok=True)
-    shutil.copytree(src, dst, dirs_exist_ok=True)
-    _record_promotion(root, dst, stamp, approval_info)
+    staging_root = os.path.join(root, ".chelate", "staging")
+    _recover_staging(staging_root)
+    os.makedirs(staging_root, exist_ok=True)
+    staging = os.path.join(staging_root, f"promoted_{stamp}")
+    shutil.copytree(src, staging, symlinks=True)
+    os.replace(staging, dst)  # one rename: the whole set, or nothing
+    info = dict(approval_info or {})
+    info["allow_unverified"] = bool(allow_unverified)
+    info["freshness"] = gate_freshness(root)
+    _record_promotion(root, dst, stamp, info)
     return dst
 
 
@@ -704,13 +944,50 @@ def _scan_inputs_for_injection(inputs, root: str):
     return None
 
 
+def _skill_arg_inputs(skill_args, root: str) -> List[str]:
+    """Files named by ``--skill-arg ... --input <file>``, as absolute paths."""
+    found: List[str] = []
+    for args in (skill_args or {}).values():
+        previous = ""
+        for token in args:
+            if previous == "--input" and token and not token.startswith("-"):
+                absolute = token if os.path.isabs(token)                     else os.path.join(root, token)
+                if os.path.isfile(absolute):
+                    found.append(absolute)
+            previous = token
+    return found
+
+
+def _rewrite_skill_args(skill_args, mapping: Dict[str, str]):
+    """Replace every frozen input path in ``--skill-arg`` with its snapshot."""
+    if not skill_args:
+        return skill_args
+    rewritten: Dict[str, List[str]] = {}
+    for skill, args in skill_args.items():
+        out: List[str] = []
+        previous = ""
+        for token in args:
+            replaced = token
+            if previous == "--input":
+                for original, frozen_path in mapping.items():
+                    if os.path.abspath(token) in (original,
+                                                  os.path.abspath(original)):
+                        replaced = frozen_path
+                        break
+            out.append(replaced)
+            previous = token
+        rewritten[skill] = out
+    return rewritten
+
+
 def run(root: str, mode: str = "a", input_kind: str = "",
         inputs: Optional[List[str]] = None,
         selected: Optional[List[str]] = None, dry_run: bool = False,
         extra_args: Optional[List[str]] = None,
         skill_args: Optional[Dict[str, List[str]]] = None,
         timeout: int = 600, debug: bool = False,
-        require_approval: bool = True) -> dict:
+        require_approval: bool = True,
+        allow_unverified: bool = False) -> dict:
     """Execute the pipeline; returns the full decision record (see module doc).
 
     `extra_args` are appended to every skill invocation; `skill_args` maps a
@@ -787,7 +1064,48 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         result["finished"] = _iso_now()
         return result
 
-    auto_args, input_warnings = _auto_input_args(flat, inputs)
+    # Freeze the declared inputs before anything reads them. From here on the
+    # skills are handed snapshot paths, so a file edited while the run is in
+    # flight cannot change what a skill opened — the check and the use are the
+    # same bytes. Large inputs are dispatched from their original path and
+    # reported as such.
+    dispatch_inputs = list(inputs or [])
+    # `--skill-arg "x:--input f"` is the documented way to wire a file the
+    # manifest types do not cover; those files must be frozen too, or the
+    # snapshot protection has an obvious hole beside it.
+    extra_inputs = _skill_arg_inputs(skill_args, root)
+    freeze = list(dispatch_inputs) + extra_inputs
+    if freeze:
+        try:
+            frozen = snapshot.materialise(root, freeze)
+        except OSError as exc:
+            frozen = {"id": "", "files": {}, "skipped": [], "error": str(exc)}
+        if frozen.get("id"):
+            skill_args = _rewrite_skill_args(skill_args, frozen["files"])
+            dispatch_inputs = [frozen["files"].get(os.path.abspath(str(p)),
+                                                   str(p))
+                               for p in dispatch_inputs]
+            result["snapshot"] = {
+                "id": frozen["id"],
+                "dir": frozen["dir"],
+                "manifest": frozen["manifest"],
+                "files": {os.path.relpath(src, root).replace(os.sep, "/"):
+                          os.path.relpath(dst, root).replace(os.sep, "/")
+                          for src, dst in frozen["files"].items()},
+                "direct": [os.path.relpath(p, root).replace(os.sep, "/")
+                           for p in frozen.get("skipped", [])],
+            }
+            debug_mod.log(f"snapshot: id={frozen['id']} "
+                          f"files={len(frozen['files'])} "
+                          f"direct={len(frozen.get('skipped', []))}")
+        if frozen.get("skipped"):
+            print(_color(
+                "[INPUT] too large to snapshot, dispatched from the original "
+                "path (no TOCTOU protection): "
+                + ", ".join(os.path.basename(p)
+                            for p in frozen.get("skipped", [])), _YELLOW))
+
+    auto_args, input_warnings = _auto_input_args(flat, dispatch_inputs)
     if auto_args:
         result["auto_inputs"] = {name: args[1]
                                  for name, args in auto_args.items()}
@@ -857,7 +1175,8 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         # Promotion is the pipeline's one irreversible write: intermediate
         # products become deliverables and later stages stop seeing them as
         # provisional. It needs a token a human issued for this exact plan.
-        params = approval.pipeline_params(mode, input_kind, inputs, selected)
+        params = approval.pipeline_params(mode, input_kind, inputs, selected,
+                                          allow_unverified=allow_unverified)
         if require_approval:
             try:
                 token = approval.consume(root, "promote", params)
@@ -872,7 +1191,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                     promoted = promote(root, stamp, {
                         "source": "token",
                         "nonce": token.get("nonce"),
-                    })
+                    }, allow_unverified=allow_unverified)
                 except PromotionLocked as exc:
                     result["blocked"] = "gate"
                     result["reason"] = f"promotion withheld: {exc}"
@@ -893,7 +1212,10 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                       file=sys.stderr)
             else:
                 try:
-                    promoted = promote(root, stamp, {"source": "scripted-run"})
+                    promoted = promote(root, stamp, {
+                        "source": "scripted-run",
+                        "unsafe_auto": True,
+                    }, allow_unverified=allow_unverified)
                 except PromotionLocked as exc:
                     result["blocked"] = "gate"
                     result["reason"] = f"promotion withheld: {exc}"
@@ -904,7 +1226,16 @@ def run(root: str, mode: str = "a", input_kind: str = "",
     # The gate binds promote(). It cannot stop a process that writes into
     # results/ itself, so every run reports what is there without a
     # promotion behind it. `cli.py audit` runs the same check on demand.
+    # Snapshots hold copies of the user's data. Keep the newest ones and any
+    # still referenced by a gate; delete the rest, so a long-lived workspace
+    # does not accumulate a shadow archive of everything it ever read.
+    result["snapshots_pruned"] = snapshot.prune(
+        root, keep=20, protect=snapshot.referenced(root))
     result["results_audit"] = audit_results(root)
+    # What the promotion (or refusal) rested on: how many of the newest PASS
+    # gates carry bound digests, how many predate 1.3.6 and verify nothing,
+    # and which ones expired between the check and now.
+    result["gate_freshness"] = gate_freshness(root)
     result["finished"] = _iso_now()
     paths = write_reports(root, result)
     result["report"] = paths["report"]

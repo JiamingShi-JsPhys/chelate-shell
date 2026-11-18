@@ -35,7 +35,8 @@ chelate-shell/
 │   └── model3d.md                    # /model3d — OBJ mesh generate / merge / audit
 ├── contracts/                        # global contracts
 │   ├── __init__.py
-│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts}
+│   ├── gate_result.py                # {skill, status, evidence_level, reason, artifacts,
+│   │                                 #  inputs, provenance}  (last two bind a PASS to bytes)
 │   └── schema.json                   # manifest.json validation spec
 ├── cordis.patch.yml                  # cordis bundle patch
 ├── core/                             # microkernel
@@ -61,7 +62,7 @@ chelate-shell/
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.5)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.6)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md

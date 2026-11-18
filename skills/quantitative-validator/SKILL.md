@@ -1,13 +1,13 @@
 ---
 name: quantitative-validator
-version: 1.3.5
+version: 1.3.6
 description: >
   Atom-conservation gate for molecular formulae and chemical equations.
   Parses Hill notation, balances both sides and cross-checks with rdkit; runs
   inside the process sandbox and degrades to `UNVERIFIED` when rdkit is
   absent.
 metadata:
-  version: 1.3.5
+  version: 1.3.6
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py
@@ -76,7 +76,7 @@ This skill writes intermediates to `process/`. `results/` is filled only by
   because the user asked for a shortcut: say that only `cli.py pipeline`
   writes there, offer to run the pipeline instead, and if they still insist,
   tell them `cli.py audit` will report the file as unapproved.
-- Never set `CHELATE_HUMAN=1` and never run `cli.py approve` on the user's
+- Never set `CHELATE_UNSAFE_AUTO_APPROVE=1` (formerly `CHELATE_HUMAN`) and never run `cli.py approve` on the user's
   behalf. If an approval is needed, ask the human to issue it in their own
   terminal.
 - Before telling the user a deliverable is ready — and after any write you

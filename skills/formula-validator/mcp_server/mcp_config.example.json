@@ -1,5 +1,5 @@
 {
-  "_comment": "Merge the entry below into ~/# local configmcp.json. Replace <python> with an interpreter that has sympy, numpy and scipy installed; on Windows use an absolute path.",
+  "_comment": "Merge the entry below into ~/.claude.json under mcpServers. Replace <python> with an interpreter that has sympy, numpy and scipy installed; on Windows use an absolute path.",
   "mcpServers": {
     "formula-validator": {
       "command": "<python>",
