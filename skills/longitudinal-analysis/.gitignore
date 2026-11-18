@@ -17,6 +17,10 @@ state.db
 # Runtime artifacts of the installer / tests
 .snapshots/
 
-# Metadata that must never ship to GitHub
-references/
+# Metadata that must never ship to GitHub — everything under references/,
+# except the tiered reference document SKILL.md links to, which is part of
+# the skill (git cannot re-include a file from an excluded directory, so the
+# rule excludes the contents rather than the directory).
+references/*
+!references/longitudinal-analysis-reference.md
 examples/_runtime/
