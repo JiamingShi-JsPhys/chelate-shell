@@ -1,4 +1,4 @@
-# Per-skill dependencies (1.3.6)
+# Per-skill dependencies (1.4.0)
 
 Declared in each skill's `manifest.json` and enforced at run time by
 `core/sandbox.py`. A missing required dependency degrades that one
@@ -11,6 +11,7 @@ skill to an `UNVERIFIED` gate; it never crashes the pipeline.
 | bibtex-normalizer | `bibtexparser` | — |
 | conflict-detector | *(stdlib only)* | PyYAML (`.yaml` configs; JSON configs need nothing) |
 | data-profiler | `pandas` | — |
+| deck-exporter | *(stdlib only)* | — |
 | document-evolution-tracker | *(stdlib only)* | PyYAML (`.yaml` configs; JSON configs need nothing) |
 | formula-validator | sympy, numpy, pint | — |
 | fulltext-extractor | pdfminer.six / pypdf | — |
@@ -20,6 +21,11 @@ skill to an `UNVERIFIED` gate; it never crashes the pipeline.
 | ml-auditor | `scikit-learn`, `pandas` | `cleanlab` (second-opinion label issues) |
 | multi-dim-manager | *(stdlib only)* | PyYAML (`.yaml` configs; JSON configs need nothing) |
 | quantitative-validator | `rdkit` | — |
+| repro-bundler | *(stdlib only)* | — |
+| schema-gate | *(stdlib only)* | — |
+| secret-gate | *(stdlib only)* | — |
+| code-gate | *(stdlib only)* | — |
+| test-gate | *(stdlib only)*; ruff only with `--ruff` | — |
 | reference-auditor | `requests` | — |
 | sci-visualizer | `matplotlib`, `seaborn`, `pandas` | Pillow (gif/animation frame scan) |
 | security-guard | *(stdlib only)* | — |

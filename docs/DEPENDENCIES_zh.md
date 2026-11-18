@@ -1,4 +1,4 @@
-# 逐技能依赖（1.3.6）
+# 逐技能依赖（1.4.0）
 
 由每个技能的 `manifest.json` 声明，运行时由
 `core/sandbox.py` 检查。缺失必需依赖时，只有那一个技能降级为
@@ -11,6 +11,7 @@
 | `bibtex-normalizer` | `bibtexparser` | 无 |
 | `conflict-detector` | 无（纯标准库） | `PyYAML`（读取 `.yaml` 配置；JSON 配置零依赖） |
 | `data-profiler` | `pandas` | 无 |
+| `deck-exporter` | 无（纯标准库） | 无 |
 | `document-evolution-tracker` | 无（纯标准库） | `PyYAML`（读取 `.yaml` 配置；JSON 配置零依赖） |
 | `formula-validator` | `sympy`, `numpy`, `pint` | 无 |
 | `fulltext-extractor` | `pdfminer.six` / `pypdf` | 无 |
@@ -20,6 +21,11 @@
 | `ml-auditor` | `scikit-learn`, `pandas` | `cleanlab`（标签问题的第二意见） |
 | `multi-dim-manager` | 无（纯标准库） | `PyYAML`（读取 `.yaml` 配置；JSON 配置零依赖） |
 | `quantitative-validator` | `rdkit` | 无 |
+| `repro-bundler` | 无（纯标准库） | 无 |
+| `schema-gate` | 无（纯标准库） | 无 |
+| `secret-gate` | 无（纯标准库） | 无 |
+| `code-gate` | 无（纯标准库） | 无 |
+| `test-gate` | 无（纯标准库）；仅 `--ruff` 时用 ruff | 无 |
 | `reference-auditor` | `requests` | 无 |
 | `sci-visualizer` | `matplotlib`, `seaborn`, `pandas` | `Pillow`（gif/动画逐帧扫描） |
 | `security-guard` | 无（纯标准库） | 无 |

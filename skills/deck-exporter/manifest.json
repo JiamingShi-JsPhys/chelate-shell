@@ -1,0 +1,17 @@
+{
+  "name": "deck-exporter",
+  "version": "1.4.0",
+  "stage": "processors",
+  "input_types": [
+    "markdown"
+  ],
+  "output_type": "artifact",
+  "output_types": [
+    "artifact",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Turn the Markdown reports in process/ into one self-contained HTML deck: images inlined as data URIs, CSS inline, no network references, and an absolute path in the output refuses the export instead of being sanitised."
+}

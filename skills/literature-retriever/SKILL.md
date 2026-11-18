@@ -1,12 +1,11 @@
 ---
 name: literature-retriever
-version: 1.3.6
+version: 1.4.0
 description: >
-  Searches arXiv for a keyword phrase and stores the result as JSON in
-  `process/`. Returns metadata only — titles, authors, identifiers, abstracts —
-  and never downloads or redistributes the papers themselves.
+  Searches arXiv, Crossref or PubMed, or resolves a DOI; stores metadata
+  JSON, optionally BibTeX.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py
@@ -15,10 +14,13 @@ metadata:
 
 # literature-retriever
 
-Queries the arXiv API and normalises the response into one JSON file per
-search. It does not rank by relevance for you beyond the API's own sort.
+Queries one bibliographic source and normalises the response into one JSON
+file per search. Four sources: `arxiv` (SDK), `crossref` and `pubmed`
+(standard library), and `doi` (resolve one DOI through Crossref). It does not
+rank for you beyond the API's own ordering.
 
-- **Stage:** `ingest` · **Sandbox:** no · **Dependencies:** `arxiv`
+- **Stage:** `ingest` · **Sandbox:** no · **Dependencies:** `arxiv` (only for
+  `--source arxiv`; the other three need nothing installed)
 
 ## Quick Execution
 
@@ -26,10 +28,15 @@ Run this exact form — do not read the source tree:
 
 ```bash
 python run.py --root <WS> --action search --query "topological insulator"
+python run.py --root <WS> --action search --query "twisted bilayer graphene" --source crossref --format bibtex
+python run.py --root <WS> --action search --query 10.1038/nature14539 --source doi
 ```
 
+- `--source {arxiv,crossref,pubmed,doi}` defaults to `arxiv`.
 - `--max-results` and `--sort-by {relevance,lastUpdatedDate,submittedDate}`
-  default to `assets/config.yaml`.
+  default to `assets/config.yaml`; `--sort-by` is arXiv-only.
+- `--format {json,bibtex,both}` writes a `.bib` next to the JSON.
+- Dates are normalised to `YYYY[-MM[-DD]]` whichever source answered.
 - Results land in `<WS>/process/literature/`, the gate in `<WS>/process/gates/`.
 
 ## When to use
@@ -46,7 +53,7 @@ python run.py --root <WS> --action search --query "topological insulator"
 
 | `--action` | Does | Extra arguments |
 | --- | --- | --- |
-| `search` | arXiv keyword search → JSON | `--query "..." [--max-results N] [--sort-by ...] [--outdir <dir>]` |
+| `search` | keyword search (or one DOI) → JSON (+ `.bib`) | `--query "..." [--source arxiv\|crossref\|pubmed\|doi] [--max-results N] [--sort-by ...] [--format json\|bibtex\|both] [--outdir <dir>]` |
 
 ## Hard constraints
 

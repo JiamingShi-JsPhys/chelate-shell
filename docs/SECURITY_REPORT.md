@@ -1,4 +1,4 @@
-# Security report — 1.3.6
+# Security report — through 1.4.0
 
 What this release measured, what it did not, and where the line is. Written
 for a reader who will go looking for a containment claim and needs to find out
@@ -26,9 +26,13 @@ python examples/graphene-tight-binding/run_demo.py          # end-to-end, 5 atta
 | **A3.** Another OS user, malware, a remote attacker | **No** | Nothing in this codebase. Out of scope by construction |
 
 A2 and A3 are not a gap in the implementation; they are the boundary of what a
-Python policy layer can do on a filesystem the agent can write. Closing them
-needs a separate identity for the worker, a broker holding the key, and a
-`results/` only the broker can write — the 1.4.0 target.
+Python policy layer can do on a filesystem the agent can write. 1.4.0 ships
+the first half of what closing them needs — a broker holding the key, with
+`submit` and `approve` on separate channels — and reports which half it got:
+`cli.py status` prints `containment_detail`, `same-os-user` while the broker
+shares the worker's account, `separate-os-user` once a second identity exists.
+The worker still runs as the same user and `results/` is still an ordinary
+directory, so A2 is not closed yet.
 
 ## Rates, measured inside the model
 
@@ -82,7 +86,7 @@ half-published deliverable.
 | Concurrency | 20 processes racing one token (`test_token_lifecycle.py`) | exactly 1 winner, 19 refusals |
 | Crash recovery | Mid-copy abort, leftover staging, special file | no partial publication |
 | Platform | Windows 11, Python 3.10/3.12 | pass; POSIX-only cases skip and are marked |
-| Host integration | Claude Code, Codex, DSH, zcode, opencode | exercised manually in 1.3.5; not re-run in 1.3.6 |
+| Host integration | Claude Code, Codex, DSH, zcode, opencode | exercised manually in 1.3.5; not re-run since |
 
 ## What changed in 1.3.6, and what each change is worth
 
@@ -97,21 +101,82 @@ half-published deliverable.
 | Chinese, homoglyph, HTML-comment and base64 injection patterns | the screen doing nothing for Chinese input | a novel phrasing no pattern covers |
 | Symlink and hardlink refusal at promotion | `process/leak -> /etc/shadow` landing in `results/` | a file copied in rather than linked |
 
+## What changed in 1.4.0, and what each change is worth
+
+| Change | Closes | Does not close |
+|---|---|---|
+| Manifest paths refuse `:` and Windows device names; declared files are opened with `O_NOFOLLOW` where the platform has it | writing into an NTFS alternate data stream, publishing to `NUL`, and swapping a symlink between the link check and the open | a hardlink that already points outside the workspace — the tree check names it, it does not undo it |
+| Approval bound to the manifest's digest and nonce; publication copies only the declared files, hashing as it copies | editing `process/` between approval and publication; publishing a file the manifest never named; spending an approval on a rebuilt manifest | a process that can reach the approve key and mint its own token (A2) |
+| `Runtime.submit` is the only publication path; `pipeline`, `publish` and the MCP surface all go through it | a caller publishing by calling `router.promote` itself without the manifest checks | a caller that imports `router` directly — the same code is still importable in-process |
+| Broker: two channels, separate 32-byte keys, fixed op sets, JSON bytes | an agent that has only reached the `submit` channel | a process running as the same user that reads the approve key — reported as `containment_detail: same-os-user` |
+| `core/runtime.py`, fail-closed `BrokerRuntime` | a silent fall back to policy mode when no broker is running | a caller that instantiates `PolicyRuntime` directly; it is still the default backend |
+| `contracts/action_manifest.py` validation | absolute paths, `..` escapes, stale expiry and a replayed nonce reaching the broker | an operator who reads a manifest instead of re-checking it |
+| Hash-chained memory, written only by `cli.py memory add` | a later session treating an edited note as history | a person writing the wrong thing, correctly |
+| Recipes run every step with `publish=False` | a recipe publishing by accident | a step that writes into `results/` itself |
+| Hooks take argv only, scrubbed environment, non-blocking exit code | shell injection through a hook; an approval variable inheriting into it | a hook that is permitted to act and then acts badly |
+| MCP exposes five tools, no approval and no memory write | an agent approving its own promotion over MCP | an agent calling `cli.py approve` directly |
+| `egress` declares `controlled: false` and names the skills whose manifests declare `network` | a status report implying a firewall | the network calls themselves |
+| `secret-gate` reports `path:line (rule, fingerprint)` | a credential reaching a gate record or a transcript | a credential outside a text file, or one already in `results/` |
+
+### What the scanners said
+
+`python -m deepsec shield scan . --layer all --no-remote-l3` over the release
+tree reports one medium: `sast_ssrf_fetch_use` at
+`lib/chelate_core/scholar_search.py`, "HTTP request appears to use a
+user-controlled URL". That is true about the shape of the code — a search
+phrase and a DOI both reach a URL — and not true about the risk, because the
+host is a literal in all five templates: `_get` refuses anything whose scheme
+is not `https` or whose host is not `api.crossref.org` /
+`eutils.ncbi.nlm.nih.gov`, and `resolve_doi` refuses a string that is not a
+DOI before a URL is built. Both checks have tests
+(`tests/test_literature_sources.py`); the rule cannot see across them, so the
+finding is reported here rather than suppressed with an ignore file.
+
 ## Known gaps, stated rather than implied
 
 1. **`results/` is writable by anyone who can write the workspace.** The
    approval gate guards `promote()`; `cli.py audit` names what arrived another
    way. Prevention needs a filesystem boundary.
-2. **The key is readable by the same user.** See A2.
+2. **The key is readable by the same user.** See A2. 1.4.0 splits the channel
+   in code and reports the split as `same-os-user`; it is a control over code
+   paths, not over processes.
 3. **`process/gates/` is agent-writable.** A forged PASS with no digests is
    recorded as `unbound`, which is visible in `gate_freshness` but not blocked.
 4. **No network egress control.** A skill that calls out is not stopped.
+   Manifests can declare `network`, and `cli.py status` reports
+   `egress: {controlled: false, declaring_network: [...]}` — a scope for the
+   claim, not a control.
 5. **Large inputs are bound by size, not by digest.** A same-size replacement
    is not detected; the gate says `large:<bytes>` rather than pretending.
 6. **Only declared inputs are bound.** A config found by convention, an
    environment variable, a network response — none of it is covered.
 7. **The sandbox whitelist includes `python`.** A whitelisted interpreter can
    do anything the account can.
+
+## The 1.4.0 broker, as it stands in the tree
+
+Not released, and not described above. What is implemented and tested:
+
+- **Two channels.** `submit` serves `submit|audit|status|ping`; `approve`
+  serves `approve|revoke|rotate|status|ping`. Each listener has its own
+  32-byte authkey; the operation set is the control, a cross-channel call is
+  refused and logged with its op and channel, and payloads are JSON bytes
+  (never pickle).
+- **Publication is the broker's.** `runtime.submit()` crosses IPC; the broker
+  validates the manifest, checks the outputs' digests, consumes the one-time
+  token, and calls `router.promote()` in its own process. `audit` crosses the
+  same channel. No broker ⇒ `RuntimeUnavailable`, never policy mode.
+- **What that is worth is conditional, and the report says which.** With the
+  broker on the worker's own OS user, `containment_detail` reads
+  `same-os-user`: the channel split constrains code paths, and a process that
+  hunts the approve key defeats it. With a second identity it reads
+  `separate-os-user`, which is the claim the design exists for. The mechanism
+  behind the latter — a DACL naming Administrators and SYSTEM refusing an
+  ordinary process — is exercised in `tests/test_broker.py` and skips where
+  the account can rewrite the ACL.
+- **Still missing before the claim holds:** the broker owning `results/` as
+  an installer step, and the cross-user test in CI. Gap 1 is therefore
+  narrowed, not closed.
 
 ## Statement
 

@@ -8,14 +8,14 @@ against.
 
 ## How a run flows
 
-`core/router.py` is a microkernel: it reads the 19 `manifest.json` files, builds a plan in the canonical stage order, screens text inputs for prompt injection **before** dispatching anything, and then calls each skill's adapter. Every call writes a `GateResult` to `process/gates/` — `PASS`, `UNVERIFIED`, or `FAIL`.
+`core/router.py` is a microkernel: it reads the 25 `manifest.json` files, builds a plan in the canonical stage order, screens text inputs for prompt injection **before** dispatching anything, and then calls each skill's adapter. Every call writes a `GateResult` to `process/gates/` — `PASS`, `UNVERIFIED`, or `FAIL`.
 
-A missing dependency degrades one skill to `UNVERIFIED` and the run continues. A single `FAIL` is terminal: the pipeline stops on the spot and leaves the intermediate products locked in `process/`. When no gate fails **and a human has approved that exact plan**, `process/` is promoted into `results/`; either way the run is summarised in a typed pipeline report plus the `_broadcast/` index that a later session reads before opening any original.
+A missing dependency degrades one skill to `UNVERIFIED` and the run continues. A single `FAIL` is terminal: the pipeline stops on the spot and leaves the intermediate products locked in `process/`. When no gate fails **and a person has approved that exact manifest**, the files it names are copied into `results/`; either way the run is summarised in a typed pipeline report plus the `_broadcast/` index that a later session reads before opening any original.
 
 ```mermaid
 flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>scan the 19 manifests"]
+    CLI --> REG["core/registry.py<br/>scan the 25 manifests"]
     REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
     PLAN --> SCAN["core/security_shield.py<br/>pre-dispatch injection scan"]
     SCAN -->|"markers found"| BAD["FAIL: injection-scan<br/>blocked before dispatch"]
@@ -24,8 +24,8 @@ flowchart LR
         direction TB
         WS["workspace · 3 skills<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
         ING["ingest · 4 skills<br/>video-tracker, fulltext-extractor,<br/>literature-retriever, bibtex-normalizer"]
-        GAT["gates · 7 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
-        PRO["processors · 2 skills<br/>ai-trace-remover, latex-exporter"]
+        GAT["gates · 11 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler, schema-gate,<br/>quantitative-validator, ml-auditor, longitudinal-analysis,<br/>code-gate, test-gate, secret-gate"]
+        PRO["processors · 4 skills<br/>ai-trace-remover, deck-exporter, latex-exporter, repro-bundler"]
         WS --> ING --> GAT --> PRO
     end
 

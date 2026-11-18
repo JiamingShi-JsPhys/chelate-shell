@@ -350,8 +350,13 @@ def test_cli_approve_issues_a_token_the_pipeline_accepts(workspace):
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout[proc.stdout.find("{"):])
     assert Path(payload["token"]).is_file()
-    approval.consume(str(workspace), "promote",
-                     _params(selected=["reference-auditor"]))
+    # The token names a manifest now: it can only be spent by presenting the
+    # digest it was issued for.
+    assert payload["manifest_sha256"]
+    token = approval.consume(str(workspace), "promote",
+                             _params(selected=["reference-auditor"]),
+                             manifest_sha256=payload["manifest_sha256"])
+    assert token["manifest_sha256"] == payload["manifest_sha256"]
 
 
 def test_the_cli_exits_non_zero_when_the_promotion_is_withheld(workspace):

@@ -46,7 +46,7 @@ _REQUIRED_FIELDS = ("name", "version", "stage", "input_types",
 _STRING_FIELDS = ("name", "version", "stage", "output_type",
                   "entrypoint", "description")
 _ARRAY_FIELDS = ("input_types", "dependencies", "output_types")
-_BOOL_FIELDS = ("sandbox_required",)
+_BOOL_FIELDS = ("sandbox_required", "network")
 _KNOWN_FIELDS = (set(_REQUIRED_FIELDS) | set(_ARRAY_FIELDS)
                  | set(_BOOL_FIELDS))
 
@@ -97,6 +97,10 @@ class SkillRecord:
     run_path: str
     output_types: List[str] = field(default_factory=list)
     sandbox_required: bool = False
+    # Declarative, not enforced: no layer here blocks a socket. It exists so
+    # a status report can say which skills *could* reach the network instead
+    # of claiming a control this tree does not have.
+    network: bool = False
 
     @property
     def run_exists(self) -> bool:
@@ -168,6 +172,7 @@ class Registry:
             output_types=list(data.get("output_types",
                                        [data["output_type"]])),
             sandbox_required=bool(data.get("sandbox_required", False)),
+            network=bool(data.get("network", False)),
         )
         if not rec.run_exists:
             self.errors.append(f"{manifest_path}: entrypoint not found: {rec.run_path}")

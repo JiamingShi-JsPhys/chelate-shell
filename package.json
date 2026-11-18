@@ -1,7 +1,7 @@
 {
   "name": "chelate-shell",
-  "version": "1.3.6",
-  "description": "Nineteen research and engineering skills run as one gated pipeline for DeepSeek Harness and other agent hosts: falsifiable gates (atom conservation, CAS and units, Crossref DOI, ML leakage, OBJ mesh) block the stages downstream of a failure instead of passing it along.",
+  "version": "1.4.0",
+  "description": "Twenty-five research and engineering skills run as one gated pipeline for DeepSeek Harness and other agent hosts: falsifiable gates (atom conservation, CAS and units, Crossref DOI, ML leakage, OBJ mesh, credentials, schema, code and tests) block the stages downstream of a failure instead of passing it along.",
   "main": "index.js",
   "type": "module",
   "license": "MIT",

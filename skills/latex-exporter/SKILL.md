@@ -1,12 +1,11 @@
 ---
 name: latex-exporter
-version: 1.3.6
+version: 1.4.0
 description: >
-  Merges the Markdown reports in `process/` plus the graphics in
-  `process/figures/` into one compilable `.tex` file. Pure standard library —
-  no pandoc, no LaTeX toolchain required to produce the file.
+  Merges process/ Markdown and figures into one compilable .tex, standard
+  library only.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python scripts/run.py
@@ -30,7 +29,10 @@ python scripts/run.py --root <WS> --action export
 
 - `--action process` is an alias; `--name report.tex` sets the filename
   (default `merged_report.tex`).
-- The `.tex` lands in `<WS>/results/`; the gate in `<WS>/process/gates/`.
+- The `.tex` lands in `<WS>/process/latex/` — **not** `results/`; promotion is
+  the pipeline's job. The gate lands in `<WS>/process/gates/`.
+- **Stdlib only**: never introduce a pandoc dependency, and never rewrite the
+  prose — the Markdown is embedded as authored.
 
 ## When to use
 
@@ -42,46 +44,6 @@ python scripts/run.py --root <WS> --action export
 - The document must be compiled to PDF — that needs a LaTeX install.
 - The sources are Word or HTML.
 
-## Actions
+## More
 
-| `--action` | Does | Extra arguments |
-| --- | --- | --- |
-| `export` | Merge reports + figures into one `.tex` | `[--name report.tex]` |
-| `process` | Alias of `export` | `[--name report.tex]` |
-
-## Hard constraints
-
-- **Stdlib only.** Never introduce a pandoc dependency.
-- **Never rewrite the prose** — the Markdown is embedded as authored.
-
-## Outputs
-
-- `<WS>/results/merged_report.tex` (or `--name`) — the merged document.
-- `<WS>/process/gates/latex-exporter_<ts>.json` — the gate result.
-
-## Failure handling
-
-- No Markdown to merge fails the gate with a clear message.
-- A missing figure file is reported, and the include is written commented out.
-
-## Limitations
-
-- No compilation step.
-- Only Markdown and the common image formats are handled.
-
-## Delivering results
-
-This skill writes intermediates to `process/`. `results/` is filled only by
-`python cli.py pipeline` after a human approved that exact plan.
-
-- Do not copy a skill's output into `results/` yourself, and do not do it
-  because the user asked for a shortcut: say that only `cli.py pipeline`
-  writes there, offer to run the pipeline instead, and if they still insist,
-  tell them `cli.py audit` will report the file as unapproved.
-- Never set `CHELATE_UNSAFE_AUTO_APPROVE=1` (formerly `CHELATE_HUMAN`) and never run `cli.py approve` on the user's
-  behalf. If an approval is needed, ask the human to issue it in their own
-  terminal.
-- Before telling the user a deliverable is ready — and after any write you
-  make under `results/` — run `python cli.py audit --root <ws>`. Exit 1 means
-  files there have no approval behind them: report that and name them, do not
-  describe the state as delivered.
+- [actions, outputs, failure handling and limits](references/latex-exporter-reference.md)

@@ -1,12 +1,12 @@
 # Chelate Shell
 
-**Nineteen research and engineering skills routed as one deterministic pipeline — and it stops before the one step that cannot be undone.**
+**Twenty-three research and engineering skills routed as one deterministic pipeline — and it stops before the one step that cannot be undone.**
 
 Each skill solves a single problem. The hard part is what runs first, and where the output lands — Chelate Shell puts the skills, the stage order and the gates in one repository.
 
 **English** · [简体中文](README_zh.md)
 
-**Version:** 1.3.6 | **License:** MIT | **Python:** 3.10+ | **Skills:** 19
+**Version:** 1.4.0 | **License:** MIT | **Python:** 3.10+ | **Skills:** 25
 
 > Research and engineering assistance only. Read [Safety and licensing](#safety-and-licensing) before relying on any output.
 
@@ -45,7 +45,7 @@ Each skill solves a single problem. The hard part is what runs first, and where 
 
 Every skill in today's AI ecosystem solves one problem: check a formula, track a video, tidy up files. What an agent still has to decide on a complex task is **which skill to call, in what order, and where its output belongs** — and loose, stateless calls produce context pollution, muddled file versions and confident nonsense. Chelate Shell answers that at two levels, both in the same repository.
 
-- **The 19 skills implement their algorithms directly, not as prompt templates.** `formula-validator` runs five check layers over SymPy and cross-checks units with pint; `quantitative-validator` balances chemical equations through RDKit; `longitudinal-analysis` calls lme4 and lavaan in R; `video-tracker` performs CSRT tracking in OpenCV and computes an FFT of the trajectory; `ml-auditor` checks labelled datasets for leakage and label errors with scikit-learn; `sci-visualizer` renders publication-grade charts; `fulltext-extractor` pulls page ranges out of PDFs; `latex-exporter` assembles the Markdown reports into a compilable `.tex` using the standard library only.
+- **The 25 skills implement their algorithms directly, not as prompt templates.** `formula-validator` runs five check layers over SymPy and cross-checks units with pint; `quantitative-validator` balances chemical equations through RDKit; `longitudinal-analysis` calls lme4 and lavaan in R; `video-tracker` performs CSRT tracking in OpenCV and computes an FFT of the trajectory; `ml-auditor` checks labelled datasets for leakage and label errors with scikit-learn; `sci-visualizer` renders publication-grade charts; `fulltext-extractor` pulls page ranges out of PDFs; `latex-exporter` assembles the Markdown reports into a compilable `.tex` using the standard library only.
 - **The orchestrator guarantees what a lone skill cannot.** `core/router.py` breaks the task down, enforces the four-zone workspace, and routes in a deterministic stage order, so the same input always produces the same plan. Every call writes a typed gate, the first `FAIL` stops the pipeline, and a missing dependency is reported as `UNVERIFIED` rather than silently skipped.
 - **The one irreversible step needs a person to say yes.** Promoting `process/` into `results/` requires an approval a human issued for that exact plan; the signing key lives outside the workspace, so an agent cannot mint its own. Without one the run still completes, but nothing is written to `results/` and the process exits non-zero.
 
@@ -66,17 +66,17 @@ Visit the GitHub repository `https://github.com/JiamingShi-JsPhys/chelate-shell`
 ### Method two: install from a marketplace URL
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.6
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.4.0
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.6` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
+`#v1.4.0` pins the install to this release; drop it to follow the default branch. Registering the same URL twice is harmless — the second attempt reports that it already exists.
 
 ### Method three: install with commands
 
 Claude Code, Codex, dsh and CodeBuddy install with a one-line plugin command; Cursor, Windsurf, Cline, Continue, Roo Code, GitHub Copilot and opencode read rule files, and one script writes all of them. Every command, every flag and the optional dependencies are on one page: **[docs/INSTALL_COMMANDS.md](docs/INSTALL_COMMANDS.md)**.
 
-The npm registry is covered there too. The published tarball is the same tree the release zip is — `index.js`, the DSH patch, `core/`, `lib/`, `contracts/`, `commands/`, `agents/` and all 19 folders under `skills/` — so it suits a project dependency or a DSH profile:
+The npm registry is covered there too. The published tarball is the same tree the release zip is — `index.js`, the DSH patch, `core/`, `lib/`, `contracts/`, `commands/`, `agents/` and all 25 folders under `skills/` — so it suits a project dependency or a DSH profile:
 
 ```bash
 npm install chelate-shell                        # as a dependency in a project
@@ -102,7 +102,7 @@ python cli.py update --apply    # run each host's own update command
 
 ### From the chat box
 
-Once the plugin is installed you do not leave the chat: type `/` and pick a skill. No terminal, no absolute paths — the workspace is the folder you are already working in. All 19 skills live under the `chelate-shell` namespace:
+Once the plugin is installed you do not leave the chat: type `/` and pick a skill. No terminal, no absolute paths — the workspace is the folder you are already working in. All 25 skills live under the `chelate-shell` namespace:
 
 ```text
 /chelate-shell:task-organizer      turn this folder into a task workspace
@@ -142,10 +142,19 @@ The host routes matching work to them automatically, or you can name one. Each i
 The same operations run headless, for CI and scripts:
 
 ```bash
-python cli.py list                                           # the 19 skills
+python cli.py list                                           # the 25 skills
 python cli.py run task-organizer --root <ws> --action init   # make a workspace
 python cli.py run data-profiler --root <ws> --input data.csv # run one skill
-python cli.py pipeline --root <ws> --mode a                  # run the pipeline
+python cli.py pipeline --root <ws> --mode a                  # run, then submit
+python cli.py pipeline --root <ws> --summary                 # one line per skill, no JSON dump
+python cli.py approve --root <ws>                            # bind an approval to those bytes
+python cli.py publish --root <ws>                            # publish exactly what was approved
+python cli.py memory add "units are cgs" --root <ws>         # record a note
+python cli.py memory brief --root <ws>                       # read the notes back
+python cli.py doctor --root <ws>                             # what a clean machine would skip
+python cli.py broker start --root <ws>                       # the 1.4.0 publication boundary
+python cli.py skill new my-gate --stage gates                # scaffold a skill
+python cli.py skill lint                                     # manifest / SKILL.md / README agree?
 ```
 
 The `a` / `b` / `c` pipeline modes, every flag and the debug switches are in [ORCHESTRATOR.md](ORCHESTRATOR.md) §5.
@@ -182,13 +191,13 @@ A wrong dimension is not a reminder: it is a failed gate, a report on disk, and 
 | "Generate this mesh and check it" | `3d-modeler` | an OBJ plus winding / degenerate-face / bounding-box audit |
 | "Is this text trying to inject instructions?" | `security-guard` | injection markers and dangerous call sites |
 
-All 19 skills and what each one actually computes: [repository layout](#repository-layout) and [docs/REFERENCE.md](docs/REFERENCE.md).
+All 25 skills and what each one actually computes: [repository layout](#repository-layout) and [docs/REFERENCE.md](docs/REFERENCE.md).
 
 ---
 
 ## How a run flows
 
-`core/router.py` reads the 19 manifests, builds a plan in the canonical stage order, screens text inputs for prompt injection before dispatch, then calls each skill adapter.
+`core/router.py` reads the 25 manifests, builds a plan in the canonical stage order, screens text inputs for prompt injection before dispatch, then calls each skill adapter.
 
 | Stage | Does |
 |---|---|
@@ -203,7 +212,7 @@ Promoting `process/` into `results/` is the one irreversible step, so it needs a
 
 ```bash
 python cli.py approve  --root <ws> --mode a     # type the confirmation phrase
-python cli.py pipeline --root <ws> --mode a     # promote with that approval
+python cli.py publish  --root <ws>              # publish exactly those bytes
 ```
 
 The approval is bound to the action, the resolved workspace, the mode and selected skills, the SHA-256 of every input file, and a 15-minute expiry; the signing key lives outside the workspace, so an agent cannot mint its own. Without one the run still completes — the attempt stays visible in `process/` — but nothing is written to `results/` and the process exits non-zero.
@@ -213,7 +222,7 @@ The gate guards `promote()`, not the directory: an agent holding a file-writing 
 ```mermaid
 flowchart LR
   IN["task + inputs"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-  CLI --> REG["core/registry.py<br/>scan 19 manifests"]
+  CLI --> REG["core/registry.py<br/>scan 25 manifests"]
   REG --> PLAN{"build_plan<br/>canonical stage order"}
   PLAN --> SCAN["security_shield<br/>injection scan before dispatch"]
   SCAN -->|"marker hit"| INJ["FAIL: injection-scan<br/>nothing dispatched"]
@@ -222,8 +231,8 @@ flowchart LR
     direction TB
     WS["workspace · 3<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
     ING["ingest · 4<br/>fulltext-extractor, literature-retriever,<br/>bibtex-normalizer, video-tracker"]
-    GAT["gates · 7<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
-    PRO["processors · 2<br/>ai-trace-remover, latex-exporter"]
+    GAT["gates · 11<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler, schema-gate,<br/>quantitative-validator, ml-auditor, longitudinal-analysis,<br/>code-gate, test-gate, secret-gate"]
+    PRO["processors · 4<br/>ai-trace-remover, deck-exporter,<br/>latex-exporter, repro-bundler"]
     WS --> ING --> GAT --> PRO
   end
 
@@ -253,17 +262,17 @@ flowchart LR
 
 ```text
 chelate-shell/
-├── cli.py                 # list / run / pipeline / approve / audit / update
+├── cli.py                 # list / run / pipeline / approve / publish / audit / status / memory / update
 ├── core/                  # router, approval, sandbox, security_shield, registry
 ├── lib/chelate_core/      # shared logic (paths, DOI, BibTeX, debug layer)
-├── skills/                # 19 skills, one flat folder each
+├── skills/                # 25 skills, one flat folder each
 ├── agents/                # subagents registered with the plugin
 ├── commands/              # slash commands (figure / model3d / trace / brainstorm)
 ├── docs/                  # architecture, reference, safety, testing, dependencies
 └── tests/                 # root suite + the adversarial cases
 ```
 
-Per-directory detail, and what each of the 19 skills computes: **[docs/REFERENCE.md](docs/REFERENCE.md)**.
+Per-directory detail, and what each of the 25 skills computes: **[docs/REFERENCE.md](docs/REFERENCE.md)**.
 
 ## Full reference
 
@@ -289,6 +298,7 @@ This pipeline writes files and runs external commands, so the boundaries are in 
 - **What was issued can be withdrawn.** `cli.py revoke` deletes unspent approvals; `cli.py rotate-key` replaces the signing key and invalidates every token issued under it, while old promotion records keep verifying.
 - **The injection screen reads Chinese.** It normalises full-width forms, zero-width characters and Cyrillic/Greek homoglyphs before matching, inspects HTML comments, decodes base64 once, and requires the object of the verb to be a prompt artefact so ordinary prose (`忽略不计`) passes.
 - **Containment and the sandbox.** `ensure_within()` resolves both paths with `realpath` before comparing, so `--output ../../x`, `workspace(root, "..")` and outward-pointing symlinks are refused before any write happens. The sandbox checks the child's `cmd[0]` against a whitelist before the process exists, and again inside the child.
+- **Memory is data, and only a person writes it.** `cli.py memory` keeps workspace notes in `.chelate/memory/memory.jsonl`, append-only and hash-chained: each entry carries its own digest and the previous one's, so an edited entry is named by `memory verify` at the line it broke, and a store whose chain no longer holds refuses to grow. No skill and no MCP tool can write — `chelate_memory` reads only. An entry that would read as an instruction is refused at write time, because `brief` replays it to a later session as data. Wire it into a session start through `chelate.hooks.json` (`session_start` → `python cli.py memory brief --root .`).
 - **Auditable afterwards.** Every promotion is recorded in `results/.promotions.jsonl`, and `cli.py audit` names what no promotion accounts for, exiting 1.
 
 Threat model, the 26 adversarial cases (including how three self-approval routes were closed and why two probes are reported as passing), the 17 promotion-integrity cases, and the known boundary: **[docs/SAFETY.md](docs/SAFETY.md)**.
@@ -299,7 +309,7 @@ Threat model, the 26 adversarial cases (including how three self-approval routes
 
 ## Requirements
 
-Python 3.10+ and nothing else up front: the microkernel and most skills use the standard library only. A few data and network skills additionally use common third-party packages (numpy, pandas, sympy, rdkit, matplotlib, requests, …); each skill's `manifest.json` states exactly what it needs, and `core/sandbox.py` checks it at run time. A missing package never crashes the pipeline — that one skill degrades to an `UNVERIFIED` gate and the rest keep running. This repository bundles no third-party code, and every library keeps its own permissive licence. The full per-skill matrix is in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
+Python 3.10+ and nothing else up front: the microkernel and most skills use the standard library only. A few data and network skills additionally use common third-party packages (numpy, pandas, sympy, rdkit, matplotlib, requests, …); each skill's `manifest.json` states exactly what it needs, and `core/sandbox.py` checks it at run time. A missing package never crashes the pipeline — that one skill degrades to an `UNVERIFIED` gate and the rest keep running. The consequence is worth stating plainly: on a machine with none of them installed, mode `a` still runs, but six of the ten gates return `UNVERIFIED`, and promotion is refused, because an `UNVERIFIED` gate publishes nothing unless a person bound `--allow-unverified` into the token. Install what your plan needs first; `docs/DEPENDENCIES.md` is the per-skill matrix. This repository bundles no third-party code, and every library keeps its own permissive licence. The full per-skill matrix is in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 ## Tests
 
@@ -308,7 +318,7 @@ python -m pytest tests/ -q                                 # the full suite
 python -m pytest tests/test_irreversible_actions.py -q    # the 26 adversarial cases
 ```
 
-471 tests: 459 pass and 12 skip with the optional dependencies installed; in a pytest-only environment the dependency-gated cases skip instead, and what runs is the `UNVERIFIED` path a fresh user actually meets. Seven skills also keep their own upstream suites under `skills/<skill>/tests/`, each run in its own process. Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**.
+772 tests: 760 pass and 12 skip with the optional dependencies installed; in a pytest-only environment the dependency-gated cases skip instead, and what runs is the `UNVERIFIED` path a fresh user actually meets. Seven skills also keep their own upstream suites under `skills/<skill>/tests/`, each run in its own process. Both environments, the coverage list and the per-skill counts: **[docs/TESTING.md](docs/TESTING.md)**. What the routing layer costs in context every session, measured, and what 1.4.0 changed: **[docs/TOKEN_BUDGET.md](docs/TOKEN_BUDGET.md)**.
 
 ## Safety and licensing
 

@@ -20,7 +20,7 @@ def test_all_routed_skills_registered():
     left. v1.3.0 adds security-guard, which declares stage=infrastructure.)"""
     reg = Registry().scan(str(SKILLS_DIR))
     assert reg.names() == sorted(ROUTED_SKILLS)
-    assert len(reg) == 19
+    assert len(reg) == 25
     # any residual skeleton would be reported, not silently dropped
     reported = " ".join(reg.errors)
     for s in SKELETON_SKILLS:
@@ -97,11 +97,11 @@ def test_stage_partition_matches_blueprint():
         "bibtex-normalizer", "fulltext-extractor",
         "literature-retriever", "video-tracker"]
     assert sorted(r.name for r in reg.by_stage("gates")) == [
-        "conflict-detector", "data-profiler", "formula-validator",
+        "code-gate", "conflict-detector", "data-profiler", "formula-validator",
         "longitudinal-analysis", "ml-auditor", "quantitative-validator",
-        "reference-auditor"]
+        "reference-auditor", "schema-gate", "secret-gate", "test-gate"]
     assert sorted(r.name for r in reg.by_stage("processors")) == [
-        "ai-trace-remover", "latex-exporter"]
+        "ai-trace-remover", "deck-exporter", "latex-exporter", "repro-bundler"]
     assert sorted(r.name for r in reg.by_stage("workspace")) == [
         "document-evolution-tracker", "multi-dim-manager",
         "task-organizer"]
@@ -136,3 +136,20 @@ def test_repo_layout_top_level():
     for item in ("core", "contracts", "skills", "tests", "cli.py",
                  "bootstrap.py"):
         assert (REPO_ROOT / item).exists(), f"missing top-level {item}"
+
+
+def test_network_is_a_declared_capability_not_an_enforced_one():
+    """Exactly the skills that reach the network say so; nothing else claims
+    it, and the declaration is not a control (see runtime.egress_status)."""
+    reg = Registry().scan(str(SKILLS_DIR))
+    assert {r.name for r in reg.all() if r.network} == {
+        "literature-retriever", "reference-auditor"}
+    assert reg.get("data-profiler").network is False
+
+
+def test_network_must_be_a_boolean():
+    problems = validate_manifest({
+        "name": "x", "version": "1.0.0", "stage": "gates",
+        "input_types": ["csv"], "output_type": "json", "entrypoint": "run.py",
+        "description": "d", "network": "yes"})
+    assert any("network" in p for p in problems)

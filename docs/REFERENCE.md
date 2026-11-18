@@ -2,7 +2,7 @@
 
 # Reference
 
-Every directory in the repository, and what each of the 19 skills does. The
+Every directory in the repository, and what each of the 25 skills does. The
 front page of the README keeps the short version: **core/** is the microkernel,
 **lib/chelate_core/** is the shared logic, **skills/** holds one folder per
 skill.
@@ -29,7 +29,8 @@ chelate-shell/
 ├── assets/                           # icon.png (shared by the plugin manifests)
 ├── bootstrap.py                      # shared import + gate-write helper for every run.py
 ├── CHANGELOG.md                      # release notes
-├── cli.py                            # CLI entry: list / run / approve / pipeline / audit / update
+├── cli.py                            # CLI entry: list / run / approve / pipeline / publish / audit / status /
+│                                     # recipe / hook / memory / update
 ├── commands/                         # slash commands
 │   ├── figure.md                     # /figure — chart from a CSV or JSON dataset
 │   └── model3d.md                    # /model3d — OBJ mesh generate / merge / audit
@@ -41,11 +42,20 @@ chelate-shell/
 ├── cordis.patch.yml                  # cordis bundle patch
 ├── core/                             # microkernel
 │   ├── __init__.py
+│   ├── approval.py                   # promotion tokens: signing, expiry, atomic spend, revocation
+│   ├── broker.py                     # two-channel publication broker (submit / approve, separate keys)
+│   ├── hooks.py                      # pipeline/host hook dispatch (argv only, scrubbed env)
+│   ├── memory.py                     # append-only hash-chained workspace notes
+│   ├── recipes.py                    # serial recipe loading, validation, graph, run
 │   ├── registry.py                   # scans skills/ into a routing table
 │   ├── router.py                     # dispatcher: manifest-driven pipeline
 │   ├── sandbox.py                    # dependency resolution / 120-second circuit-breaker
+│   ├── runtime.py                    # the five-call Runtime API (policy / fail-closed broker)
 │   ├── security_shield.py            # anti-injection text scan + AST dangerous-call scan
-│   └── subagent_manager.py           # sub-agent role registry
+│   ├── skillkit.py                   # skill scaffolding + manifest/SKILL.md/README/CHANGELOG lint
+│   ├── snapshot.py                   # content-addressed input snapshots (TOCTOU)
+│   ├── subagent_manager.py           # sub-agent role registry
+│   └── update.py                     # self-update check (version lookup, no auto-install)
 ├── docs/                             # this reference, architecture, testing, install commands, dependencies
 ├── index.js                          # ESM plugin entry (dsh: registers 4 tools)
 ├── install.py                        # one-command rule-file installer (see Installation)
@@ -54,24 +64,32 @@ chelate-shell/
 │   ├── adapter.py                    # thin-adapter toolkit: argparse, gate emission, legacy runner
 │   ├── arxiv_search.py               # arXiv search core
 │   ├── bibtex_norm.py                # BibTeX parse / dedupe / normalize core
+│   ├── codegate.py                   # eight fixed AST code-quality rules
 │   ├── csv_profile.py                # CSV profiling core (pandas)
 │   ├── debug.py                      # [chelate:debug] switch shared by every layer
+│   ├── deck.py                       # Markdown reports -> one self-contained HTML deck
 │   ├── doi_audit.py                  # DOI extraction + Crossref verification core
 │   ├── formula_merge.py              # legacy D1-D5 + pint verdict merge policy
 │   ├── paths.py                      # path resolution
 │   ├── pdf_text.py                   # PDF extraction core (pdfminer.six / pypdf)
+│   ├── repro.py                      # deterministic result bundle (build / verify)
+│   ├── schema_check.py               # CSV/JSON column-contract validator
+│   ├── scholar_search.py             # Crossref / PubMed / DOI lookup core
+│   ├── testgate.py                   # declared test command runner, verdict from output
 │   └── yamlmini.py                   # assets/config.yaml loader
 ├── LICENSE
-├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.3.6)
+├── ORCHESTRATOR.md                   # agent-facing routing contract (v1.4.0)
 ├── package.json                      # npm/dsh packaging metadata
 ├── README.md
 ├── README_zh.md
-├── skills/                           # 19 skills, all flat — one folder per skill
+├── skills/                           # 25 skills, all flat — one folder per skill
 │   ├── 3d-modeler/                   # [domain_extensions] pure-Python OBJ mesh generate /
 │   │                                 # merge / audit with mesh QC; sandboxed
 │   ├── ai-trace-remover/             # [processors] template-sentence removal and a
 │   │                                 # 0–100 "AI-likeness" score (EN + ZH lexicons)
 │   ├── bibtex-normalizer/            # [ingest]    .bib parsing, dedupe, normalized output
+│   ├── code-gate/                    # [gates]     eight fixed AST rules over Python
+│   │                                 # source; ruff opt-in, named when it runs
 │   ├── conflict-detector/            # [gates]     cross-document contradiction engine
 │   │                                 # with regex number extraction
 │   ├── data-profiler/                # [gates]     pandas CSV profiling: row counts,
@@ -83,6 +101,7 @@ chelate-shell/
 │   │                                 # + pint unit cross-check
 │   ├── fulltext-extractor/           # [ingest]    pdfminer.six text extraction into process/
 │   │                                 # (pypdf fallback)
+│   ├── deck-exporter/                # [processors] process/*.md -> one self-contained HTML deck
 │   ├── latex-exporter/               # [processors] merges process/ Markdown + process/figures/
 │   │                                 # into one compilable .tex
 │   ├── literature-retriever/         # [ingest]    arXiv keyword search to JSON
@@ -98,6 +117,13 @@ chelate-shell/
 │   │                                 # cross-check); sandboxed
 │   ├── reference-auditor/            # [gates]     DOI extraction + Crossref verification;
 │   │                                 # a fake DOI fails the gate
+│   ├── repro-bundler/                # [processors] deterministic result bundle
+│   │                                 # (files + gates + skill versions), and a
+│   │                                 # non-extracting verifier that refuses
+│   │                                 # escaping entries
+│   ├── secret-gate/                  # [gates] credentials by shape, reported by fingerprint
+│   ├── schema-gate/                  # [gates]     declared column contract for CSV/JSON;
+│   │                                 # an unsupported keyword degrades to UNVERIFIED
 │   ├── sci-visualizer/               # [generation] publication-quality charts (matplotlib +
 │   │                                 # seaborn + pandas), incl. AMOS-style SEM path renderer,
 │   │                                 # plus gif frame scan
@@ -106,9 +132,12 @@ chelate-shell/
 │   ├── task-organizer/               # [workspace] four-zone workspace init, file organization
 │   │                                 # (C1–C8 validation, dedupe, snapshots, undo/redo),
 │   │                                 # _broadcast/INDEX.md context index
+│   ├── test-gate/                    # [gates]     runs the declared test command as an
+│   │                                 # argv list; a green exit code with no test
+│   │                                 # collected is UNVERIFIED; sandboxed
 │   └── video-tracker/                # [ingest]    OpenCV coordinate extraction (CSRT/Template),
 │                                     # FFT spectrum, physics probes
-├── tests/                            # root suite (357 tests); each skill also ships skills/<skill>/tests/
+├── tests/                            # root suite (662 tests); each skill also ships skills/<skill>/tests/
 └── THIRD_PARTY_LICENSES.txt          # upstream licence inventory
 ```
 

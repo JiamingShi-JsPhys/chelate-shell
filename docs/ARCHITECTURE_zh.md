@@ -7,14 +7,14 @@
 
 ## 架构与流水线
 
-`core/router.py` 是微内核：它读取 19 个 `manifest.json`，按规范阶段顺序生成计划，在派发任何技能**之前**先对文本输入做提示注入扫描，然后逐个调用技能的适配器。每次调用都会在 `process/gates/` 写下一个 `GateResult`——`PASS`、`UNVERIFIED` 或 `FAIL`。
+`core/router.py` 是微内核：它读取 25 个 `manifest.json`，按规范阶段顺序生成计划，在派发任何技能**之前**先对文本输入做提示注入扫描，然后逐个调用技能的适配器。每次调用都会在 `process/gates/` 写下一个 `GateResult`——`PASS`、`UNVERIFIED` 或 `FAIL`。
 
-缺依赖时只把该技能降级为 `UNVERIFIED`，流水线继续。单个 `FAIL` 是终止态：流水线当场停止，中间产物锁在 `process/` 里。没有任何门禁失败**且人类已针对这次计划签发审批**时，`process/` 才会被提升到 `results/`；无论是否提升，都会写出类型化的流水线报告和 `_broadcast/` 索引——后续会话先读索引，再决定打开哪些原件。
+缺依赖时只把该技能降级为 `UNVERIFIED`，流水线继续。单个 `FAIL` 是终止态：流水线当场停止，中间产物锁在 `process/` 里。没有任何门禁失败**且人已批准那份清单**时，清单里列出的文件才会被复制进 `results/`；无论是否提升，都会写出类型化的流水线报告和 `_broadcast/` 索引——后续会话先读索引，再决定打开哪些原件。
 
 ```mermaid
 flowchart LR
     IN["用户意图 + 输入文件"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>扫描 19 个 manifest"]
+    CLI --> REG["core/registry.py<br/>扫描 25 个 manifest"]
     REG --> PLAN{"build_plan<br/>规范顺序<br/>--inputs 按类型收窄"}
     PLAN --> SCAN["core/security_shield.py<br/>派发前注入扫描"]
     SCAN -->|"命中标记"| BAD["FAIL：injection-scan<br/>派发前拦截"]
@@ -23,8 +23,8 @@ flowchart LR
         direction TB
         WS["workspace · 3 个技能<br/>task-organizer、multi-dim-manager、<br/>document-evolution-tracker"]
         ING["ingest · 4 个技能<br/>video-tracker、fulltext-extractor、<br/>literature-retriever、bibtex-normalizer"]
-        GAT["gates · 7 个技能<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、<br/>quantitative-validator、ml-auditor、<br/>longitudinal-analysis"]
-        PRO["processors · 2 个技能<br/>ai-trace-remover、latex-exporter"]
+        GAT["gates · 11 个技能<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、schema-gate、<br/>quantitative-validator、ml-auditor、longitudinal-analysis、<br/>code-gate、test-gate、secret-gate"]
+        PRO["processors · 4 个技能<br/>ai-trace-remover、deck-exporter、latex-exporter、repro-bundler"]
         WS --> ING --> GAT --> PRO
     end
 

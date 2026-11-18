@@ -35,6 +35,17 @@ named. It is also the scanner behind the "0 findings" line quoted in the
 1.3.2 and 1.3.3 changelog entries, and it has no stake in the result: several rounds of fixes were rejected by it before one came back
 clean.
 
+## Prior art (method, not content)
+
+Two public sources shaped the token-budget work in 1.4.0, and neither
+contributed text, code or fixtures to this repository:
+
+- SkillReducer, arXiv:2603.29919 — an empirical study of skill bloat plus a
+  two-stage compression method. The measurement it reports is its own; the
+  numbers in [TOKEN_BUDGET.md](TOKEN_BUDGET.md) were taken from this tree.
+- Anthropic, *Effective context engineering for AI agents* — the framing of a
+  finite attention budget and just-in-time context loading.
+
 ## AI assistance
 
 Parts of this project's code, tests, documentation and release notes were

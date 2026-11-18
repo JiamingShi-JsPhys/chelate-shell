@@ -142,6 +142,9 @@ def test_cli_pipeline_debug_flag_reaches_router(monkeypatch):
         return {"terminated_by": None}
 
     monkeypatch.setattr(cli, "router_run", fake_run)
+    # This test is about the debug flag reaching the router; publication is a
+    # separate step (tests/test_cli.py) and must not run against the repo.
+    monkeypatch.setattr(cli, "_publish_or_hold", lambda *a, **k: None)
     assert cli.cmd_pipeline(args) == 0
     assert captured["debug"] is True
     assert os.environ.get("CHELATE_DEBUG") == "1"

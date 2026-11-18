@@ -287,6 +287,30 @@ def test_a_gate_written_by_the_adapter_binds_the_files_it_was_given(
     assert written["provenance"]["skill_digest"]
 
 
+def test_a_gate_written_without_a_skill_tree_still_carries_the_contract(
+        tmp_path, monkeypatch):
+    """A copied-out install must produce an *unbound* gate, not a KeyError.
+
+    Reported from outside: running this file where `skills/` is not next to
+    `bootstrap.py` failed with `KeyError: 'gate_contract'`, because the whole
+    provenance mapping came back empty. The contract version belongs to the
+    writer, so it stays; the empty digests are what marks the gate unbound,
+    and `router.gate_freshness` already counts that state.
+    """
+    import bootstrap
+    from contracts import pass_gate
+
+    monkeypatch.setattr(bootstrap, "_REPO_ROOT", str(tmp_path))
+    monkeypatch.setattr(bootstrap, "_skill_dir", lambda skill: "")
+    ws = _ws(tmp_path)
+    path = bootstrap.write_gate(str(ws), pass_gate("formula-validator"))
+    written = json.loads(Path(path).read_text(encoding="utf-8"))
+
+    assert written["provenance"]["gate_contract"] == 2
+    assert written["provenance"]["skill_digest"] == ""
+    assert written["provenance"]["skill_version"] == ""
+
+
 def test_a_very_large_input_is_bound_by_size_not_by_digest(
         tmp_path, monkeypatch):
     """A multi-gigabyte video is not hashed on every gate write.

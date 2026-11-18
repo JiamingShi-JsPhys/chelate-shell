@@ -34,9 +34,9 @@ def test_build_plan_modes(reg):
     # a PDF matches fulltext-extractor, the only ingest skill taking pdf
     ingest_names = [r.name for r in plan_a["ingest"]]
     assert ingest_names == ["fulltext-extractor"]
-    assert len(plan_a["gates"]) == 7
+    assert len(plan_a["gates"]) == 11
     assert [r.name for r in plan_a["processors"]] == [
-        "ai-trace-remover", "latex-exporter"]
+        "ai-trace-remover", "deck-exporter", "latex-exporter", "repro-bundler"]
 
     plan_b = router.build_plan(reg, "b", "pdf", None)
     assert [r.name for r in plan_b["ingest"]] == ["fulltext-extractor"]
@@ -50,11 +50,12 @@ def test_build_plan_modes(reg):
 
 def test_build_plan_mode_a_runs_all_gates(reg):
     plan = router.build_plan(reg, "a", "", None)
-    assert len(plan["gates"]) == 7
+    assert len(plan["gates"]) == 11
     assert {r.name for r in plan["gates"]} == {
         "formula-validator", "conflict-detector",
-        "reference-auditor", "data-profiler",
-        "ml-auditor", "quantitative-validator", "longitudinal-analysis"}
+        "reference-auditor", "data-profiler", "schema-gate",
+        "ml-auditor", "quantitative-validator", "longitudinal-analysis",
+        "test-gate", "code-gate", "secret-gate"}
 
 
 def test_stage_order_is_canonical():
@@ -78,7 +79,7 @@ def test_dry_run_lists_plan_without_executing(reg, workspace, monkeypatch,
     assert planned[0] == "fulltext-extractor"  # pdf matches it first
     assert "fulltext-extractor" in planned
     assert "reference-auditor" in planned
-    assert planned[-1] == "latex-exporter"
+    assert planned[-1] == "repro-bundler"
     assert not list((workspace / "results").glob("promoted_*"))
     assert "DRY RUN" in capsys.readouterr().out
 
@@ -216,6 +217,9 @@ def test_input_type_by_ext_covers_documented_inputs():
     assert router.INPUT_TYPE_BY_EXT["csv"] == "csv"
     assert router.INPUT_TYPE_BY_EXT["pdf"] == "pdf"
     assert router.INPUT_TYPE_BY_EXT["bib"] == "bib"
+    # .py reaches the two engineering gates; before this mapping a Python
+    # input narrowed the plan to nothing and the run said "no skills matched".
+    assert router.INPUT_TYPE_BY_EXT["py"] == "python"
 
 
 def test_adapter_probe_detects_input_flag_on_real_adapters():
@@ -345,7 +349,8 @@ def test_inputs_narrow_the_plan_to_matching_skills(workspace, capsys):
     # (ml-auditor and longitudinal-analysis declare the csv input type, so
     # they join the plan now that they have graduated from skeletons.)
     assert set(names) == {"conflict-detector", "data-profiler",
-                          "longitudinal-analysis", "ml-auditor"}
+                          "longitudinal-analysis", "ml-auditor",
+                          "schema-gate"}
     entry = next(p for p in result["planned"] if p["skill"] == "data-profiler")
     assert os.path.basename(entry["input"]) == "data.csv"
     assert "snapshots" in entry["input"]

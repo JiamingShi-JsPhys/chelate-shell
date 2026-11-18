@@ -84,8 +84,9 @@ same gate covers `--no-approval`, which skips the token but not the human.
 Both directions were verified against a **real Windows console** — the child
 gets its own console via `CREATE_NEW_CONSOLE`, so `isatty()` is genuinely
 true and `input()` genuinely blocks — not against a mocked `sys.stdin`:
-typing the phrase issues a token and the pipeline then promotes; typing
-anything else exits 2 and creates no key.
+typing the phrase issues a token bound to the pending manifest, and `publish`
+then copies exactly the files that manifest names; typing anything else exits
+2 and creates no key.
 
 ### The scripted hatch, named as what it is
 
@@ -182,7 +183,7 @@ The rule has to reach the agent to matter, and for a while it did not. Hosts
 give a plugin's skills, not its `AGENTS.md`, so the paragraph about never
 writing `results/` was read by nobody: driven from ZCode the model profiled a
 CSV, copied the output into `results/` by hand and reported success. The same
-holds for the 19 `SKILL.md` files, which load only when a skill is invoked —
+holds for the 25 `SKILL.md` files, which load only when a skill is invoked —
 "just write this file into results/" invokes none. What does reach an agent is
 a rule file at the *workspace* root (`AGENTS.md`, and `CLAUDE.md` for Claude
 Code), so `task-organizer init` writes those now, never overwriting one the
@@ -202,7 +203,7 @@ the model it judged had been rewritten. An agent could let a check pass,
 change the input, and promote the result the check never saw.
 
 Every gate now carries two things, attached where they are serialized
-(`bootstrap.write_gate`, the one choke point all 19 skills write through, so
+(`bootstrap.write_gate`, the one choke point all 25 skills write through, so
 a new adapter cannot forget them):
 
 - `inputs` — the SHA-256 of each file named on the adapter's command line,
@@ -286,6 +287,69 @@ copy into a way to move bytes the workspace never held:
 
 Both are refused by name before anything is copied. A symlink that stays
 inside the workspace is kept as a symlink and is harmless.
+
+## Control 8 — memory is written by a person and replayed as data
+
+`.chelate/memory/memory.jsonl` is the one store whose contents are handed to a
+*future* session. That makes it a write path into a process nothing in this
+one supervises, and it is treated accordingly:
+
+- **Only a person writes.** The write path is `python cli.py memory add`, typed
+  by a human. There is no memory skill, and the MCP tool `chelate_memory` is
+  read-only (`brief`, `list`, `verify`) for the same reason no MCP tool mints
+  an approval token: the process being supervised must not be able to write
+  what a later session will read.
+- **Append-only and hash-chained.** Every entry carries its own SHA-256 and the
+  digest of the entry before it. Editing an old line breaks the chain at that
+  line, `memory verify` names it, and a store whose chain no longer holds
+  refuses to grow. Removal is an appended tombstone, so a withdrawal is
+  itself a recorded event.
+- **Instruction-shaped text is refused.** `memory add` runs the entry through
+  `core.security_shield.scan_text` and refuses what it blocks, with no override
+  flag. The store has no way to tell a legitimate imperative from a planted
+  one, and the cost of being wrong in that direction is a instruction that
+  survives every restart.
+- **Expiry is a date, not a promise.** An entry past its `--expires` date leaves
+  `brief` and `list` but stays in the file, where `verify` still checks it.
+
+`python cli.py status --root <ws>` reports the entry counts and whether the
+chain holds, so a store that was edited by hand is visible where the workspace
+is normally inspected.
+
+A session picks the entries up through `chelate.hooks.json` — a
+`session_start` hook running `python cli.py memory brief --root .` —
+which is also the only place the brief is delivered automatically; the
+hook runner scrubs the approval environment and cannot block a gate.
+
+## Control 9 — publication crosses a channel the worker cannot serve
+
+`python cli.py broker start --root <ws>` starts the 1.4.0 boundary: two
+`multiprocessing.connection` listeners — one for the worker (`submit`), one
+for the human (`approve`) — each with its own 32-byte authkey under the
+broker's state directory, and each serving a fixed operation set. Membership
+in that table *is* the control: `submit` cannot call `approve`, `approve`
+cannot call `submit`, and a refused operation is logged with its op and
+channel (`approval.consume` still spends the token exactly once).
+
+The worker's path to `results/` is `runtime.submit()` → the submit channel →
+`router.promote()` inside the broker process, after the token the approve
+channel minted is consumed. No broker, or a broker that stopped answering, is
+`RuntimeUnavailable` — never a quiet fall back to policy mode. `audit` crosses
+the same channel, because a worker-side census of `results/` would be the same
+quiet shortcut `submit` exists to prevent.
+
+What this buys depends on one fact, and `cli.py status` prints it instead of
+averaging it away. If the broker runs as the same OS user as the worker,
+`containment_detail` says **same-os-user**: the channel split is a real
+control over code paths, not over a process that goes looking for the approve
+key. Provision a second identity for the broker and the same report says
+**separate-os-user**, which is the claim the design exists for. Nothing here
+pretends the first is the second.
+
+`python cli.py broker adopt --root <ws>` brings a workspace that promoted
+under 1.3.x into broker mode: it re-checks the existing promotion log and
+records the result in `.chelate/broker/adopted.json`, so history written
+before the boundary stays auditable.
 
 ## Tokens can be revoked and the key rotated
 
@@ -428,11 +492,18 @@ These are stated so the claims above are not read as more than they are.
    not go looking — which is the common case, and the three bypasses measured
    before 1.3.4 (`--no-approval`, calling `approval.issue()`, forging a key
    inside the workspace) all now fail. Real containment needs an OS boundary:
-   a separate user, a container, a syscall filter. That is the 1.4.0 target,
-   not something this release claims.
+   a separate user, a container, a syscall filter. 1.4.0 ships half of that
+   boundary — a broker holding the key, with `submit` and `approve` on
+   separate channels — but the worker still runs as one OS user, so A2 stays
+   open and `status` labels it `same-os-user`. A separate identity, a
+   container or a syscall filter is not in this release.
 2. **The whitelist is a policy gate.** `python` is whitelisted, and a
    whitelisted interpreter can do whatever the user account can.
-3. **Approval binds `promote()`, not the `results/` directory.** The gate is
+3. **Approval binds `promote()`, not the `results/` directory.** In policy
+   mode (the default) this is unchanged. In broker mode the same sentence is
+   true only until the broker runs under a second identity (Control 9): with
+   the broker and the worker sharing an OS user, a worker can still read the
+   approve key and write `results/` directly — `containment_detail` says so. The gate is
    a function guard. Anything that can write files can put a file into
    `results/` without a token — a skill, a shell, an editor, or the agent's own
    file tool. Measured in the ZCode session described under Control 4: the
@@ -443,6 +514,11 @@ These are stated so the claims above are not read as more than they are.
    still owns its writes inside the workspace; `ensure_within` stops escapes,
    not mistakes within the boundary.
 4. **No network egress control.** A skill that calls out is not stopped here.
+   Manifest now carries a declarative `network` boolean, and `cli.py status`
+   reports `egress: {controlled: false, declaring_network: [...]}` — two
+   skills declare it, and the `false` is the point: this is a scope for the
+   claim, not a firewall. Blocking egress needs an OS boundary (a container or
+   a firewall rule), which is the same target as limitation 3.
 5. **The token binds the plan; the gate binds the bytes — and only the files
    an adapter was handed.** Since 1.3.6 a PASS expires when a *declared* input
    or the skill's own code changes (Control 5). It does not cover a file the

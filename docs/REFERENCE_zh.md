@@ -2,7 +2,7 @@
 
 # 参考
 
-仓库里的每一个目录，以及 19 个技能各自做什么。README 首页只留简版：`core/`
+仓库里的每一个目录，以及 25 个技能各自做什么。README 首页只留简版：`core/`
 是微内核，`lib/chelate_core/` 是共享逻辑，`skills/` 下每个技能一个目录。
 
 ## 仓库布局
@@ -27,7 +27,7 @@ chelate-shell/
 ├── assets/                           # icon.png（各插件清单共用）
 ├── bootstrap.py                      # 各 run.py 共用的导入与门禁写入工具
 ├── CHANGELOG.md                      # 版本发布说明
-├── cli.py                            # 命令行入口：list / run / approve / pipeline / audit / update
+├── cli.py                            # 命令行入口：list / run / approve / pipeline / publish / audit / update
 ├── commands/                         # 斜杠命令
 │   ├── figure.md                     # /figure —— 从 CSV 或 JSON 数据集出图
 │   └── model3d.md                    # /model3d —— OBJ 网格生成 / 合并 / 审计
@@ -39,11 +39,20 @@ chelate-shell/
 ├── cordis.patch.yml                  # cordis bundle 补丁
 ├── core/                             # 微内核
 │   ├── __init__.py
+│   ├── approval.py                   # 发布令牌：签名、过期、原子消费、吊销
+│   ├── broker.py                     # 双通道发布 broker（submit / approve 各自独立密钥）
+│   ├── hooks.py                      # 流水线 / 宿主 hook 派发（仅 argv，环境已清洗）
+│   ├── memory.py                     # 只追加、哈希链式的工作区笔记
+│   ├── recipes.py                    # 串行 recipe 的加载、校验、依赖图与运行
 │   ├── registry.py                   # 扫描 skills/ 并注册进路由表
 │   ├── router.py                     # 确定性调度器（解析 manifest 生成流水线）
+│   ├── runtime.py                    # 五调用 Runtime API（policy / 失败即关的 broker）
 │   ├── sandbox.py                    # 依赖隔离与 120 秒超时熔断
 │   ├── security_shield.py            # 提示注入文本扫描 + AST 危险调用扫描
-│   └── subagent_manager.py           # 子 Agent 角色注册表
+│   ├── skillkit.py                   # 技能脚手架 + manifest/SKILL.md/README/CHANGELOG 一致性检查
+│   ├── snapshot.py                   # 内容寻址的输入快照（防 TOCTOU）
+│   ├── subagent_manager.py           # 子 Agent 角色注册表
+│   └── update.py                     # 自更新检查（查版本，不自动安装）
 ├── docs/                             # 本页、架构、测试、安装命令、依赖矩阵
 ├── index.js                          # ESM 插件入口（dsh：注册 4 个工具）
 ├── install.py                        # 一条命令装好所有规则文件的安装器（见安装章节）
@@ -52,24 +61,31 @@ chelate-shell/
 │   ├── adapter.py                    # 薄适配器工具箱：argparse、门禁发射、legacy 运行器
 │   ├── arxiv_search.py               # arXiv 搜索核心
 │   ├── bibtex_norm.py                # BibTeX 解析 / 去重 / 规范化核心
+│   ├── codegate.py                   # 八条固定 AST 代码质量规则
 │   ├── csv_profile.py                # CSV 体检核心（pandas）
 │   ├── debug.py                      # 贯通全链路的 [chelate:debug] 开关
+│   ├── deck.py                       # Markdown 报告 → 一份自带样式的 HTML 讲稿
 │   ├── doi_audit.py                  # DOI 抽取 + Crossref 核验核心
 │   ├── formula_merge.py              # legacy D1-D5 + pint 裁决合并策略
 │   ├── paths.py                      # 路径解析
 │   ├── pdf_text.py                   # PDF 提取核心（pdfminer.six / pypdf）
+│   ├── repro.py                      # 确定性成果包（打包 / 校验）
+│   ├── schema_check.py               # CSV/JSON 列契约校验
+│   ├── scholar_search.py             # Crossref / PubMed / DOI 查询内核
+│   ├── testgate.py                   # 运行声明的测试命令，按输出判定
 │   └── yamlmini.py                   # assets/config.yaml 加载
 ├── LICENSE
-├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.3.6）
+├── ORCHESTRATOR.md                   # 给 Agent 看的路由契约（v1.4.0）
 ├── package.json                      # npm/dsh 打包元数据
 ├── README.md
 ├── README_zh.md
-├── skills/                           # 19 个技能，全部平铺——一个技能一个目录
+├── skills/                           # 25 个技能，全部平铺——一个技能一个目录
 │   ├── 3d-modeler/                   # [domain_extensions] 纯 Python OBJ 网格
 │   │                                 # 生成 / 合并 / 审计，含网格质检；沙箱运行
 │   ├── ai-trace-remover/             # [processors] 模板句清除与 0–100「AI 味」评分
 │   │                                 # （英文 + 中文词表）
 │   ├── bibtex-normalizer/            # [ingest]    .bib 解析、去重、规范化输出
+│   ├── code-gate/                   # [gates]     八条固定 AST 规则扫描 Python 源码；ruff 可选
 │   ├── conflict-detector/            # [gates]     跨文档矛盾引擎，正则数字抽取
 │   ├── data-profiler/                # [gates]     pandas CSV 体检：行数、缺失值、
 │   │                                 # 1.5·IQR 异常值比率、重复行、常值列
@@ -79,6 +95,7 @@ chelate-shell/
 │   │                                 # 数值采样、符号证明）+ pint 单位交叉校验
 │   ├── fulltext-extractor/           # [ingest]    pdfminer.six 文本提取进 process/
 │   │                                 # （pypdf 回退）
+│   ├── deck-exporter/                # [processors] 把 process/*.md 合成一份自带样式的 HTML 讲稿
 │   ├── latex-exporter/               # [processors] 把 process/ 下的 Markdown 与 process/figures/
 │   │                                 # 下的图形合并为一个可编译 .tex
 │   ├── literature-retriever/         # [ingest]    arXiv 关键词搜索转 JSON
@@ -91,13 +108,17 @@ chelate-shell/
 │   │                                 # 哈希审计日志、回滚到任意历史轮次
 │   ├── quantitative-validator/       # [gates]     分子式与化学方程式的原子守恒
 │   │                                 # （Hill 记法文法 + rdkit 交叉校验）；沙箱运行
+│   ├── repro-bundler/                # [processors] 确定性成果包：打包并在内存中校验，拒绝逃逸条目
 │   ├── reference-auditor/            # [gates]     DOI 抽取与 Crossref 核验；
 │   │                                 # 假 DOI 直接 FAIL 门禁
+│   ├── schema-gate/                  # [gates]     CSV/JSON 列契约校验；未知关键字记为 UNVERIFIED
 │   ├── sci-visualizer/               # [generation] 出版级统计图（matplotlib +
 │   │                                 # seaborn + pandas），含 AMOS 风格 SEM 路径图
 │   │                                 # 渲染器，另可扫描 gif 逐帧
+│   ├── secret-gate/                  # [gates]     按形状查凭据，只报指纹不报原文
 │   ├── security-guard/               # [infrastructure] 提示注入文本扫描 +
 │   │                                 # AST 危险调用点扫描
+│   ├── test-gate/                    # [gates]     运行声明的测试命令，按输出判定；未跑到测试记 UNVERIFIED
 │   ├── task-organizer/               # [workspace] 四区工作区初始化、文件整理
 │   │                                 # （C1–C8 校验、去重、快照、撤销/重做）、
 │   │                                 # _broadcast/INDEX.md 上下文索引

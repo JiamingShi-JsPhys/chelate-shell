@@ -4,6 +4,15 @@ All notable changes to this skill are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-11-18
+
+### Changed
+
+- No changes to this skill's code. The 1.4.0 release adds the publication
+  broker, workspace memory, recipes, hooks and the MCP surface around it, and
+  makes network use a declared manifest field. See the repository
+  [CHANGELOG](../../CHANGELOG.md).
+
 ## [1.3.6] - 2026-11-18
 
 ### Changed

@@ -25,9 +25,11 @@ ALL_SKILLS = [
     "fulltext-extractor", "literature-retriever", "bibtex-normalizer",
     "reference-auditor", "data-profiler",
     "quantitative-validator", "ml-auditor",
-    "latex-exporter",
+    "latex-exporter", "deck-exporter",
+    "secret-gate",
     "security-guard",
     "sci-visualizer",
+    "repro-bundler", "schema-gate", "test-gate", "code-gate",
     "3d-modeler",
     "longitudinal-analysis", "ai-trace-remover", "multi-dim-manager",
 ]
@@ -109,9 +111,14 @@ STAGE_OF = {
     "longitudinal-analysis": "gates",
     "quantitative-validator": "gates", "ml-auditor": "gates",
     "ai-trace-remover": "processors", "latex-exporter": "processors",
+    "deck-exporter": "processors", "secret-gate": "gates",
     "security-guard": "infrastructure",
     "sci-visualizer": "generation",
     "3d-modeler": "domain_extensions",
+    "schema-gate": "gates",
+    "test-gate": "gates",
+    "code-gate": "gates",
+    "repro-bundler": "processors",
 }
 
 if str(REPO_ROOT) not in sys.path:

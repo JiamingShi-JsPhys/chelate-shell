@@ -1,0 +1,19 @@
+{
+  "name": "schema-gate",
+  "version": "1.4.0",
+  "stage": "gates",
+  "input_types": [
+    "csv",
+    "dataset",
+    "json"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Validate a CSV or JSON dataset against a declared column contract (type, required, allowed, min/max, pattern) and fail on any violation."
+}

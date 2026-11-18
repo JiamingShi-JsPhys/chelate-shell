@@ -1,7 +1,6 @@
 """Chelate Shell router — microkernel dispatcher (manifest-driven pipeline).
 
-Caller: cli.py (cmd_pipeline), tests/core/test_router.py.
-No existing file in chelate-shell-v1.1.0/ serves this purpose.
+Caller: cli.py (cmd_pipeline), tests/test_router.py.
 Data schemas:
     Reads:  skills/<skill>/manifest.json via core.registry (routing table);
             each skill's GateResult JSON from process/gates/<skill>_<ts>.json
@@ -9,11 +8,12 @@ Data schemas:
     Writes: results/pipeline_report_<ts>.json, _broadcast/pipeline_index_<ts>.json,
             and — only when every gate passes — a promoted copy of process/
             under results/promoted_<ts>/.
-User instruction: v1.1.0 blueprint section 3:
-    1. scan the 14 manifests into an in-memory routing table;
+User instruction: v1.1.0 blueprint section 3. The shape still holds; the
+count below does not, and neither do the names, so the table is the only
+list that matters (`python cli.py list` — 25 skills today):
+    1. scan the manifests into an in-memory routing table;
     2. dispatch stage="ingest" skills matched by input type (e.g. PDF ->
-       fulltext-extractor), then serially dispatch stage="gates" skills
-       (formula-validator, reference-auditor, ...);
+       fulltext-extractor), then serially dispatch stage="gates" skills;
     3. hard block: the first gate returning FAIL terminates the pipeline
        immediately; intermediate products stay locked in process/ and never
        reach results/.
@@ -92,6 +92,7 @@ INPUT_TYPE_BY_EXT = {
     "cap": "cap",
     "tex": "latex_string",
     "yaml": "config", "yml": "config", "json": "config",
+    "py": "python", "pyi": "python",
     "mp4": "video", "mov": "video", "avi": "video", "mkv": "video",
 }
 
@@ -460,6 +461,25 @@ def _current_skill_digest(skill: str) -> str:
         return ""
 
 
+def skill_lock_digest() -> str:
+    """Digest over every registered skill's name, version and code bytes.
+
+    A manifest carries this so an approval issued against one skill set
+    cannot be spent after the code changed. `_current_skill_digest` is the
+    same per-skill digest the gate freshness check uses, so the lock and the
+    gates agree about what "this skill's code" means.
+    """
+    from core import registry
+    skills_dir = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "skills")
+    digest = hashlib.sha256()
+    for record in sorted(registry.Registry().scan(skills_dir).all(),
+                         key=lambda r: r.name):
+        digest.update(f"{record.name}:{record.version}:"
+                      f"{_current_skill_digest(record.name)}\n".encode("utf-8"))
+    return digest.hexdigest()
+
+
 def stale_gates(root: str) -> List[Dict[str, str]]:
     """Gates whose recorded inputs or code no longer match the workspace.
 
@@ -776,9 +796,76 @@ def _recover_staging(staging_root: str) -> None:
             pass
 
 
+_WINDOWS_DEVICES = frozenset(
+    {"con", "prn", "aux", "nul"}
+    | {f"com{i}" for i in range(1, 10)}
+    | {f"lpt{i}" for i in range(1, 10)})
+
+
+def _stage_declared(root: str, files: List[Dict[str, str]],
+                    staging: str) -> None:
+    """Copy exactly the declared files, hashing the bytes as they are written.
+
+    Checking a digest and then copying leaves a window in which the file can
+    change between the two reads. Here the bytes that are written are the
+    bytes that are hashed, and the comparison is against the digest the
+    person approved: a mismatch aborts the whole promotion, leaving nothing
+    visible in ``results/``.
+    """
+    if not files:
+        raise PromotionLocked("the manifest declares no files to publish")
+    os.makedirs(staging, exist_ok=True)
+    for item in files:
+        rel = str(item.get("path", "")).replace("\\", "/")
+        expected = str(item.get("sha256", "")).lower()
+        if rel.startswith("/") or (len(rel) > 1 and rel[1] == ":"):
+            raise PromotionLocked(f"declared output {rel!r} is not relative")
+        parts = [part for part in rel.split("/") if part]
+        if not parts or ".." in parts:
+            raise PromotionLocked(f"declared output {rel!r} escapes the "
+                                  f"workspace")
+        # The manifest validator refuses these too; promotion checks them
+        # again because it is the code that opens the file. On Windows ":"
+        # starts an alternate data stream and a device name is not a file.
+        if ":" in rel:
+            raise PromotionLocked(f"declared output {rel!r} contains ':'")
+        for part in parts:
+            if part.split(".", 1)[0].strip().lower() in _WINDOWS_DEVICES:
+                raise PromotionLocked(f"declared output {rel!r} names a "
+                                      f"Windows device")
+        src = os.path.join(root, *parts)
+        paths.ensure_within(root, src, what="declared output")
+        if os.path.islink(src) or not os.path.isfile(src):
+            raise PromotionLocked(
+                f"declared output {rel} is not a regular file in the workspace")
+        target = parts[1:] if parts[0] == "process" else parts
+        dst = os.path.join(staging, *target)
+        paths.ensure_within(staging, dst, what="staged output")
+        folder = os.path.dirname(dst)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+        digest = hashlib.sha256()
+        # O_NOFOLLOW where the platform has it: the islink() check above and
+        # this open() are two syscalls, and a link swapped between them would
+        # otherwise be followed. Windows has no such flag; there the tree
+        # check in _process_tree_problems is the guard.
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(src, flags)
+        with os.fdopen(fd, "rb") as fin, open(dst, "wb") as fout:
+            for chunk in iter(lambda: fin.read(1 << 20), b""):
+                digest.update(chunk)
+                fout.write(chunk)
+        if digest.hexdigest() != expected:
+            raise PromotionLocked(
+                f"declared output {rel} changed between approval and "
+                f"publication; re-run the skill and approve the new manifest")
+
+
 def promote(root: str, stamp: str,
             approval_info: Optional[Dict] = None,
-            allow_unverified: bool = False) -> Optional[str]:
+            allow_unverified: bool = False,
+            files: Optional[List[Dict[str, str]]] = None,
+            manifest_sha256: str = "") -> Optional[str]:
     """Publish process/ into results/promoted_<stamp>/ — atomically.
 
     Three checks stand between a run and a deliverable, and each of them
@@ -832,16 +919,24 @@ def promote(root: str, stamp: str,
     # The promotion target is derived from a timestamp, but it is still a
     # write: prove it lands inside the workspace before copying anything.
     paths.ensure_within(root, dst, what="promotion target")
-    os.makedirs(os.path.join(root, "results"), exist_ok=True)
     staging_root = os.path.join(root, ".chelate", "staging")
     _recover_staging(staging_root)
     os.makedirs(staging_root, exist_ok=True)
     staging = os.path.join(staging_root, f"promoted_{stamp}")
-    shutil.copytree(src, staging, symlinks=True)
+    if files is None:
+        shutil.copytree(src, staging, symlinks=True)
+    else:
+        _stage_declared(root, files, staging)
+    # results/ appears only once the set is complete: a refused promotion
+    # leaves no empty directory that reads like a deliverable.
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
     os.replace(staging, dst)  # one rename: the whole set, or nothing
     info = dict(approval_info or {})
     info["allow_unverified"] = bool(allow_unverified)
     info["freshness"] = gate_freshness(root)
+    if files is not None:
+        info["manifest_sha256"] = str(manifest_sha256 or "")
+        info["files"] = len(files)
     _record_promotion(root, dst, stamp, info)
     return dst
 
@@ -987,7 +1082,8 @@ def run(root: str, mode: str = "a", input_kind: str = "",
         skill_args: Optional[Dict[str, List[str]]] = None,
         timeout: int = 600, debug: bool = False,
         require_approval: bool = True,
-        allow_unverified: bool = False) -> dict:
+        allow_unverified: bool = False,
+        publish: bool = True) -> dict:
     """Execute the pipeline; returns the full decision record (see module doc).
 
     `extra_args` are appended to every skill invocation; `skill_args` maps a
@@ -1170,7 +1266,7 @@ def run(root: str, mode: str = "a", input_kind: str = "",
               file=sys.stderr)
         terminated = True
 
-    if not terminated:
+    if not terminated and publish:
         stamp = _ts()
         # Promotion is the pipeline's one irreversible write: intermediate
         # products become deliverables and later stages stop seeing them as
@@ -1222,8 +1318,12 @@ def run(root: str, mode: str = "a", input_kind: str = "",
                     promoted = None
                 result["promoted"] = promoted is not None
                 result["promoted_to"] = promoted
-
-    # The gate binds promote(). It cannot stop a process that writes into
+    elif not terminated:
+        # `publish=False` is a recipe step, not a pipeline: it produces into
+        # process/ and stops there. Publishing is a separate, approved act —
+        # `Runtime.submit` once the broker exists, `cli.py pipeline` today.
+        result["promoted"] = False
+        result["promotion"] = "skipped"
     # results/ itself, so every run reports what is there without a
     # promotion behind it. `cli.py audit` runs the same check on demand.
     # Snapshots hold copies of the user's data. Keep the newest ones and any

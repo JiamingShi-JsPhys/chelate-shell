@@ -1,0 +1,18 @@
+{
+  "name": "repro-bundler",
+  "version": "1.4.0",
+  "stage": "processors",
+  "input_types": [
+    "artifacts",
+    "workspace"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Package a run's products, gate records and skill versions into a deterministic zip, and verify a bundle handed to you without extracting it."
+}

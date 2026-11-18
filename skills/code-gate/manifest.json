@@ -1,0 +1,17 @@
+{
+  "name": "code-gate",
+  "version": "1.4.0",
+  "stage": "gates",
+  "input_types": [
+    "python"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Check Python source against eight fixed AST rules - bare except, swallowed error, mutable default, == None, star import, long function, too many arguments, syntax error - and fail on any finding; ruff is opt-in."
+}

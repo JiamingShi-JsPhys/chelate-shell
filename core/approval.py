@@ -397,17 +397,42 @@ def pipeline_params(mode: str, input_kind: str,
 # ------------------------------------------------------------------- issuing
 
 def issue(workspace: str, action: str, params: Dict[str, Any],
-          ttl: int = DEFAULT_TTL_SECONDS) -> Path:
+          ttl: int = DEFAULT_TTL_SECONDS,
+          manifest_sha256: str = "", nonce: str = "") -> Path:
     """Create a one-time token for *action* and return its path.
 
     Requires a human channel: this is the signature the whole control rests
     on, so it is not reachable from an agent subprocess.
     """
     require_human(f"issuing an approval for {action!r}", action)
+    token = mint(workspace, action, params, ttl=ttl,
+                 manifest_sha256=manifest_sha256, nonce=nonce)
+    return _approvals_dir(workspace) / f"{action}-{token['nonce']}.json"
+
+
+def mint(workspace: str, action: str, params: Dict[str, Any],
+         ttl: int = DEFAULT_TTL_SECONDS,
+         manifest_sha256: str = "", nonce: str = "") -> Dict[str, Any]:
+    """Sign and write a token, with no human-channel check of its own.
+
+    Two callers exist and each makes that check where it can actually be
+    made: `issue()` requires a terminal in the caller's process, and the
+    broker's approve channel answers only the CLI that reached the approve
+    channel. A third caller would need a third argument, not a quiet reuse.
+
+    ``manifest_sha256`` binds the token to one exact manifest. A caller that
+    publishes must present a manifest whose digest matches; a token minted
+    for a different set of bytes cannot be spent on this one.
+    """
     if action not in IRREVERSIBLE_ACTIONS:
         raise ValueError(f"unknown irreversible action: {action!r}")
     if not ttl or ttl <= 0:
         raise ValueError("approval ttl must be a positive number of seconds")
+    # An approval for a manifest adopts that manifest's nonce: the token and
+    # the manifest must name the same act, and the digest — which covers the
+    # nonce — is what the broker compares.
+    if nonce and (len(nonce) != 32 or set(nonce.lower()) - set("0123456789abcdef")):
+        raise ValueError(f"nonce {nonce!r} is not 32 hex characters")
     key = _load_key(workspace, create=True)
     payload = {
         "v": _TOKEN_VERSION,
@@ -416,7 +441,8 @@ def issue(workspace: str, action: str, params: Dict[str, Any],
         "params_sha256": params_digest(params),
         "issued": int(time.time()),
         "expires": int(time.time()) + int(ttl),
-        "nonce": secrets.token_hex(16),
+        "nonce": str(nonce) or secrets.token_hex(16),
+        "manifest_sha256": str(manifest_sha256 or ""),
     }
     token = {**payload,
              "mac": hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()}
@@ -426,7 +452,7 @@ def issue(workspace: str, action: str, params: Dict[str, Any],
                    encoding="utf-8")
     os.chmod(tmp, 0o600)
     os.replace(tmp, path)
-    return path
+    return token
 
 
 # ---------------------------------------------------------------- consuming
@@ -437,7 +463,9 @@ def _token_files(workspace: str, action: str) -> List[Path]:
 
 
 def _verify(token: Dict[str, Any], key: bytes, workspace: str,
-            action: str, params: Dict[str, Any]) -> None:
+            action: str, params: Dict[str, Any],
+            manifest_sha256: Optional[str] = None,
+            require_binding: bool = False) -> None:
     if token.get("v") != _TOKEN_VERSION:
         raise ApprovalInvalid(f"unsupported token version: {token.get('v')!r}")
     if token.get("action") != action:
@@ -457,6 +485,24 @@ def _verify(token: Dict[str, Any], key: bytes, workspace: str,
     expires = token.get("expires")
     if not isinstance(expires, int) or expires < int(time.time()):
         raise ApprovalInvalid("token has expired")
+    # The plan digest says which inputs and mode were approved; the manifest
+    # digest says which bytes may be published. A token carrying one cannot
+    # be spent by a caller that cannot present it, and a caller that requires
+    # the binding refuses a token minted without it.
+    bound = str(token.get("manifest_sha256") or "")
+    if bound:
+        if not manifest_sha256:
+            raise ApprovalInvalid(
+                "token is bound to a manifest; pass the manifest digest it "
+                "was issued for")
+        if bound != str(manifest_sha256):
+            raise ApprovalInvalid(
+                "token was issued for a different manifest; the files or the "
+                "skill set changed since it was approved")
+    elif require_binding:
+        raise ApprovalInvalid(
+            "token carries no manifest binding; approve the current manifest "
+            "with `cli.py approve --root <ws>`")
 
 
 def _claim(path: Path) -> bool:
@@ -474,8 +520,16 @@ def _claim(path: Path) -> bool:
     return True
 
 
-def consume(workspace: str, action: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Spend one valid token for *action*; raise when there is none."""
+def consume(workspace: str, action: str, params: Dict[str, Any],
+            manifest_sha256: Optional[str] = None,
+            require_binding: bool = False) -> Dict[str, Any]:
+    """Spend one valid token for *action*; raise when there is none.
+
+    ``manifest_sha256`` is the digest of the manifest the caller is about to
+    publish. When the token was minted with a binding, it must match; when
+    ``require_binding`` is set, an unbound token is refused as well, so a
+    caller on the publication path cannot fall back to a weaker token.
+    """
     if action not in IRREVERSIBLE_ACTIONS:
         raise ValueError(f"unknown irreversible action: {action!r}")
     key = _load_key(workspace)  # raises ApprovalRequired when absent
@@ -483,7 +537,9 @@ def consume(workspace: str, action: str, params: Dict[str, Any]) -> Dict[str, An
     for path in _token_files(workspace, action):
         try:
             token = json.loads(path.read_text(encoding="utf-8"))
-            _verify(token, key, workspace, action, params)
+            _verify(token, key, workspace, action, params,
+                    manifest_sha256=manifest_sha256,
+                    require_binding=require_binding)
         except (OSError, ValueError, ApprovalInvalid) as exc:
             last_error = exc if isinstance(exc, ApprovalInvalid) else \
                 ApprovalInvalid(f"unreadable token {path.name}: {exc}")

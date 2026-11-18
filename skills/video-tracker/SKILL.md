@@ -1,13 +1,11 @@
 ---
 name: video-tracker
-version: 1.3.6
+version: 1.4.0
 description: >
-  Turns an experiment video into reproducible physics data: tracks declared
-  objects (CSRT with template fallback), computes the amplitude spectrum of the
-  coordinate series, and runs physics-consistency probes. Experimental and
-  unstable — every run must be checked against a known reference.
+  Turns an experiment video into reproducible physics data: CSRT tracking,
+  FFT, consistency probes.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

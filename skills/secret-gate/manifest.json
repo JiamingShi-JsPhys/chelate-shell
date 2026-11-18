@@ -1,0 +1,19 @@
+{
+  "name": "secret-gate",
+  "version": "1.4.0",
+  "stage": "gates",
+  "input_types": [
+    "filesystem",
+    "source_tree",
+    "file"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": false,
+  "entrypoint": "run.py",
+  "description": "Scan a tree for credential shapes (AWS, GitHub, Slack, Google, private keys, secret assignments, high-entropy strings) and report path, line and fingerprint — never the secret itself."
+}

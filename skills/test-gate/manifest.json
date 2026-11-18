@@ -1,0 +1,17 @@
+{
+  "name": "test-gate",
+  "version": "1.4.0",
+  "stage": "gates",
+  "input_types": [
+    "python"
+  ],
+  "output_type": "gate_result",
+  "output_types": [
+    "gate_result",
+    "json"
+  ],
+  "dependencies": [],
+  "sandbox_required": true,
+  "entrypoint": "run.py",
+  "description": "Run the project's declared test command as an argv list and gate on the result it actually printed: FAIL on a red summary or a non-zero exit, UNVERIFIED when no test ran or the budget ran out."
+}

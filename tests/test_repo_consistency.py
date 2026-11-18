@@ -1,4 +1,4 @@
-"""Repo-wide consistency guard: the 19 skills stay organized.
+"""Repo-wide consistency guard: the 25 skills stay organized.
 
 The SEM module and the three graduated heavy skills each landed as separate
 pieces of work. This suite is the anti-drift net that keeps the whole
@@ -11,7 +11,7 @@ the READMEs state in prose:
    entry_point) — the same rule `test_plugin_manifests.py` enforces for
    host manifests;
 3. the declared `entrypoint` actually exists on disk;
-4. all 20 `LICENSE` files are the same MIT text (whitespace-normalised, so
+4. all 25 `LICENSE` files are the same MIT text (whitespace-normalised, so
    a re-wrap of the boilerplate is not a false positive);
 5. no stub markers in the human/AI-facing docs;
 6. the dependency tables in `README.md` **and** `README_zh.md` agree with
@@ -39,7 +39,7 @@ from conftest import SKILLS_DIR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERSION = "1.3.6"
+EXPECTED_VERSION = "1.4.0"
 CANONICAL_CONTACT_EMAIL = "jiamingshi_git@outlook.com"
 # v1.3.0 extended the four runtime stages (workspace/ingest/gates/processors)
 # with three architectural categories: infrastructure (security-guard),
@@ -220,7 +220,7 @@ def _parse_dep_table(text: str) -> dict:
 
 def test_every_skill_ships_the_full_surface():
     dirs = _skill_dirs()
-    assert len(dirs) == 19, f"expected 19 skills, found {len(dirs)}"
+    assert len(dirs) == 25, f"expected 25 skills, found {len(dirs)}"
     missing = {d.name: f for d in dirs for f in SURFACE_FILES
                if not (d / f).is_file()}
     assert not missing, f"skills missing surface files: {missing}"
@@ -582,3 +582,28 @@ def test_agent_specs_resolve_allowed_skills():
                 if name not in reg:
                     problems.setdefault(md.name, "unregistered skill: " + name)
     assert not problems, f"agent spec frontmatter issues: {problems}"
+
+
+def test_the_suite_size_is_quoted_the_same_everywhere():
+    """Four documents state the suite size; they must state one number.
+
+    Why this exists: README said "471 tests" for two releases after the suite
+    had grown, because the number lived in four places and a release updated
+    one of them. This cannot recompute the figure inside a run (a subset would
+    make it wrong), so it guards the cheaper failure — the four disagreeing —
+    and `docs/TESTING.md` carries the command that recounts.
+    """
+    # Anchored on the sentence stating the total: "471 tests:", "That is 471
+    # tests." and "471 个测试：". A bare "918 tests across the seven skills"
+    # describes the per-skill suites and must not be picked up here.
+    patterns = (re.compile(r"(\d{2,4})\s+tests(?=[.:,])"),
+                re.compile(r"(\d{2,4})\s*个测试(?=[：。，])"))
+    quoted = {}
+    for name in ("README.md", "README_zh.md", "docs/TESTING.md",
+                 "docs/TESTING_zh.md"):
+        text = (REPO_ROOT / name).read_text(encoding="utf-8")
+        found = {int(n) for pattern in patterns for n in pattern.findall(text)}
+        quoted[name] = max(found) if found else None
+    missing = [name for name, value in quoted.items() if value is None]
+    assert not missing, f"no suite size quoted in: {missing}"
+    assert len(set(quoted.values())) == 1, f"suite size differs: {quoted}"

@@ -2,7 +2,7 @@ Chelate Shell — Third-Party Licences
 ====================================
 
 Chelate Shell's own source is released under the MIT License (see the
-top-level LICENSE file, Copyright (c) 2026 Jiaming Shi). The 20 skill
+top-level LICENSE file, Copyright (c) 2026 Jiaming Shi). The 25 skill
 adapters under skills/ are MIT as well.
 
 The adapters call third-party Python libraries at run time. None of those

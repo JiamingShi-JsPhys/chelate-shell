@@ -2,6 +2,176 @@
 
 All notable changes to Chelate Shell are documented in this file.
 
+## [1.4.0] — 2026-11-18
+
+A publication broker, a workspace memory a later session reads first, recipes,
+hooks and an MCP surface — and a literature-retriever that is no longer
+arXiv-only.
+
+**New skills**
+
+- `schema-gate` — validates a CSV or JSON dataset against a declared column
+  contract (`type`, `required`, `allowed`, `min`, `max`, `pattern`) and fails
+  on any violation. A schema keyword the validator does not implement
+  degrades the gate to `UNVERIFIED` instead of certifying a check it never
+  made.
+- `repro-bundler` — packs a run's `process/` products, gate records and skill
+  versions into a deterministic zip, and verifies a bundle in memory without
+  extracting it; absolute paths, drive letters, `..` components and symlink
+  entries refuse the whole archive.
+- `test-gate` — runs the project's declared test command, as an argument list
+  from `.chelate/test-gate.json` (no shell, executable whitelist, scrubbed
+  approval environment, declared timeout). The verdict is read from what the
+  command printed: a green exit code with no test collected is `UNVERIFIED`,
+  and a summary counting failures beats a green exit code.
+- `code-gate` — eight fixed AST rules over Python source (bare `except`,
+  swallowed error, mutable default, `== None`, star import, over-long
+  function, too many arguments, unparseable file). The rule set is fixed so
+  two machines give one verdict; `--ruff` is opt-in and the report records
+  the version that produced its findings. Dangerous-call screening stays in
+  `security-guard`.
+- `deck-exporter` — renders the Markdown reports under `process/` into one
+  self-contained HTML deck: CSS inline, images as `data:` URIs, no `<script>`
+  and no network reference. A deck that would embed an absolute path is
+  refused rather than sanitised, because by the time a half-working sanitiser
+  is noticed the file has already been mailed; a missing image becomes its alt
+  text and is counted.
+- `secret-gate` — scans text files for credential shapes (AWS, GitHub, Slack,
+  Google, provider `sk-` keys, PEM headers), assignments and high-entropy
+  values, and reports every finding as `path:line (rule, fingerprint)` — the
+  matched string never reaches the gate, the report or stdout. Allowlist by
+  fingerprint or `path` + rule, or a single-line `chelate-secret-allow`
+  comment; nothing scannable is `UNVERIFIED`, never a pass. The engineering
+  side of the gates stage, alongside `code-gate` and `test-gate`.
+
+**Token budget**
+
+- Skill descriptions cut from 5,966 to 2,554 characters (≈ 1,480 → 638 tokens
+  read in every session), each one sentence plus its trigger; `skill lint`
+  refuses a description over 120 characters so the cost cannot drift back.
+- `pipeline --summary` prints the per-skill lines and a one-line tally instead
+  of the full JSON decision record, which is still written to `process/reports/`
+  and `_broadcast/`. Nothing removed; wording and stdout only.
+- Sixteen `SKILL.md` bodies are tiered: the executable instruction, verdict
+  table and use / do-not-use boundary stay in the file, while actions,
+  outputs, failure handling, limits and delivery rules move to
+  `references/<name>-reference.md` (read on demand). 41,517 → 21,756 characters
+  (−48%, average ≈ 340 tokens per invocation); nothing deleted. The eight
+  legacy bodies stay byte-frozen (`tests/test_capability_guard.py`).
+- `skill lint` now refuses a broken `references/` link and an orphaned
+  reference file, so the split cannot silently lose a document.
+- `docs/TOKEN_BUDGET.md` states the measured per-session cost, what changed and
+  what was deliberately left alone, and names the two prior-art sources
+  (SkillReducer; Anthropic's context-engineering post) without reusing their
+  text.
+
+**Workspace memory**
+
+- `core/memory.py` and `cli.py memory add|list|brief|forget|verify` — notes a later
+  session reads first (`brief`). Append-only and hash-chained: every entry carries its
+  own digest and the previous entry's, so editing an old line breaks the chain at that
+  line and `verify` names it; a store whose chain does not hold refuses to grow, and
+  removal appends a tombstone instead of deleting.
+- The write path is a person typing `cli.py memory add`. No skill writes memory and the
+  MCP tool `chelate_memory` reads only: memory is replayed to a later session as data,
+  so text `security_shield` blocks as an injection is refused at write time, with no
+  override flag.
+- `cli.py status` reports the store's counts and whether its chain holds.
+
+**Broker — the 1.4.0 publication boundary**
+
+- `core/broker.py` and `cli.py broker start|status|adopt` — two
+  `multiprocessing.connection` listeners with separate 32-byte authkeys and
+  fixed operation sets per channel; `submit` cannot call `approve` and vice
+  versa, refusals are logged with op and channel, and messages are JSON bytes
+  (no pickle). Publication runs `router.promote` inside the broker process
+  after the approve channel's one-time token is consumed. No broker means
+  `RuntimeUnavailable`, never a fall back to policy mode, and `audit` crosses
+  the same channel.
+- `cli.py status` reports `containment_detail`: **same-os-user** when the
+  broker shares the worker's account (the channel split is a code-path
+  control, and a process that hunts the approve key defeats it) versus
+  **separate-os-user** once a second identity is provisioned.
+- `broker adopt` re-checks an existing promotion log and records the result in
+  `.chelate/broker/adopted.json`, so a workspace that published under 1.3.x
+  stays auditable.
+- Fixed: `_write_private` opened the channel keys with `os.open` and no
+  `O_BINARY`. On Windows that is text mode, so a random 32-byte key
+  containing `0x0a` (about one key in eight) was written as 33 bytes with
+  `
+` → `
+`. Both sides read the same file, so the broker kept working
+  and only the key-length assertion saw it — the exact shape of a bug that
+  survives a green suite until it matters.
+
+**Publication — one manifest, one approval, one set of files**
+
+- `cli.py pipeline` no longer publishes from inside the router. It produces
+  into `process/`, writes `.chelate/pending/manifest.json` (every file with
+  its SHA-256, the skill lock and a nonce), and submits that manifest through
+  the selected runtime — `PolicyRuntime.submit` today, `BrokerRuntime.submit`
+  when a broker is configured. A run without a bound approval is withheld at
+  that point, not before it.
+- `cli.py approve` binds the token to that manifest's digest and adopts its
+  nonce. A token minted for one manifest cannot be spent on another, and a
+  manifest rebuilt after approval is refused.
+- `cli.py publish` submits the pending manifest again after approving it. It
+  is the only command that publishes, and it publishes exactly the files the
+  manifest lists: `router.promote(files=…)` stages that set, hashing every
+  byte as it copies it, and refuses the whole promotion if a file changed
+  since the manifest was built. `results/` appears only once the copy is
+  complete, so a refused publication leaves no empty deliverable behind.
+- The broker checks what the worker cannot: the manifest names runtime
+  `broker`, the broker version matches, `skill_lock_sha256` still describes
+  the skills on disk, the token's bound digest is the manifest's digest, and
+  the two nonces are the same. `run_skill` stops at `process/` as well.
+- Paths in a manifest may not contain `:` or name a Windows device (`CON`,
+  `NUL`, `COM1`…): the first is an NTFS alternate data stream, the second is
+  not a file at all. `promote` checks both again — it is the code that opens
+  the file — and opens every declared file with `O_NOFOLLOW` where the
+  platform provides it, closing the window between the link check and the
+  read.
+
+**Runtime and surfaces**
+
+- `core/runtime.py` — one API (`status`, `run_skill`, `start_recipe`, `submit`,
+  `audit`) with `PolicyRuntime` and a working, fail-closed `BrokerRuntime`;
+  `CHELATE_RUNTIME` selects the backend and an unrecognised value is refused
+  rather than defaulted.
+- `contracts/action_manifest.py` — the manifest a broker will accept, with
+  fail-closed validation (absolute paths, `..` escapes, digests, expiry,
+  nonce, symlinked workspace).
+- `core/recipes.py` and `cli.py recipe` — serial recipes; every step runs with
+  `publish=False`, so a recipe produces into `process/` and never publishes.
+- `core/hooks.py` and `cli.py hook` — argv commands only (no shell), exit
+  codes recorded but never blocking a gate, approval environment variables
+  scrubbed from the hook's environment.
+- `mcp_server.py` — stdio MCP with five tools (status, run_skill,
+  start_recipe, audit, memory) and deliberately no approval or memory
+  write tool; `run_skill` never publishes.
+- `cli.py status` — active runtime, containment label, gate census, memory
+  summary and an `egress` block that says `controlled: false` and lists the
+  skills whose manifests declare `network` (today: `literature-retriever`,
+  `reference-auditor`). A declaration, not a firewall.
+- `cli.py doctor` — per-skill dependency census: which gates would degrade to
+  `UNVERIFIED` on this machine, and the one `pip install` line that fixes it.
+- `cli.py skill new|lint` — scaffold a skill (manifest, `run.py`, `SKILL.md`,
+  `README`, `LICENSE`) and check that all five surfaces plus `CHANGELOG.md`
+  still agree across the tree; `lint` also requires `## When NOT to use`.
+
+**literature-retriever**
+
+- `--source crossref|pubmed|doi` alongside `arxiv`; the three new sources use
+  the standard library only, so they work without the `arxiv` SDK.
+- Dates are normalised to `YYYY[-MM[-DD]]` across sources, Crossref
+  `component` records are filtered out, and an unregistered DOI is reported
+  as not found rather than as a network failure.
+- `--format bibtex|both` writes a `.bib` beside the JSON, with unique keys.
+
+Network egress control is **not** in this tree. `cli.py status` says so
+explicitly (`egress.controlled: false`) and names the skills that declared
+they reach the network, so the gap is reported rather than implied.
+
 ## [1.3.6] — 2026-11-18
 
 Everything here stays inside the existing trust model: the approval key is

@@ -1,7 +1,7 @@
 # literature-retriever
 
-Search arXiv by keyword phrase and store the hits as JSON in the workspace
-`process/` zone.
+Search arXiv, Crossref or PubMed — or resolve a DOI — and store the hits as
+JSON (optionally BibTeX) in the workspace `process/` zone.
 
 Part of [Chelate Shell](../../README.md) (MIT). The AI-facing instructions
 live in [SKILL.md](SKILL.md); the Router contract lives in
@@ -10,23 +10,37 @@ live in [SKILL.md](SKILL.md); the Router contract lives in
 ## Install
 
 ```bash
-pip install arxiv
+pip install arxiv      # only needed for --source arxiv
 ```
+
+Crossref, PubMed and DOI resolution use the standard library and need
+nothing installed.
 
 ## Usage
 
 ```bash
 python run.py --root <workspace> --action search --query "topological insulator surface state"
 python run.py --root <workspace> --action search --query "blackbody radiation" --max-results 20 --sort-by submittedDate
+python run.py --root <workspace> --action search --query "twisted bilayer graphene" --source crossref --format bibtex
+python run.py --root <workspace> --action search --query "graphene" --source pubmed
+python run.py --root <workspace> --action search --query 10.1038/nature14539 --source doi
 ```
 
 Defaults (`max_results`, `sort_by`) come from `assets/config.yaml`.
+
+Crossref is asked for literature types only (journal articles, chapters,
+proceedings, preprints, dissertations, reports), and anything else that slips
+through is filtered out — a plain phrase query otherwise returns figure
+captions and subject-heading entries as its top hits. Dates are normalised to
+`YYYY[-MM[-DD]]` across all sources, so records from different databases sort
+together.
 
 ## Outputs
 
 | Path | Content |
 |------|---------|
-| `process/literature/literature_<stamp>.json` | query, count, and per-paper records: title, abstract, authors, dates, entry id, PDF link, categories, DOI, journal reference |
+| `process/literature/literature_<stamp>.json` | query, source, count, and per-paper records: title, abstract, authors, dates, entry id, PDF link, categories, DOI, journal reference |
+| `process/literature/literature_<stamp>.bib` | `--format bibtex\|both` — one `@article` per record, unique keys |
 | `process/gates/literature-retriever_<ts>.json` | gate result (PASS / UNVERIFIED) |
 
 ## Gate semantics

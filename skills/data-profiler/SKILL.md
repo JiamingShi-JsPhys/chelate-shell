@@ -1,12 +1,11 @@
 ---
 name: data-profiler
-version: 1.3.6
+version: 1.4.0
 description: >
-  Profiles a CSV with pandas: row and column counts, per-column missing-value
-  statistics, 1.5·IQR outlier ratios, duplicate rows and constant columns. It
-  certifies that the file was read and characterised — never that it is clean.
+  Profiles a CSV: counts, missing values, IQR outliers, duplicates. Not a
+  cleanliness check.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py
@@ -28,9 +27,10 @@ Run this exact form — do not read the source tree:
 python run.py --root <WS> --action profile --input data.csv
 ```
 
+- Missing values, outliers and duplicates are **reported**, not failed.
+  **FAIL means unreadable, empty or header-only.**
 - The gate lands in `<WS>/process/gates/data-profiler_<ts>.json`; the full
   profile in `<WS>/process/data_profile_<stem>_<ts>.json`.
-- Missing values, outliers and duplicates are **reported**, not failed.
 
 ## When to use
 
@@ -44,47 +44,6 @@ python run.py --root <WS> --action profile --input data.csv
 - Cleaning or imputing data — the profiler never writes.
 - Datasets too large for memory.
 
-## Actions
+## More
 
-| `--action` | Does | Extra arguments |
-| --- | --- | --- |
-| `profile` | Profile the CSV | `--input <data.csv>` |
-
-## Hard constraints
-
-- **Missing values and outliers are REPORTED, not FAIL.**
-- **FAIL means unreadable, empty or header-only.**
-- **The input CSV is never modified.**
-
-## Outputs
-
-- `<WS>/process/data_profile_<stem>_<ts>.json` — the full profile.
-- `<WS>/process/gates/data-profiler_<ts>.json` — the gate result.
-
-## Failure handling
-
-- An unreadable or empty CSV fails the gate.
-- A header-only file is a FAIL (no rows to characterise).
-- `pandas` missing → `UNVERIFIED`.
-
-## Limitations
-
-- Numeric-only outliers; non-numeric columns get counts only.
-- The Tukey multiplier is `assets/config.yaml` (default 1.5).
-
-## Delivering results
-
-This skill writes intermediates to `process/`. `results/` is filled only by
-`python cli.py pipeline` after a human approved that exact plan.
-
-- Do not copy a skill's output into `results/` yourself, and do not do it
-  because the user asked for a shortcut: say that only `cli.py pipeline`
-  writes there, offer to run the pipeline instead, and if they still insist,
-  tell them `cli.py audit` will report the file as unapproved.
-- Never set `CHELATE_UNSAFE_AUTO_APPROVE=1` (formerly `CHELATE_HUMAN`) and never run `cli.py approve` on the user's
-  behalf. If an approval is needed, ask the human to issue it in their own
-  terminal.
-- Before telling the user a deliverable is ready — and after any write you
-  make under `results/` — run `python cli.py audit --root <ws>`. Exit 1 means
-  files there have no approval behind them: report that and name them, do not
-  describe the state as delivered.
+- [actions, outputs, failure handling and limits](references/data-profiler-reference.md)

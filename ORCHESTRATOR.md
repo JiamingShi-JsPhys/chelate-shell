@@ -4,11 +4,11 @@ Chelate Shell is the core router of the ecosystem. It does not generate low-leve
 Python itself; it routes every request to the right local skill, enforces a
 standard workspace layout, and respects the platform / security constraints below.
 
-- Version: **v1.3.6**
-- Skills: **19**, all flat under `./skills` — one folder per skill (all fully implemented)
+- Version: **v1.4.0**
+- Skills: **25**, all flat under `./skills` — one folder per skill (all fully implemented)
 - Stages: **7** (4 runtime: workspace / ingest / gates / processors; 3 architectural layers: infrastructure / generation / domain_extensions)
 - Entry point (DeepSeek Harness): `index.js` (`apply(ctx)`, registers `chelate_skills` / `chelate_run` / `chelate_pipeline` / `chelate_audit`; `.dsh-plugin/index.js` re-exports it)
-- Entry point (CLI): `python cli.py list | run <skill> | approve | pipeline`
+- Entry point (CLI): `python cli.py list | run <skill> | approve | pipeline | publish`
 - Per-platform manifests: `.claude-plugin/plugin.json`, `.codebuddy-plugin/plugin.json`,
   `.codex-plugin/plugin.json`, `.dsh-plugin/plugin.json`
 - Cross-host rule files: `AGENTS.md`, `.cursor/rules/chelate-shell.mdc`,
@@ -30,15 +30,23 @@ mechanism that performs the following:
 
 ### 1.1 Pipeline flow
 
-The router is a microkernel over the 19 manifests. It screens text inputs for
+The router is a microkernel over the 25 manifests. It screens text inputs for
 prompt injection before dispatch, runs the planned skills in canonical stage
 order, and turns every skill call into a `GateResult` under `process/gates/`.
 A missing dependency degrades one skill to `UNVERIFIED`; only `FAIL` terminates
 the run and keeps `process/` locked. A run with no failing gate writes the
-pipeline report plus the `_broadcast/` index, but copies `process/` into
-`results/` only when a human issued an approval for that exact plan
-(`cli.py approve`). Without it the report records `"blocked": "approval"` and
-the attempt stays visible in `process/`.
+pipeline report plus the `_broadcast/` index, and describes the bytes it
+produced in `.chelate/pending/manifest.json`: every file under `process/` with
+its SHA-256, the skill-set lock and a nonce. Publishing is a separate act —
+`cli.py approve` binds a one-time token to that manifest's digest (and adopts
+its nonce), and `cli.py publish` submits the same manifest through the
+selected runtime. Without the bound token the submission is withheld, the
+report records `"blocked": "approval"`, and nothing is copied.
+
+What lands in `results/` is exactly the file list the manifest declared.
+`router.promote(files=…)` stages that set and hashes each file as it copies
+it, so a file edited between approval and publication refuses the whole
+promotion; `results/` appears only once the copy is complete.
 
 The approval guards the `promote()` call, not the `results/` directory — an
 agent with file-write tools can still copy a deliverable in itself, and one did
@@ -51,7 +59,7 @@ non-empty. Every pipeline report carries the same dict as `results_audit`.
 ```mermaid
 flowchart LR
     IN["User intent + input files"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-    CLI --> REG["core/registry.py<br/>scan the 19 manifests"]
+    CLI --> REG["core/registry.py<br/>scan the 25 manifests"]
     REG --> PLAN{"build_plan<br/>canonical order<br/>--inputs narrows"}
     PLAN --> SCAN["core/security_shield.py<br/>pre-dispatch injection scan"]
     SCAN -->|"markers found"| BAD["FAIL: injection-scan<br/>blocked before dispatch"]
@@ -60,8 +68,8 @@ flowchart LR
         direction TB
         WS["workspace · 3 skills<br/>task-organizer, multi-dim-manager,<br/>document-evolution-tracker"]
         ING["ingest · 4 skills<br/>video-tracker, fulltext-extractor,<br/>literature-retriever, bibtex-normalizer"]
-        GAT["gates · 7 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler,<br/>quantitative-validator, ml-auditor,<br/>longitudinal-analysis"]
-        PRO["processors · 2 skills<br/>ai-trace-remover, latex-exporter"]
+        GAT["gates · 11 skills<br/>formula-validator, conflict-detector,<br/>reference-auditor, data-profiler, schema-gate,<br/>quantitative-validator, ml-auditor, longitudinal-analysis,<br/>code-gate, test-gate, secret-gate"]
+        PRO["processors · 4 skills<br/>ai-trace-remover, deck-exporter, latex-exporter, repro-bundler"]
         WS --> ING --> GAT --> PRO
     end
 
@@ -92,7 +100,7 @@ flowchart LR
 
 ## 2. Skill inventory and pipeline stages
 
-The system contains **19 skills**, each at `skills/<name>/`. They are planned
+The system contains **25 skills**, each at `skills/<name>/`. They are planned
 according to seven stages — four runtime stages plus three architectural
 categories — and within each stage the skills are listed alphabetically. A
 skill's category lives in its manifest `stage` field, never in its folder path:
@@ -138,13 +146,39 @@ pipeline immediately and locks the intermediate products in `process/`.
 - **ml-auditor** — data-leakage and label-error audit. **Sandbox**
   (`sandbox_required: true`), 120 s circuit-breaker.
 - **reference-auditor** — DOI existence verification against Crossref.
+- **schema-gate** — validates a CSV/JSON dataset against a declared column
+  contract (`type`, `required`, `allowed`, `min`, `max`, `pattern`). An
+  unsupported keyword degrades to `UNVERIFIED` instead of passing.
+- **code-gate** — eight fixed AST rules over Python source (bare except,
+  swallowed error, mutable default, comparison with `None`, star import,
+  over-long function, too many arguments, unparseable file). `ruff` is
+  opt-in and the report names the version that ran; dangerous calls stay
+  `security-guard`'s job.
+- **test-gate** — runs the project's declared test command as an argv list
+  and gates on the result it printed. A green exit code with no test
+  collected is `UNVERIFIED`, not a pass. **Sandbox**
+  (`sandbox_required: true`).
+- **secret-gate** — scans text files for credential shapes (AWS, GitHub,
+  Slack, Google, provider keys, PEM headers), secret-looking assignments and
+  high-entropy values. Findings carry a SHA-256 fingerprint, never the
+  matched string; the allowlist suppresses by fingerprint or `path` + rule,
+  and a `chelate-secret-allow` comment exempts one line. Nothing scannable is
+  `UNVERIFIED`, never a pass.
 ### 2.4 processors stage
 
 - **ai-trace-remover** — template-sentence removal and a 0–100 "AI-likeness"
   score (clean-room English lexicon plus the full Chinese lexicon).
+- **deck-exporter** — renders the Markdown reports under `process/` into one
+  self-contained HTML deck (inline CSS, `data:` images, no script, no
+  network reference); a deck that would embed an absolute path is refused
+  rather than sanitised. **Standard library only**, no sandbox.
 - **latex-exporter** — merges the Markdown reports under `process/` and the
   graphics under `process/figures/` into one compilable `.tex`. **Standard
   library only** (no `pandoc`), so no sandbox is required.
+- **repro-bundler** — packs `process/` products, gate records and skill
+  versions into a deterministic zip, and verifies a bundle in memory
+  without extracting it (absolute paths, `..`, drive letters and symlink
+  entries are refused).
 
 ### 2.5 architectural layer stages (v1.3.1)
 
@@ -229,7 +263,7 @@ Required fields: `name`, `version`, `stage`, `input_types`, `output_type`,
   network failure, incomplete invocation) never does — it reports honestly
   instead of pretending.
 
-### 4.3 Adapter CLI (uniform across all 19 skills)
+### 4.3 Adapter CLI (uniform across all 25 skills)
 
 ```
 python skills/<name>/<entrypoint> --root <workspace> --action <action> [args]
@@ -251,11 +285,13 @@ keeping the stdout contract clean.
    `input_types` declare its type. An explicit `--selected` list always wins.
 3. **FAIL is a hard stop.** When a gate fails, intermediate products stay in
    `process/` and nothing is promoted. Fix the cause; do not bypass the gate.
-4. **Promotion is earned twice.** Every gate must pass *and* a human must have
-   approved this exact plan: `cli.py approve` (type the confirmation it asks
-   for), then `cli.py pipeline`. Without the token the run still completes and
-   the report records `"blocked": "approval"`, but nothing is copied to
-   `results/promoted_<ts>/`. `--no-approval` skips the token, not the human.
+4. **Promotion is earned twice.** Every gate must pass *and* a person must
+   have approved these exact bytes: `cli.py pipeline` produces, `cli.py
+   approve` binds the pending manifest, `cli.py publish` submits it. Without
+   the bound token the run still completes and the report records
+   `"blocked": "approval"`, but nothing is copied to `results/promoted_<ts>/`.
+   `--no-approval` skips the token, not the hashing — every declared file is
+   still re-hashed as it is copied.
 5. **A passing gate has a shelf life.** Each gate records the SHA-256 of the
    files it was handed and a digest of the skill's code; change either and the
    gate is *expired*, and promotion is refused with the file named until that
@@ -285,7 +321,7 @@ keeping the stdout contract clean.
 | DeepSeek Harness | `.dsh-plugin/` | CJS entry `index.js` exporting `name` + `apply(ctx)`. |
 
 `marketplace.json` files describe the same plugin for each platform's
-marketplace. Keep `version` in sync across all manifests (currently 1.3.6).
+marketplace. Keep `version` in sync across all manifests (currently 1.4.0).
 
 ## 7. Hard constraints
 

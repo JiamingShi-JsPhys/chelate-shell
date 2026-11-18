@@ -42,6 +42,10 @@
       "type": "boolean",
       "description": "True when the skill must run inside an isolated environment (heavy or unsafe dependencies). core/sandbox.py resolves this."
     },
+    "network": {
+      "type": "boolean",
+      "description": "True when the skill makes outbound network calls. Declarative only: nothing in this tree blocks a socket, so this scopes the claim rather than enforcing it."
+    },
     "entrypoint": {
       "type": "string",
       "description": "Adapter script relative to the skill root; must be run.py in v1.1.0."

@@ -1,16 +1,15 @@
 ---
 name: task-organizer
-version: 1.3.6
+version: 1.4.0
 description: >
-  Mandatory entry point for task folders. Builds the standard four-zone
-  workspace, files every deliverable by provenance, verifies each run with
-  automatic rollback, and keeps the `_broadcast/` index that lets a later
-  session read one summary instead of every original. Fires whenever a task
-  folder is named or attached and work starts inside it — whatever the
-  deliverable and however many steps it takes. It proposes `init` once for a
-  merely referenced folder and never reorganizes one uninvited.
+  Mandatory entry point for task folders: files every deliverable by
+  provenance and keeps the `_broadcast/` index so a later session reads
+  one summary instead of every original. Fires whenever a task folder is
+  named or attached and work starts inside it — whatever the deliverable
+  and however many steps it takes. It proposes `init` once and never
+  reorganizes one uninvited.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

@@ -1,12 +1,11 @@
 ---
 name: fulltext-extractor
-version: 1.3.6
+version: 1.4.0
 description: >
-  Extracts the text of a local PDF into `process/` so later stages can read
-  plain text instead of a binary. Uses `pdfminer.six` with a `pypdf` fallback,
-  and can be limited to selected pages.
+  Extracts a local PDF's text into process/ so later stages read plain
+  text, not a binary.
 metadata:
-  version: 1.3.6
+  version: 1.4.0
   author: Jiaming Shi
   license: MIT
   entry_point: python run.py

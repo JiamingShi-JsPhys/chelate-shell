@@ -1,12 +1,12 @@
 # Chelate Shell（螯合壳）
 
-**把 19 个科研与工程技能调度成一条确定性流水线，并在唯一不可逆的那一步之前停下来等人。**
+**把 25 个科研与工程技能调度成一条确定性流水线，并在唯一不可逆的那一步之前停下来等人。**
 
 技能各自解决单点问题，真正难的是谁先谁后、产物落在哪——Chelate Shell 把技能、阶段顺序和门禁放进同一个仓库。
 
 [English](README.md) · **简体中文**
 
-**版本：** 1.3.6 ｜ **许可：** MIT ｜ **Python：** 3.10+ ｜ **技能数：** 19
+**版本：** 1.4.0 ｜ **许可：** MIT ｜ **Python：** 3.10+ ｜ **技能数：** 25
 
 > 仅作科研与工程辅助。依赖任何输出之前，请先读[安全与开源声明](#安全与开源声明)。
 
@@ -45,7 +45,7 @@
 
 当前 AI 生态里每个技能都在解决单点问题：校验公式、追踪视频、整理文件。但当 Agent 面对复杂任务时，它常常不知道**该按什么顺序、在什么位置调用哪个技能**——散落的、无状态的调用会带来上下文污染、文件版本混乱，以及不可信的幻觉输出。Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里。
 
-- **19 个技能直接实现各自的算法，不是提示词模板。** `formula-validator` 在 SymPy 之上执行五层判定并用 pint 交叉校验单位；`quantitative-validator` 通过 RDKit 配平化学方程式；`longitudinal-analysis` 在 R 中调用 lme4 与 lavaan；`video-tracker` 在 OpenCV 中执行 CSRT 跟踪并对轨迹计算 FFT；`ml-auditor` 用 scikit-learn 检查标注数据集的泄漏与标签错误；`sci-visualizer` 渲染出版级统计图；`fulltext-extractor` 按页区间抽取 PDF 文本；`latex-exporter` 仅用标准库把 Markdown 报告合成为可编译的 `.tex`。
+- **25 个技能直接实现各自的算法，不是提示词模板。** `formula-validator` 在 SymPy 之上执行五层判定并用 pint 交叉校验单位；`quantitative-validator` 通过 RDKit 配平化学方程式；`longitudinal-analysis` 在 R 中调用 lme4 与 lavaan；`video-tracker` 在 OpenCV 中执行 CSRT 跟踪并对轨迹计算 FFT；`ml-auditor` 用 scikit-learn 检查标注数据集的泄漏与标签错误；`sci-visualizer` 渲染出版级统计图；`fulltext-extractor` 按页区间抽取 PDF 文本；`latex-exporter` 仅用标准库把 Markdown 报告合成为可编译的 `.tex`。
 - **调度器提供单个技能无法自行提供的保证。** `core/router.py` 拆解任务、强制四区工作区结构，并按确定性的阶段顺序路由，使相同输入始终产生相同计划；每次调用都写下一个类型化门禁，在第一个 `FAIL` 处停下，缺依赖时明确报告 `UNVERIFIED`。
 - **唯一不可逆的一步需要一个人点头。** 从 `process/` 提升到 `results/` 必须有一条针对本次计划、由人签发的审批；密钥在工作区之外，agent 无法自签；没有审批时流水线照常跑完，但不会往 `results/` 写任何东西，并以非零码退出。
 
@@ -66,17 +66,17 @@
 ### 方法二：从插件市场用 URL 安装
 
 ```text
-/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.3.6
+/plugin marketplace add https://github.com/JiamingShi-JsPhys/chelate-shell.git#v1.4.0
 /plugin install chelate-shell@chelate-shell-marketplace
 ```
 
-`#v1.3.6` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
+`#v1.4.0` 把安装钉在这个发布上；去掉它则跟随默认分支。URL 重复注册没有副作用，第二次会提示已存在。
 
 ### 方法三：用命令安装
 
 Claude Code、Codex、dsh、CodeBuddy 用一行插件命令安装；Cursor、Windsurf、Cline、Continue、Roo Code、GitHub Copilot 与 opencode 读规则文件，一个脚本把这些文件一次写好。全部命令、全部参数与可选依赖集中在一页：**[docs/INSTALL_COMMANDS_zh.md](docs/INSTALL_COMMANDS_zh.md)**。
 
-npm 也在那一页：registry 上的包与 Release zip 是同一棵树——`index.js`、DSH 补丁、`core/`、`lib/`、`contracts/`、`commands/`、`agents/`，以及 `skills/` 下全部 19 个目录——适合作为项目依赖，或装进某个 DSH 配置档：
+npm 也在那一页：registry 上的包与 Release zip 是同一棵树——`index.js`、DSH 补丁、`core/`、`lib/`、`contracts/`、`commands/`、`agents/`，以及 `skills/` 下全部 25 个目录——适合作为项目依赖，或装进某个 DSH 配置档：
 
 ```bash
 npm install chelate-shell                        # 作为项目依赖
@@ -102,7 +102,7 @@ python cli.py update --apply    # 调用各宿主自己的更新命令
 
 ### 在对话框里用
 
-装好插件后不用离开对话框：输入 `/` 选择技能即可，不需要终端，也不需要绝对路径——工作区就是你当前正在操作的文件夹。19 个技能全部注册在 `chelate-shell` 命名空间下：
+装好插件后不用离开对话框：输入 `/` 选择技能即可，不需要终端，也不需要绝对路径——工作区就是你当前正在操作的文件夹。25 个技能全部注册在 `chelate-shell` 命名空间下：
 
 ```text
 /chelate-shell:task-organizer      把这个文件夹初始化成任务工作区
@@ -142,10 +142,19 @@ python cli.py update --apply    # 调用各宿主自己的更新命令
 同样的操作可以无头运行，供 CI 与脚本调用：
 
 ```bash
-python cli.py list                                        # 列出 19 个技能
+python cli.py list                                        # 列出 25 个技能
 python cli.py run task-organizer --root <ws> --action init   # 建工作区
 python cli.py run data-profiler --root <ws> --input data.csv # 跑一个技能
-python cli.py pipeline --root <ws> --mode a                  # 跑整条流水线
+python cli.py pipeline --root <ws> --mode a                  # 跑，然后提交
+python cli.py pipeline --root <ws> --summary                 # 每个技能一行，不打印 JSON
+python cli.py approve --root <ws>                            # 把审批绑到这批字节上
+python cli.py publish --root <ws>                            # 只发布被批准的那批文件
+python cli.py memory add "单位约定是 cgs" --root <ws>             # 记一条笔记
+python cli.py memory brief --root <ws>                       # 读回来
+python cli.py doctor --root <ws>                             # 干净机器上哪些检查会降级
+python cli.py broker start --root <ws>                       # 1.4.0 的发布边界
+python cli.py skill new my-gate --stage gates                # 脚手架一个新技能
+python cli.py skill lint                                     # manifest / SKILL.md / README 是否一致
 ```
 
 `a` / `b` / `c` 三种流水线模式、全部参数与调试开关见 [ORCHESTRATOR.md](ORCHESTRATOR.md) §5。
@@ -182,13 +191,13 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 | “生成这个网格并检查它” | `3d-modeler` | OBJ，外加绕序 / 退化面 / 包围盒审计 |
 | “这段文字是不是在尝试注入指令？” | `security-guard` | 注入标记与危险调用点 |
 
-全部 19 个技能、各自到底算了什么，见 [仓库布局](#仓库布局) 与 [docs/REFERENCE_zh.md](docs/REFERENCE_zh.md)。
+全部 25 个技能、各自到底算了什么，见 [仓库布局](#仓库布局) 与 [docs/REFERENCE_zh.md](docs/REFERENCE_zh.md)。
 
 ---
 
 ## 一次运行如何流转
 
-`core/router.py` 读取 19 个 manifest，按规范阶段顺序生成计划，派发前先对文本输入做提示注入扫描，然后逐个调用技能适配器。
+`core/router.py` 读取 25 个 manifest，按规范阶段顺序生成计划，派发前先对文本输入做提示注入扫描，然后逐个调用技能适配器。
 
 | 阶段 | 做什么 |
 |---|---|
@@ -203,17 +212,19 @@ report  → process/reports/equation-4c9b2ce5-20261112-210045.md
 
 ```bash
 python cli.py approve  --root <ws> --mode a     # 按提示输入确认词
-python cli.py pipeline --root <ws> --mode a     # 凭这条审批提升
+python cli.py publish  --root <ws>              # 只发布这批字节
 ```
 
 审批绑定 action、工作区真实路径、模式与选择的技能、每个输入文件的 SHA-256，以及 15 分钟有效期；签名密钥存放在工作区之外，agent 无法自签。没有凭据时运行照常完成——尝试记录留在 `process/` 里——但流水线不会往 `results/` 写任何东西，并以非零码退出。
 
 这道闸门守的是 `promote()`，不是目录本身：手上有文件写入工具的 agent 仍可以自己把文件拷进 `results/`，实测中确实有 agent 这么做了。所以每一次提升都会记入 `results/.promotions.jsonl`（带上授权它的 token 以及每个文件的哈希），`python cli.py audit --root <ws>` 会把 `results/` 里没有对应提升记录的文件逐个列出并以退出码 1 结束；每次流水线报告里也会带同一份 `results_audit`。
 
+工作区记忆只由人写入。`cli.py memory` 把笔记存进 `.chelate/memory/memory.jsonl`，只追加、按哈希串成链：每条带自己的摘要和上一条的摘要，改动旧条目会在断掉的那一行被 `memory verify` 点名，链一旦断裂就拒绝继续追加，删除也只是追加一条墓碑。没有记忆技能，MCP 的 `chelate_memory` 只读——因为 `brief` 会把这些条目当作**数据**交给之后的会话，所以读起来像指令的文本在写入时就被拒绝，且没有开关可以绕过。
+
 ```mermaid
 flowchart LR
   IN["任务 + 输入"] --> CLI["cli.py pipeline<br/>--mode a / b / c"]
-  CLI --> REG["core/registry.py<br/>扫描 19 个 manifest"]
+  CLI --> REG["core/registry.py<br/>扫描 25 个 manifest"]
   REG --> PLAN{"build_plan<br/>规范阶段顺序"}
   PLAN --> SCAN["security_shield<br/>派发前注入扫描"]
   SCAN -->|"命中标记"| INJ["FAIL：injection-scan<br/>未派发就拦下"]
@@ -222,8 +233,8 @@ flowchart LR
     direction TB
     WS["workspace · 3<br/>task-organizer、multi-dim-manager、<br/>document-evolution-tracker"]
     ING["ingest · 4<br/>fulltext-extractor、literature-retriever、<br/>bibtex-normalizer、video-tracker"]
-    GAT["gates · 7<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、<br/>quantitative-validator、ml-auditor、<br/>longitudinal-analysis"]
-    PRO["processors · 2<br/>ai-trace-remover、latex-exporter"]
+    GAT["gates · 11<br/>formula-validator、conflict-detector、<br/>reference-auditor、data-profiler、schema-gate、<br/>quantitative-validator、ml-auditor、longitudinal-analysis、<br/>code-gate、test-gate、secret-gate"]
+    PRO["processors · 4<br/>ai-trace-remover、deck-exporter、<br/>latex-exporter、repro-bundler"]
     WS --> ING --> GAT --> PRO
   end
 
@@ -256,14 +267,14 @@ chelate-shell/
 ├── cli.py                 # list / run / pipeline / approve / audit / update
 ├── core/                  # router、approval、sandbox、security_shield、registry
 ├── lib/chelate_core/      # 共享逻辑（路径、DOI、BibTeX、调试层）
-├── skills/                # 19 个技能，每个一个扁平目录
+├── skills/                # 25 个技能，每个一个扁平目录
 ├── agents/                # 随插件注册的子代理
 ├── commands/              # 斜杠命令（figure / model3d / trace / brainstorm）
 ├── docs/                  # 架构、参考、安全、测试、依赖、逐文件地图
 └── tests/                 # 根测试套件 + 对抗用例
 ```
 
-逐目录说明，以及 19 个技能各自算什么：**[docs/REFERENCE_zh.md](docs/REFERENCE_zh.md)**。
+逐目录说明，以及 25 个技能各自算什么：**[docs/REFERENCE_zh.md](docs/REFERENCE_zh.md)**。
 
 ## 完整参考
 
@@ -299,7 +310,7 @@ chelate-shell/
 
 ## 环境要求
 
-只需要 Python 3.10+，别的都不用提前准备：微内核与多数技能仅依赖标准库。少数数据处理与网络类技能会额外用到常见的第三方包（numpy、pandas、sympy、rdkit、matplotlib、requests 等）；每个技能的 `manifest.json` 精确声明了自己需要什么，运行时由 `core/sandbox.py` 检查。缺包不会让流水线崩溃——只有那一个技能会带提示降级为 `UNVERIFIED` 门禁，其余照常运行。本仓库不内置任何第三方代码，每个库仍保持其自身的宽松许可。逐技能的完整依赖矩阵见 [docs/DEPENDENCIES_zh.md](docs/DEPENDENCIES_zh.md)。
+只需要 Python 3.10+，别的都不用提前准备：微内核与多数技能仅依赖标准库。少数数据处理与网络类技能会额外用到常见的第三方包（numpy、pandas、sympy、rdkit、matplotlib、requests 等）；每个技能的 `manifest.json` 精确声明了自己需要什么，运行时由 `core/sandbox.py` 检查。缺包不会让流水线崩溃——只有那一个技能会带提示降级为 `UNVERIFIED` 门禁，其余照常运行。但后果要说清楚：一个第三方包都没装的机器上，mode `a` 照样跑，10 个门禁里有 6 个返回 `UNVERIFIED`，而提升会被拒绝——`UNVERIFIED` 门禁不往 `results/` 带任何东西，除非有人把 `--allow-unverified` 绑进 token。先装计划需要的包；逐技能矩阵见 `docs/DEPENDENCIES_zh.md`。本仓库不内置任何第三方代码，每个库仍保持其自身的宽松许可。逐技能的完整依赖矩阵见 [docs/DEPENDENCIES_zh.md](docs/DEPENDENCIES_zh.md)。
 
 ## 测试
 
@@ -308,7 +319,7 @@ python -m pytest tests/ -q                                 # 全量套件
 python -m pytest tests/test_irreversible_actions.py -q    # 26 条对抗用例
 ```
 
-471 个测试：装齐可选依赖时 459 通过、12 跳过；只有 pytest 的环境里，依赖相关的用例改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于 `skills/<skill>/tests/`，每个目录单独一个进程运行。两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
+772 个测试：装齐可选依赖时 760 通过、12 跳过；只有 pytest 的环境里，依赖相关的用例改为跳过，跑的是 `UNVERIFIED` 路径。另有 7 个技能自带上游套件，位于 `skills/<skill>/tests/`，每个目录单独一个进程运行。两套环境、覆盖清单与逐技能条数：**[docs/TESTING_zh.md](docs/TESTING_zh.md)**。
 
 ## 安全与开源声明
 

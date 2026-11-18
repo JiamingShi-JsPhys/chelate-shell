@@ -136,7 +136,13 @@ def skill_provenance(skill: str) -> dict:
     import hashlib
     skill_dir = _skill_dir(skill)
     if not skill_dir:
-        return {}
+        # `gate_contract` describes what *this function* emits, not the skill,
+        # so it is present either way. Leaving the whole mapping empty turned
+        # a copied-out install (core/ + tests/ without skills/) into a
+        # KeyError inside whatever read the gate. With the empty digests the
+        # gate is instead *unbound*: `router.gate_freshness` counts it as
+        # such, and `cli.py status` shows it, which is the true state.
+        return {"skill_version": "", "skill_digest": "", "gate_contract": 2}
     version = ""
     manifest = os.path.join(skill_dir, "manifest.json")
     try:
