@@ -4,38 +4,20 @@ All notable changes to Chelate Shell are documented in this file.
 
 ## [Unreleased]
 
-The 1.4.x line, in the order it will be worked. Planned, not promised: an
-entry moves to a release only when its check exists.
+The 1.4.x line. Planned, not promised: an entry moves to a release only when
+its check exists.
 
-**1.4.1 — guards**
-
-- `skill lint` fails when a `references/…` link exists in the working tree but
-  not in `git ls-files`. The 1.4.0 CI failure was exactly this: a skill's own
-  `.gitignore` excluded the document, Windows resolved the link locally, and a
-  fresh clone had no file.
-- The paragraph in `docs/TESTING.md` that claims a test keeps the four
-  documents' test counts equal gets that test.
-- The repository-snapshot check stops counting `.pytest_cache`, which made
-  `test_output_paths` order-dependent.
-- `manifest.json` gains `optional_dependencies` (Pillow, openpyxl,
-  python-docx, statsmodels, PyPDF2, cleanlab) and `cli.py doctor` reports
-  which of them are present.
-
-**1.4.2 — an OS boundary**
-
-- `broker install`: a separate identity for the broker, `results/` and
-  `.chelate/approvals` writable only by it (DACL on Windows), and `adopt`
-  migrating ownership rather than only recording state.
-- A cross-user case in CI: a worker that reads `approve.key` or writes
-  `results/` is refused by the OS, checked with `cat`/`echo`, not by reading a
-  label. A stopped broker stays `RuntimeUnavailable`.
-
-**1.4.3 — enforcement**
-
-- Gate records signed with the workspace key and verified by `promote`; a
-  forged PASS is refused unless `--allow-unbound` records the decision.
-- Optional egress restriction (bwrap/firejail or a container network policy)
-  with `status.egress.enforced_by` naming what is actually in force.
+- **1.4.1 — guards.** `skill lint` fails when a `references/…` link exists in
+  the working tree but not in `git ls-files` (the 1.4.0 CI failure); the
+  test-count check `docs/TESTING.md` claims gets written; the repository
+  snapshot stops counting `.pytest_cache`; optional dependencies become a
+  manifest field that `doctor` reports.
+- **1.4.2 — an OS boundary.** The broker under its own identity, `results/`
+  writable only by it (DACL on Windows), `adopt` migrating ownership, and a
+  cross-user case in CI that checks the refusal with `cat`/`echo`.
+- **1.4.3 — enforcement.** Signed gate records, so a forged PASS cannot reach
+  `results/`; optional egress restriction with `status.egress.enforced_by`
+  naming what is actually in force.
 
 Parallel execution, resume and a local dashboard are 1.5.0, after these.
 
