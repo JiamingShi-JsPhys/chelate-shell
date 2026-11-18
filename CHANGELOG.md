@@ -4,22 +4,18 @@ All notable changes to Chelate Shell are documented in this file.
 
 ## [Unreleased]
 
-The 1.4.x line. Planned, not promised: an entry moves to a release only when
-its check exists.
+What comes next, planned rather than promised: an entry ships when its check
+exists, and the order may change.
 
-- **1.4.1 — guards.** `skill lint` fails when a `references/…` link exists in
-  the working tree but not in `git ls-files` (the 1.4.0 CI failure); the
-  test-count check `docs/TESTING.md` claims gets written; the repository
-  snapshot stops counting `.pytest_cache`; optional dependencies become a
-  manifest field that `doctor` reports.
-- **1.4.2 — an OS boundary.** The broker under its own identity, `results/`
-  writable only by it (DACL on Windows), `adopt` migrating ownership, and a
-  cross-user case in CI that checks the refusal with `cat`/`echo`.
-- **1.4.3 — enforcement.** Signed gate records, so a forged PASS cannot reach
-  `results/`; optional egress restriction with `status.egress.enforced_by`
-  naming what is actually in force.
+- A guard that a linked `references/…` document is in `git ls-files`, not only
+  on disk.
+- An OS boundary: the broker under its own identity, `results/` writable only
+  by it, exercised across users in CI.
+- Enforcement instead of declaration: signed gate records, and an optional
+  egress restriction that names what is actually in force.
 
-Parallel execution, resume and a local dashboard are 1.5.0, after these.
+Parallel execution, resume and a local dashboard come later; they are not part
+of this line.
 
 ## [1.4.0] — 2026-11-18
 
