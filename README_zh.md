@@ -45,7 +45,7 @@
 
 当前 AI 生态里每个技能都在解决单点问题：校验公式、追踪视频、整理文件。但当 Agent 面对复杂任务时，它常常不知道**该按什么顺序、在什么位置调用哪个技能**——散落的、无状态的调用会带来上下文污染、文件版本混乱，以及不可信的幻觉输出。Chelate Shell 从两个层面回应这个问题，两者都在同一个仓库里。
 
-- **25 个技能直接实现各自的算法，不是提示词模板。** `formula-validator` 在 SymPy 之上执行五层判定并用 pint 交叉校验单位；`quantitative-validator` 通过 RDKit 配平化学方程式；`longitudinal-analysis` 在 R 中调用 lme4 与 lavaan；`video-tracker` 在 OpenCV 中执行 CSRT 跟踪并对轨迹计算 FFT；`ml-auditor` 用 scikit-learn 检查标注数据集的泄漏与标签错误；`sci-visualizer` 渲染出版级统计图；`fulltext-extractor` 按页区间抽取 PDF 文本；`latex-exporter` 仅用标准库把 Markdown 报告合成为可编译的 `.tex`。
+- **25 个技能用代码直接实现各自的算法。** `formula-validator` 在 SymPy 之上执行五层判定并用 pint 交叉校验单位；`quantitative-validator` 通过 RDKit 配平化学方程式；`longitudinal-analysis` 在 R 中调用 lme4 与 lavaan；`video-tracker` 在 OpenCV 中执行 CSRT 跟踪并对轨迹计算 FFT；`ml-auditor` 用 scikit-learn 检查标注数据集的泄漏与标签错误；`sci-visualizer` 渲染出版级统计图；`fulltext-extractor` 按页区间抽取 PDF 文本；`latex-exporter` 仅用标准库把 Markdown 报告合成为可编译的 `.tex`。
 - **调度器提供单个技能无法自行提供的保证。** `core/router.py` 拆解任务、强制四区工作区结构，并按确定性的阶段顺序路由，使相同输入始终产生相同计划；每次调用都写下一个类型化门禁，在第一个 `FAIL` 处停下，缺依赖时明确报告 `UNVERIFIED`。
 - **唯一不可逆的一步需要一个人点头。** 从 `process/` 提升到 `results/` 必须有一条针对本次计划、由人签发的审批；密钥在工作区之外，agent 无法自签；没有审批时流水线照常跑完，但不会往 `results/` 写任何东西，并以非零码退出。
 
