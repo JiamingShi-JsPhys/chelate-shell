@@ -54,6 +54,7 @@
     }
   },
   "scripts": {
-    "prepublishOnly": "node scripts/clean-pycache.mjs"
+    "prepublishOnly": "node scripts/clean-pycache.mjs",
+    "prepack": "node scripts/clean-pycache.mjs"
   }
 }
